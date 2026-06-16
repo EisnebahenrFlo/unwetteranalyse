@@ -9,11 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as StationsRouteImport } from './routes/stations'
 import { Route as ModelsRouteImport } from './routes/models'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as AlertsRouteImport } from './routes/alerts'
 import { Route as IndexRouteImport } from './routes/index'
 
+const StationsRoute = StationsRouteImport.update({
+  id: '/stations',
+  path: '/stations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ModelsRoute = ModelsRouteImport.update({
   id: '/models',
   path: '/models',
@@ -40,12 +46,14 @@ export interface FileRoutesByFullPath {
   '/alerts': typeof AlertsRoute
   '/map': typeof MapRoute
   '/models': typeof ModelsRoute
+  '/stations': typeof StationsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/alerts': typeof AlertsRoute
   '/map': typeof MapRoute
   '/models': typeof ModelsRoute
+  '/stations': typeof StationsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,14 @@ export interface FileRoutesById {
   '/alerts': typeof AlertsRoute
   '/map': typeof MapRoute
   '/models': typeof ModelsRoute
+  '/stations': typeof StationsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/alerts' | '/map' | '/models'
+  fullPaths: '/' | '/alerts' | '/map' | '/models' | '/stations'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/alerts' | '/map' | '/models'
-  id: '__root__' | '/' | '/alerts' | '/map' | '/models'
+  to: '/' | '/alerts' | '/map' | '/models' | '/stations'
+  id: '__root__' | '/' | '/alerts' | '/map' | '/models' | '/stations'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,10 +76,18 @@ export interface RootRouteChildren {
   AlertsRoute: typeof AlertsRoute
   MapRoute: typeof MapRoute
   ModelsRoute: typeof ModelsRoute
+  StationsRoute: typeof StationsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/stations': {
+      id: '/stations'
+      path: '/stations'
+      fullPath: '/stations'
+      preLoaderRoute: typeof StationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/models': {
       id: '/models'
       path: '/models'
@@ -107,17 +124,8 @@ const rootRouteChildren: RootRouteChildren = {
   AlertsRoute: AlertsRoute,
   MapRoute: MapRoute,
   ModelsRoute: ModelsRoute,
+  StationsRoute: StationsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
