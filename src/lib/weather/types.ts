@@ -7,11 +7,8 @@ export type WeatherSource = "open-meteo" | "bright-sky" | "dwd" | "rainviewer";
 
 export interface DataMeta {
   source: WeatherSource;
-  /** ISO-Zeitstempel des Datenstands */
   updatedAt: string;
-  /** räumliche Auflösung des Modells/Beobachtung in km */
   resolutionKm?: number;
-  /** kurzer Hinweis auf Unsicherheit oder Limitierung */
   uncertainty?: string;
 }
 
@@ -82,20 +79,16 @@ export interface ForecastBundle {
   meta: DataMeta;
 }
 
+export type WeatherModelId =
+  | "icon_d2" | "icon_eu" | "icon_seamless" | "ecmwf_ifs025"
+  | "gfs_seamless" | "meteofrance_arome_france";
+
 export interface ModelSeries {
   model: WeatherModelId;
   label: string;
   hourly: HourlyPoint[];
   meta: DataMeta;
 }
-
-export type WeatherModelId =
-  | "icon_d2"
-  | "icon_eu"
-  | "icon_seamless"
-  | "ecmwf_ifs025"
-  | "gfs_seamless"
-  | "meteofrance_arome_france";
 
 export interface WeatherModelInfo {
   id: WeatherModelId;
