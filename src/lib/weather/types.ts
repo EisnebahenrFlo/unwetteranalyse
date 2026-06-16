@@ -1,0 +1,132 @@
+/**
+ * Gemeinsame Domain-Typen für MeteoFlo.
+ * Werte stehen immer in SI-Einheiten (°C, m/s, mm, hPa, m), Umrechnung passiert nur im UI.
+ */
+
+export type WeatherSource = "open-meteo" | "bright-sky" | "dwd" | "rainviewer";
+
+export interface DataMeta {
+  source: WeatherSource;
+  updatedAt: string;
+  resolutionKm?: number;
+  uncertainty?: string;
+}
+
+export interface GeoPoint {
+  lat: number;
+  lon: number;
+  name: string;
+  country?: string;
+  admin?: string;
+  elevation?: number;
+}
+
+export interface SavedLocation extends GeoPoint {
+  id: string;
+  addedAt: string;
+}
+
+export interface CurrentConditions {
+  temperatureC: number;
+  apparentTemperatureC?: number;
+  dewPointC?: number;
+  relativeHumidity?: number;
+  windSpeedMs: number;
+  windGustMs?: number;
+  windDirectionDeg?: number;
+  precipitationMm?: number;
+  pressureHpa?: number;
+  cloudCover?: number;
+  weatherCode?: number;
+  observedAt: string;
+}
+
+export interface HourlyPoint {
+  time: string;
+  temperatureC: number;
+  apparentTemperatureC?: number;
+  dewPointC?: number;
+  precipitationMm?: number;
+  precipitationProbability?: number;
+  windSpeedMs?: number;
+  windGustMs?: number;
+  pressureHpa?: number;
+  cloudCover?: number;
+  weatherCode?: number;
+  cape?: number;
+  liftedIndex?: number;
+  freezingLevelM?: number;
+  snowfallCm?: number;
+}
+
+export interface DailyPoint {
+  date: string;
+  tempMinC: number;
+  tempMaxC: number;
+  precipitationSumMm: number;
+  precipitationProbabilityMax?: number;
+  windGustMaxMs?: number;
+  weatherCode?: number;
+  sunrise?: string;
+  sunset?: string;
+}
+
+export interface ForecastBundle {
+  point: GeoPoint;
+  current?: CurrentConditions;
+  hourly: HourlyPoint[];
+  daily: DailyPoint[];
+  meta: DataMeta;
+}
+
+export type WeatherModelId =
+  | "icon_d2" | "icon_eu" | "icon_seamless" | "ecmwf_ifs025"
+  | "gfs_seamless" | "meteofrance_arome_france";
+
+export interface ModelSeries {
+  model: WeatherModelId;
+  label: string;
+  hourly: HourlyPoint[];
+  meta: DataMeta;
+}
+
+export interface WeatherModelInfo {
+  id: WeatherModelId;
+  label: string;
+  provider: string;
+  resolutionKm: number;
+  region: string;
+  horizonHours: number;
+}
+
+export type AlertSeverity = "minor" | "moderate" | "severe" | "extreme";
+
+export interface WeatherAlert {
+  id: string;
+  headline: string;
+  description?: string;
+  instruction?: string;
+  severity: AlertSeverity;
+  event: string;
+  eventCode?: number;
+  onset: string;
+  expires: string;
+  source: WeatherSource;
+}
+
+export interface StationObservation {
+  stationId: string;
+  stationName: string;
+  distanceKm: number;
+  lat: number;
+  lon: number;
+  observedAt: string;
+  temperatureC?: number;
+  dewPointC?: number;
+  windSpeedMs?: number;
+  windGustMs?: number;
+  pressureHpa?: number;
+  precipitationMm?: number;
+  cloudCover?: number;
+  weatherCode?: number;
+}
