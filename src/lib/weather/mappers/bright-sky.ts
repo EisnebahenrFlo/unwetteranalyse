@@ -1,5 +1,11 @@
 import type { CurrentConditions, StationObservation, WeatherAlert, AlertSeverity } from "../types";
 
+/** Bright Sky liefert standardmäßig DWD-Einheiten: Temperatur °C, Wind km/h,
+ *  Druck hPa, Niederschlag mm. Wir rechnen Wind in m/s, damit der Rest der App
+ *  einheitlich in SI bleibt. */
+const KMH_TO_MS = 1 / 3.6;
+const toMs = (kmh?: number) => (kmh == null ? undefined : kmh * KMH_TO_MS);
+
 export function mapBrightSkyCurrent(raw: {
   weather?: {
     timestamp: string;
@@ -17,8 +23,8 @@ export function mapBrightSkyCurrent(raw: {
     temperatureC: w.temperature ?? Number.NaN,
     dewPointC: w.dew_point,
     relativeHumidity: w.relative_humidity,
-    windSpeedMs: w.wind_speed ?? Number.NaN,
-    windGustMs: w.wind_gust_speed,
+    windSpeedMs: toMs(w.wind_speed) ?? Number.NaN,
+    windGustMs: toMs(w.wind_gust_speed),
     windDirectionDeg: w.wind_direction,
     precipitationMm: w.precipitation_10,
     pressureHpa: w.pressure_msl,
@@ -60,8 +66,8 @@ export function mapBrightSkyStations(raw: {
       observedAt: w.timestamp,
       temperatureC: w.temperature,
       dewPointC: w.dew_point,
-      windSpeedMs: w.wind_speed,
-      windGustMs: w.wind_gust_speed,
+      windSpeedMs: toMs(w.wind_speed),
+      windGustMs: toMs(w.wind_gust_speed),
       pressureHpa: w.pressure_msl,
       precipitationMm: w.precipitation,
       cloudCover: w.cloud_cover,

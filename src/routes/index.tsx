@@ -7,6 +7,7 @@ import { NextChange } from "@/components/dashboard/NextChange";
 import { HourlyStrip } from "@/components/dashboard/HourlyStrip";
 import { DailyStrip } from "@/components/dashboard/DailyStrip";
 import { AlertsSummary } from "@/components/dashboard/AlertsSummary";
+import { SevereWeatherPanel } from "@/components/dashboard/SevereWeatherPanel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/ErrorState";
 import { deriveAlertsFromForecast, derivedToAlert } from "@/lib/weather/analysis/situation";
@@ -51,6 +52,9 @@ function Dashboard() {
       </div>
       <div className="lg:col-span-12">
         <AlertsSummary alerts={allAlerts} />
+      </div>
+      <div className="lg:col-span-12">
+        <SevereWeatherPanel bundle={bundle} />
       </div>
       <div className="lg:col-span-12">
         <HourlyStrip bundle={bundle} />
