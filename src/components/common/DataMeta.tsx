@@ -1,0 +1,20 @@
+import type { DataMeta as DataMetaT } from "@/lib/weather/types";
+import { formatRelative } from "@/lib/weather/format";
+
+const SOURCE_LABEL: Record<DataMetaT["source"], string> = {
+  "open-meteo": "Open-Meteo",
+  "bright-sky": "Bright Sky / DWD",
+  "dwd": "DWD-Schwellen",
+  "rainviewer": "RainViewer",
+};
+
+export function DataMeta({ meta }: { meta: DataMetaT }) {
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+      <span>Quelle: {SOURCE_LABEL[meta.source]}</span>
+      <span>Stand: {formatRelative(meta.updatedAt)}</span>
+      {meta.resolutionKm != null && <span>Auflösung ≈ {meta.resolutionKm} km</span>}
+      {meta.uncertainty && <span title={meta.uncertainty}>· Unsicherheit</span>}
+    </div>
+  );
+}
