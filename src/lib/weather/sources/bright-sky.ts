@@ -9,7 +9,6 @@ export async function fetchBrightSkyCurrent(lat: number, lon: number) {
   const url = new URL(`${BASE}/current_weather`);
   url.searchParams.set("lat", String(lat));
   url.searchParams.set("lon", String(lon));
-  url.searchParams.set("units", "si");
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`Bright Sky current HTTP ${res.status}`);
   return res.json();
@@ -32,7 +31,6 @@ export async function fetchBrightSkyStations(lat: number, lon: number) {
   url.searchParams.set("lon", String(lon));
   url.searchParams.set("date", fromIso);
   url.searchParams.set("max_dist", "50000");
-  url.searchParams.set("units", "si");
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`Bright Sky weather HTTP ${res.status}`);
   return res.json();
