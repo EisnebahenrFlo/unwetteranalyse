@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { fetchOpenMeteoForecast, fetchOpenMeteoModels } from "./sources/open-meteo";
+import { fetchOpenMeteoForecast, fetchOpenMeteoSingleModel } from "./sources/open-meteo";
 import { fetchBrightSkyCurrent, fetchBrightSkyAlerts, fetchBrightSkyStations } from "./sources/bright-sky";
 import { mapForecastBundle, mapModelSeries } from "./mappers/open-meteo";
 import { mapBrightSkyCurrent, mapBrightSkyStations, mapBrightSkyAlerts } from "./mappers/bright-sky";
@@ -69,10 +69,17 @@ export function modelComparisonQuery(point: GeoPoint) {
   return queryOptions({
     queryKey: ["model-compare", point.lat, point.lon],
     queryFn: async () => {
-      const ids = WEATHER_MODELS.map((m) => m.id);
-      const raw = await fetchOpenMeteoModels({ lat: point.lat, lon: point.lon, models: ids, forecastDays: 3 });
-      const arr = Array.isArray(raw) ? raw : [raw];
-      return WEATHER_MODELS.map((info, i) => mapModelSeries(arr[i] ?? {}, info.id, info.label, info.resolutionKm));
+      const results = await Promise.all(WEATHER_MODELS.map(async (info) => {
+        try {
+          const raw = await fetchOpenMeteoSingleModel({
+            lat: point.lat, lon: point.lon, model: info.id, forecastDays: 3,
+          });
+          return mapModelSeries(raw, info.id, info.label, info.resolutionKm);
+        } catch {
+          return mapModelSeries({}, info.id, info.label, info.resolutionKm);
+        }
+      }));
+      return results;
     },
     staleTime: STALE,
   });

@@ -10,6 +10,11 @@ interface OmHourly {
   wind_speed_10m?: number[]; wind_gusts_10m?: number[];
   pressure_msl?: number[]; cloud_cover?: number[]; weather_code?: number[];
   cape?: number[]; lifted_index?: number[]; freezing_level_height?: number[]; snowfall?: number[];
+  convective_inhibition?: number[];
+  wind_speed_80m?: number[]; wind_speed_180m?: number[];
+  wind_direction_80m?: number[]; wind_direction_180m?: number[];
+  boundary_layer_height?: number[]; visibility?: number[]; uv_index?: number[];
+  relative_humidity_2m?: number[];
 }
 interface OmDaily {
   time: string[];
@@ -41,6 +46,15 @@ export function mapHourly(h: OmHourly | undefined): HourlyPoint[] {
     weatherCode: h.weather_code?.[i],
     cape: h.cape?.[i],
     liftedIndex: h.lifted_index?.[i],
+    convectiveInhibition: h.convective_inhibition?.[i],
+    windSpeed80mMs: h.wind_speed_80m?.[i],
+    windSpeed180mMs: h.wind_speed_180m?.[i],
+    windDirection80mDeg: h.wind_direction_80m?.[i],
+    windDirection180mDeg: h.wind_direction_180m?.[i],
+    boundaryLayerHeightM: h.boundary_layer_height?.[i],
+    visibilityM: h.visibility?.[i],
+    uvIndex: h.uv_index?.[i],
+    relativeHumidity: h.relative_humidity_2m?.[i],
     freezingLevelM: h.freezing_level_height?.[i],
     snowfallCm: h.snowfall?.[i],
   }));
