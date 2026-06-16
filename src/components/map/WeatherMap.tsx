@@ -40,6 +40,7 @@ export function WeatherMap({ center, layer }: Props) {
           },
         },
         layers: [{ id: "osm", type: "raster", source: "osm" }],
+        glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
 
       },
       center: [center.lon, center.lat],
