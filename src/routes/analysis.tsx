@@ -8,8 +8,14 @@ import { InfoPopover } from "@/components/common/InfoPopover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WarnBadge } from "@/components/common/WarnBadge";
 import { summarizeConvection, summarizeWinter } from "@/lib/weather/analysis/situation";
+import {
+  thunderProbability, hailRisk, downburstRisk, lowLevelShearMs, sultriness,
+  summarizeModelSevere,
+} from "@/lib/weather/analysis/convection";
+import { SevereTimeline } from "@/components/analysis/SevereTimeline";
 import { useSettings } from "@/hooks/use-settings";
 import { formatTemp } from "@/lib/weather/format";
+import type { AlertSeverity, HourlyPoint } from "@/lib/weather/types";
 
 export const Route = createFileRoute("/analysis")({
   head: () => ({
@@ -29,75 +35,170 @@ function AnalysisPage() {
   if (q.isLoading) return <Skeleton className="h-72 w-full" />;
   if (!q.data) return null;
 
-  const conv = summarizeConvection(q.data.hourly);
-  const winter = summarizeWinter(q.data.hourly);
-  const now = q.data.hourly[0];
+  const hourly = q.data.hourly;
+  const conv = summarizeConvection(hourly);
+  const winter = summarizeWinter(hourly);
+  const sum = summarizeModelSevere(hourly);
+  const now = hourly[0];
   const spread = now?.dewPointC != null ? now.temperatureC - now.dewPointC : null;
 
+  // Peak-Stunde für Gewitter
+  let peakTp = 0; let peakIdx = 0;
+  hourly.slice(0, 24).forEach((p, i) => {
+    const t = thunderProbability(p);
+    if (t > peakTp) { peakTp = t; peakIdx = i; }
+  });
+  const peakHour = hourly[peakIdx];
+
+  const shearNow = lowLevelShearMs(now);
+  const sult = sultriness(now);
+
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 md:gap-4">
       <div>
         <h1 className="text-lg font-semibold tracking-tight">Analyse</h1>
-        <p className="text-xs text-muted-foreground">Abgeleitete Größen aus dem Forecast, ergänzt um eine einfache Einordnung.</p>
+        <p className="text-xs text-muted-foreground">
+          Abgeleitete Parameter und Unwetter-Einordnung für die nächsten 24 Stunden.
+        </p>
       </div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <DataCard
-          title="Konvektion"
-          subtitle="nächste 24 h"
-          action={<InfoPopover title="CAPE & Lifted Index">
-            CAPE misst die verfügbare Energie für aufsteigende Luft. Der Lifted Index vergleicht ein aufsteigendes Luftpaket mit der Umgebung. Negative LI und hohe CAPE deuten auf labile Schichtung.
-          </InfoPopover>}
-          meta={q.data.meta}
-        >
-          <div className="flex flex-col gap-2">
-            <ValueWithUnit value={conv.capeMax != null ? conv.capeMax.toFixed(0) : "—"} unit="J/kg CAPE max" size="lg" />
-            <ValueWithUnit value={conv.liMin != null ? conv.liMin.toFixed(1) : "—"} unit="LI min" size="sm" />
-            <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2">
-              {conv.level !== "none" && <WarnBadge severity={conv.level} />}
-              <p className="min-w-0 text-xs text-muted-foreground">{conv.text}</p>
+
+      {/* Severity-Score oben prominent */}
+      <DataCard
+        title="Unwetter-Score (24 h)"
+        subtitle="Kombinierte Einordnung aus Gewitter, Hagel, Sturmböen, Starkregen."
+        meta={q.data.meta}
+      >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[auto_minmax(0,1fr)]">
+          <div className="flex items-center gap-3">
+            <div className="font-mono text-5xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-mono)" }}>
+              {sum.worstScore}
             </div>
+            {sum.level !== "none" && <WarnBadge severity={sum.level} />}
           </div>
-        </DataCard>
+          <div className="grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+            <KV label="Gewitter peak" value={`${Math.round(sum.thunderProbMax * 100)} %`} />
+            <KV label="CAPE max" value={sum.capeMax != null ? `${sum.capeMax.toFixed(0)} J/kg` : "—"} />
+            <KV label="LI min" value={sum.liMin != null ? sum.liMin.toFixed(1) : "—"} />
+            <KV label="Böen max" value={`${(sum.gustMaxMs * 3.6).toFixed(0)} km/h`} />
+          </div>
+        </div>
+      </DataCard>
 
-        <DataCard
-          title="Winter"
-          subtitle="nächste 24 h"
-          action={<InfoPopover title="Schneefall & Nullgradgrenze">
-            Die Nullgradgrenze (Freezing Level) ist die Höhe, in der die Temperatur 0 °C erreicht. Liegt sie unter der Geländehöhe, fällt Niederschlag als Schnee.
-          </InfoPopover>}
-          meta={q.data.meta}
-        >
-          <div className="flex flex-col gap-2">
-            <ValueWithUnit value={winter.snowfallSumCm.toFixed(1)} unit="cm Neuschnee" size="lg" />
-            <ValueWithUnit
-              value={winter.freezingLevelMinM != null ? winter.freezingLevelMinM.toFixed(0) : "—"}
-              unit="m Nullgradgrenze (min)"
-              size="sm"
-            />
-            <p className="text-xs text-muted-foreground">{winter.text}</p>
-          </div>
-        </DataCard>
+      <SevereTimeline hourly={hourly} />
 
-        <DataCard
-          title="Taupunkt-Spread"
-          subtitle="aktuell"
-          action={<InfoPopover title="Taupunkt-Spread">
-            Differenz zwischen Lufttemperatur und Taupunkt. Werte unter 2 K bedeuten hohe Sättigung, Nebelgefahr; große Werte sprechen für trockene Luft.
-          </InfoPopover>}
-          meta={q.data.meta}
-        >
-          <ValueWithUnit value={spread != null ? spread.toFixed(1) : "—"} unit="K Spread" size="lg" />
-          <div className="mt-2 text-xs text-muted-foreground">
-            Temp {formatTemp(now?.temperatureC, settings.tempUnit)} · Taupunkt {formatTemp(now?.dewPointC, settings.tempUnit)}
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            {spread == null ? "Keine Daten." :
-              spread < 2 ? "Hohe Sättigung, Nebel oder Tau möglich." :
-              spread < 5 ? "Feuchte Luft, Wolken/Schauer begünstigt." :
-              "Trockene Luft, geringe Wolkenbildung."}
-          </p>
-        </DataCard>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+        <ParamCard
+          title="Gewitter-Peak"
+          info={{ title: "Gewitter-Wahrscheinlichkeit", text: "Heuristik aus CAPE, LI, CIN und WMO-Wettercode. Über 60 % als wahrscheinlich einordnen." }}
+          big={`${Math.round(peakTp * 100)} %`}
+          unit=""
+          hint={peakHour ? `gegen ${new Date(peakHour.time).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr` : undefined}
+          level={peakTp >= 0.7 ? "severe" : peakTp >= 0.45 ? "moderate" : peakTp >= 0.25 ? "minor" : "none"}
+        />
+        <ParamCard
+          title="Hagel-Risiko"
+          info={{ title: "Hagel", text: "Hohes CAPE plus stark negativer LI plus tiefe Nullgradgrenze erhöhen das Hagelpotenzial deutlich." }}
+          big={labelSeverity(peakRisk(hourly, hailRisk))}
+          unit=""
+        />
+        <ParamCard
+          title="Downburst / Sturm­böen"
+          info={{ title: "Downburst", text: "Konvektion plus hohe Böen ergeben das Risiko für gefährliche Fallböen aus Gewittern." }}
+          big={labelSeverity(peakRisk(hourly, downburstRisk))}
+          unit=""
+        />
+        <ParamCard
+          title="Konvektive Energie"
+          info={{ title: "CAPE", text: "Convective Available Potential Energy. ≥ 500 mäßig, ≥ 1500 hoch, ≥ 2500 extrem." }}
+          big={conv.capeMax != null ? conv.capeMax.toFixed(0) : "—"}
+          unit="J/kg max"
+          hint={conv.liMin != null ? `LI min ${conv.liMin.toFixed(1)}` : undefined}
+          level={conv.level}
+        />
+        <ParamCard
+          title="Low-Level Shear"
+          info={{ title: "Wind­scherung 10 m → 180 m", text: "Höhenunterschied zwischen Wind in 10 m und 180 m. Höhere Werte begünstigen organisierte Gewitter." }}
+          big={shearNow != null ? shearNow.toFixed(1) : "—"}
+          unit="m/s"
+          hint="0–4 schwach · 4–8 mäßig · > 8 stark"
+        />
+        <ParamCard
+          title="Taupunkt & Schwüle"
+          info={{ title: "Taupunkt", text: "Maß für absolute Feuchte. Über 16 °C wird es schwül, über 20 °C drückend." }}
+          big={formatTemp(now?.dewPointC, settings.tempUnit)}
+          unit={sult}
+          hint={spread != null ? `Spread ${spread.toFixed(1)} K` : undefined}
+        />
+        <ParamCard
+          title="Starkregen-Peak"
+          info={{ title: "Starkregen", text: "DWD-Schwellen: ≥ 15 mm/h markant, ≥ 25 heftig, ≥ 40 extrem." }}
+          big={sum.precipMaxMm.toFixed(1)}
+          unit="mm/h"
+        />
+        <ParamCard
+          title="Wind & Böen"
+          info={{ title: "Böen", text: "≥ 50 km/h markant, ≥ 65 Sturmböen, ≥ 90 schwerer Sturm, ≥ 118 Orkan." }}
+          big={`${(sum.gustMaxMs * 3.6).toFixed(0)}`}
+          unit="km/h Spitze"
+          hint={now?.windSpeedMs != null ? `Mittel jetzt ${(now.windSpeedMs * 3.6).toFixed(0)} km/h` : undefined}
+        />
+        <ParamCard
+          title="Winter / Schnee"
+          info={{ title: "Schneefallgrenze", text: "Liegt die Nullgradgrenze unter der Geländehöhe, fällt Niederschlag als Schnee." }}
+          big={winter.snowfallSumCm > 0 ? winter.snowfallSumCm.toFixed(1) : "—"}
+          unit="cm Neuschnee 24 h"
+          hint={winter.freezingLevelMinM != null ? `0 °C bei ${Math.round(winter.freezingLevelMinM)} m` : undefined}
+        />
       </div>
     </div>
   );
+}
+
+function ParamCard({
+  title, info, big, unit, hint, level,
+}: {
+  title: string;
+  info: { title: string; text: string };
+  big: string;
+  unit?: string;
+  hint?: string;
+  level?: AlertSeverity | "none";
+}) {
+  return (
+    <DataCard
+      title={title}
+      action={<InfoPopover title={info.title}>{info.text}</InfoPopover>}
+    >
+      <div className="flex flex-col gap-2">
+        <ValueWithUnit value={big} unit={unit} size="lg" hint={hint} />
+        {level && level !== "none" && <WarnBadge severity={level} />}
+      </div>
+    </DataCard>
+  );
+}
+
+function KV({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-md border border-border bg-background/60 px-2.5 py-1.5">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="font-mono text-sm" style={{ fontFamily: "var(--font-mono)" }}>{value}</div>
+    </div>
+  );
+}
+
+function peakRisk(hourly: HourlyPoint[], fn: (p: HourlyPoint) => AlertSeverity | "none"): AlertSeverity | "none" {
+  const order: Array<AlertSeverity | "none"> = ["none", "minor", "moderate", "severe", "extreme"];
+  let worst: AlertSeverity | "none" = "none";
+  for (const p of hourly.slice(0, 24)) {
+    const r = fn(p);
+    if (order.indexOf(r) > order.indexOf(worst)) worst = r;
+  }
+  return worst;
+}
+
+function labelSeverity(s: AlertSeverity | "none"): string {
+  return s === "extreme" ? "Extrem" :
+    s === "severe" ? "Hoch" :
+    s === "moderate" ? "Erhöht" :
+    s === "minor" ? "Gering" : "Keine";
 }
