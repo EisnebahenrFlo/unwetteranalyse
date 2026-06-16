@@ -27,7 +27,7 @@ export function ModelCompareChart({ series, metric, unitLabel }: Props) {
     <div className="h-72 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
+          <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" opacity={0.5} />
           <XAxis dataKey="time" tickFormatter={formatHour} tick={{ fontSize: 10 }} interval={5} />
           <YAxis tick={{ fontSize: 10 }} label={{ value: unitLabel, angle: -90, position: "insideLeft", fontSize: 10 }} />
           <Tooltip
