@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StationsRouteImport } from './routes/stations'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ModelsRouteImport } from './routes/models'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as LearnRouteImport } from './routes/learn'
@@ -20,6 +21,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const StationsRoute = StationsRouteImport.update({
   id: '/stations',
   path: '/stations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ModelsRoute = ModelsRouteImport.update({
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/learn': typeof LearnRoute
   '/map': typeof MapRoute
   '/models': typeof ModelsRoute
+  '/settings': typeof SettingsRoute
   '/stations': typeof StationsRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/learn': typeof LearnRoute
   '/map': typeof MapRoute
   '/models': typeof ModelsRoute
+  '/settings': typeof SettingsRoute
   '/stations': typeof StationsRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/learn': typeof LearnRoute
   '/map': typeof MapRoute
   '/models': typeof ModelsRoute
+  '/settings': typeof SettingsRoute
   '/stations': typeof StationsRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/learn'
     | '/map'
     | '/models'
+    | '/settings'
     | '/stations'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/learn'
     | '/map'
     | '/models'
+    | '/settings'
     | '/stations'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/learn'
     | '/map'
     | '/models'
+    | '/settings'
     | '/stations'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   LearnRoute: typeof LearnRoute
   MapRoute: typeof MapRoute
   ModelsRoute: typeof ModelsRoute
+  SettingsRoute: typeof SettingsRoute
   StationsRoute: typeof StationsRoute
 }
 
@@ -128,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/stations'
       fullPath: '/stations'
       preLoaderRoute: typeof StationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/models': {
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   LearnRoute: LearnRoute,
   MapRoute: MapRoute,
   ModelsRoute: ModelsRoute,
+  SettingsRoute: SettingsRoute,
   StationsRoute: StationsRoute,
 }
 export const routeTree = rootRouteImport
