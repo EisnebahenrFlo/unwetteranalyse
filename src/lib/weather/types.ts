@@ -55,6 +55,15 @@ export interface HourlyPoint {
   weatherCode?: number;
   cape?: number;
   liftedIndex?: number;
+  convectiveInhibition?: number;
+  windSpeed80mMs?: number;
+  windSpeed180mMs?: number;
+  windDirection80mDeg?: number;
+  windDirection180mDeg?: number;
+  boundaryLayerHeightM?: number;
+  visibilityM?: number;
+  uvIndex?: number;
+  relativeHumidity?: number;
   freezingLevelM?: number;
   snowfallCm?: number;
 }

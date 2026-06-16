@@ -31,17 +31,24 @@ export function WeatherMap({ center, layer }: Props) {
       container: ref.current,
       style: {
         version: 8,
+        glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
         sources: {
           osm: {
             type: "raster",
-            tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+            tiles: [
+              "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+              "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+              "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            ],
             tileSize: 256,
+            maxzoom: 19,
             attribution: "© OpenStreetMap",
           },
         },
-        layers: [{ id: "osm", type: "raster", source: "osm" }],
-        glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-
+        layers: [
+          { id: "bg", type: "background", paint: { "background-color": "#e8eef4" } },
+          { id: "osm", type: "raster", source: "osm" },
+        ],
       },
       center: [center.lon, center.lat],
       zoom: 7,
@@ -49,6 +56,10 @@ export function WeatherMap({ center, layer }: Props) {
     });
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), "top-right");
     mapRef.current = map;
+    // Falls Container erst spät seine Größe bekommt (z. B. Tab-Wechsel),
+    // ein Resize nachreichen, sonst bleibt die Karte unsichtbar.
+    const ro = new ResizeObserver(() => map.resize());
+    ro.observe(ref.current);
     return () => { map.remove(); mapRef.current = null; };
   }, []);
 

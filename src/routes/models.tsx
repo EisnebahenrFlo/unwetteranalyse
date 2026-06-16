@@ -5,6 +5,7 @@ import { useActivePoint } from "@/components/layout/LocationSwitcher";
 import { modelComparisonQuery } from "@/lib/weather/queries";
 import { DataCard } from "@/components/common/DataCard";
 import { ModelCompareChart } from "@/components/models/ModelCompareChart";
+import { ModelSeverityGrid } from "@/components/models/ModelSeverityGrid";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/ErrorState";
@@ -63,6 +64,8 @@ function ModelsPage() {
         {q.error && <ErrorState message={q.error.message} onRetry={() => q.refetch()} />}
         {q.data && <ModelCompareChart series={q.data} metric={metric} unitLabel={METRICS[metric].unit} />}
       </DataCard>
+
+      {q.data && <ModelSeverityGrid series={q.data} />}
 
       <DataCard title="Verfügbare Modelle">
         <div className="overflow-x-auto">

@@ -21,7 +21,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <div className="mx-auto grid max-w-[1440px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 md:px-6">
-          <Link to="/" className="flex shrink-0 items-center gap-2">
+          <Link to="/" search={keepSearch} className="flex shrink-0 items-center gap-2">
             <div className="grid h-8 w-8 place-items-center rounded-md bg-primary text-primary-foreground">
               <Cloud className="h-4 w-4" />
             </div>
@@ -66,6 +66,7 @@ function NavItem({ to, label, icon: Icon }: (typeof NAV)[number]) {
   return (
     <Link
       to={to}
+      search={keepSearch}
       activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground font-medium" }}
       inactiveProps={{ className: "text-sidebar-foreground/80 hover:bg-sidebar-accent/60" }}
       activeOptions={{ exact: to === "/" }}
@@ -86,6 +87,7 @@ function BottomNav() {
         <Link
           key={to}
           to={to}
+          search={keepSearch}
           activeProps={{ className: "text-primary" }}
           inactiveProps={{ className: "text-muted-foreground" }}
           activeOptions={{ exact: to === "/" }}
@@ -98,3 +100,6 @@ function BottomNav() {
     </nav>
   );
 }
+
+/** Behält aktive Search-Params (lat/lon/name) beim Navigieren zwischen Tabs. */
+const keepSearch = (prev: Record<string, unknown>) => prev;
