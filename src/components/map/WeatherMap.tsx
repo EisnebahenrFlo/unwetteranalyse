@@ -40,7 +40,7 @@ export function WeatherMap({ center, layer }: Props) {
           },
         },
         layers: [{ id: "osm", type: "raster", source: "osm" }],
-        glyphs: undefined,
+
       },
       center: [center.lon, center.lat],
       zoom: 7,
