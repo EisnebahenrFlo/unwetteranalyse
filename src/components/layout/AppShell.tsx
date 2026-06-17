@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { Cloud, CloudRain, Layers, AlertTriangle, Radio, LineChart, GraduationCap, Settings, Map, Compass } from "lucide-react";
+import { Layers, AlertTriangle, Radio, LineChart, GraduationCap, Settings, Map, Compass } from "lucide-react";
 import { LocationSwitcher } from "./LocationSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@/lib/utils";
+import { MeteoconIcon } from "@/components/weather/MeteoconIcon";
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: Compass },
@@ -23,7 +24,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto grid max-w-[1440px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 md:px-6">
           <Link to="/" search={keepSearch} className="flex shrink-0 items-center gap-2">
             <div className="grid h-8 w-8 place-items-center rounded-md bg-primary text-primary-foreground">
-              <Cloud className="h-4 w-4" />
+              <MeteoconIcon name="partly-cloudy-day" label="MeteoFlo" className="h-6 w-6" />
             </div>
             <div className="hidden md:block">
               <div className="text-sm font-semibold tracking-tight">MeteoFlo</div>
