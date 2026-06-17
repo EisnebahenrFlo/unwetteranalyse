@@ -3,8 +3,10 @@ import { ArrowRight } from "lucide-react";
 import { formatHour, formatRelative } from "@/lib/weather/format";
 import type { ForecastBundle } from "@/lib/weather/types";
 import { findNextChange } from "@/lib/weather/analysis/situation";
+import { useLiveNow } from "@/hooks/use-live-now";
 
 export function NextChange({ bundle }: { bundle: ForecastBundle }) {
+  useLiveNow();
   const change = findNextChange(bundle.hourly);
   return (
     <DataCard title="Nächster Wetterumschwung" meta={bundle.meta}>

@@ -4,6 +4,7 @@ import { InfoPopover } from "@/components/common/InfoPopover";
 import { useSettings } from "@/hooks/use-settings";
 import { formatTemp, formatWind, formatPercent, formatPressure, formatPrecip, windDirectionLabel, weatherCodeLabel } from "@/lib/weather/format";
 import type { CurrentConditions as CC, DataMeta } from "@/lib/weather/types";
+import { MeteoconIcon } from "@/components/weather/MeteoconIcon";
 
 export function CurrentConditions({ current, meta, fallbackLabel }: { current?: CC; meta: DataMeta; fallbackLabel?: string }) {
   const [settings] = useSettings();
@@ -20,13 +21,17 @@ export function CurrentConditions({ current, meta, fallbackLabel }: { current?: 
       subtitle={weatherCodeLabel(current.weatherCode)}
       meta={meta}
     >
-      <div className="grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-4">
-        <ValueWithUnit
-          value={formatTemp(current.temperatureC, settings.tempUnit).split(" ")[0]}
-          unit={`°${settings.tempUnit}`}
-          size="xl"
-          hint={current.apparentTemperatureC != null ? `gefühlt ${formatTemp(current.apparentTemperatureC, settings.tempUnit)}` : undefined}
-        />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,2fr)]">
+        <div className="flex min-w-0 items-center gap-3">
+          <MeteoconIcon code={current.weatherCode} label={weatherCodeLabel(current.weatherCode)} className="h-14 w-14 md:h-16 md:w-16" />
+          <ValueWithUnit
+            value={formatTemp(current.temperatureC, settings.tempUnit).split(" ")[0]}
+            unit={`°${settings.tempUnit}`}
+            size="xl"
+            hint={current.apparentTemperatureC != null ? `gefühlt ${formatTemp(current.apparentTemperatureC, settings.tempUnit)}` : undefined}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-3">
         <Field label="Wind" value={formatWind(current.windSpeedMs, settings.windUnit)}
           hint={current.windGustMs != null ? `Böen ${formatWind(current.windGustMs, settings.windUnit)} aus ${windDirectionLabel(current.windDirectionDeg)}` : undefined}
           info={{ title: "Wind & Böen", text: "Der mittlere Wind in 10 m Höhe und die Spitzenböe der letzten Stunde. Böen entscheiden über DWD-Warnschwellen." }}
@@ -39,6 +44,7 @@ export function CurrentConditions({ current, meta, fallbackLabel }: { current?: 
           hint={current.pressureHpa != null ? `${formatPressure(current.pressureHpa)} Luftdruck` : undefined}
           info={{ title: "Niederschlag (10 min)", text: "Beobachteter Niederschlag der letzten 10 Minuten. Eine erste Einordnung der aktuellen Lage, nicht der Tagessumme." }}
         />
+        </div>
       </div>
     </DataCard>
   );

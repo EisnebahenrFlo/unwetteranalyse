@@ -6,8 +6,10 @@ import type { WeatherAlert } from "@/lib/weather/types";
 import { formatHour, formatRelative } from "@/lib/weather/format";
 import { severityWeight } from "@/lib/weather/thresholds/dwd";
 import { Link } from "@tanstack/react-router";
+import { useLiveNow } from "@/hooks/use-live-now";
 
 export function AlertsSummary({ alerts }: { alerts: WeatherAlert[] }) {
+  useLiveNow();
   const sorted = [...alerts].sort((a, b) => severityWeight(b.severity) - severityWeight(a.severity));
   return (
     <DataCard

@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl, { Map as MlMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useQuery } from "@tanstack/react-query";
-import { fetchRainViewerMaps, rainviewerTileUrl } from "@/lib/weather/sources/rainviewer";
+import { dwdRadarTileUrl, fetchDwdRadarFrames } from "@/lib/weather/sources/dwd-radar";
 import { Layers, Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { GeoPoint } from "@/lib/weather/types";
@@ -19,9 +19,10 @@ export function WeatherMap({ center, layer }: Props) {
   const [playing, setPlaying] = useState(true);
 
   const radarQ = useQuery({
-    queryKey: ["rainviewer"],
-    queryFn: fetchRainViewerMaps,
+    queryKey: ["dwd-radar"],
+    queryFn: fetchDwdRadarFrames,
     staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
   });
 
   // init
@@ -71,7 +72,11 @@ export function WeatherMap({ center, layer }: Props) {
   }, [center.lat, center.lon]);
 
   // radar frames
-  const frames = radarQ.data ? [...radarQ.data.radar.past, ...radarQ.data.radar.nowcast] : [];
+  const frames = useMemo(() => radarQ.data ?? [], [radarQ.data]);
+
+  useEffect(() => {
+    if (frames.length > 0) setFrameIdx(frames.length - 1);
+  }, [frames.length]);
 
   useEffect(() => {
     if (!playing || frames.length === 0 || layer !== "radar") return;
@@ -82,22 +87,23 @@ export function WeatherMap({ center, layer }: Props) {
   // update radar overlay
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !radarQ.data) return;
+    if (!map) return;
     const apply = () => {
       ["radar-layer"].forEach((id) => { if (map.getLayer(id)) map.removeLayer(id); });
       ["radar-src"].forEach((id) => { if (map.getSource(id)) map.removeSource(id); });
-      if (layer !== "radar" || frames.length === 0) return;
+      if (layer !== "radar") return;
       const frame = frames[Math.min(frameIdx, frames.length - 1)];
       map.addSource("radar-src", {
         type: "raster",
-        tiles: [rainviewerTileUrl(radarQ.data.host, frame.path, { color: 4, smooth: 1, snow: 1, size: 256 })],
+        tiles: [dwdRadarTileUrl(frame?.time)],
         tileSize: 256,
+        attribution: "© Deutscher Wetterdienst",
       });
       map.addLayer({ id: "radar-layer", type: "raster", source: "radar-src", paint: { "raster-opacity": 0.7 } });
     };
     if (map.isStyleLoaded()) apply();
     else map.once("load", apply);
-  }, [layer, radarQ.data, frameIdx, frames]);
+  }, [layer, frameIdx, frames]);
 
   const currentFrame = frames[frameIdx];
 
@@ -118,13 +124,13 @@ export function WeatherMap({ center, layer }: Props) {
             className="min-w-0 accent-primary"
           />
           <div className="shrink-0 font-mono text-xs text-foreground" style={{ fontFamily: "var(--font-mono)" }}>
-            {new Date(currentFrame.time * 1000).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+            {new Date(currentFrame.time).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
           </div>
         </div>
       )}
       <div className="pointer-events-none absolute right-3 top-3 rounded-md border border-border bg-background/90 px-2 py-1 text-[10px] text-muted-foreground backdrop-blur">
         <Layers className="mr-1 inline h-3 w-3" />
-        Radar: RainViewer · Karte: OpenStreetMap
+        Radar: DWD · Karte: OpenStreetMap
       </div>
     </div>
   );

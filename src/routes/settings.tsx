@@ -86,7 +86,7 @@ function SettingsPage() {
         <ul className="space-y-2 text-xs text-muted-foreground">
           <li><strong className="text-foreground">Open-Meteo</strong> · Forecast, Modellvergleich, abgeleitete Werte. Kostenlos, ohne Key, freie nicht-kommerzielle Nutzung.</li>
           <li><strong className="text-foreground">Bright Sky / DWD Open Data</strong> · Stationsbeobachtungen und offizielle Warnungen für DACH.</li>
-          <li><strong className="text-foreground">RainViewer</strong> · Radar-Tiles für die Kartenansicht (nahezu global).</li>
+          <li><strong className="text-foreground">DWD Radar</strong> · Niederschlagsradar als WMS-Layer für Deutschland und angrenzende Bereiche.</li>
           <li><strong className="text-foreground">OpenStreetMap</strong> · Karten-Basislayer.</li>
         </ul>
       </DataCard>

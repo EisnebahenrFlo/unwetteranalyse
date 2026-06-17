@@ -2,11 +2,13 @@ import { DataCard } from "@/components/common/DataCard";
 import { InfoPopover } from "@/components/common/InfoPopover";
 import { WarnBadge } from "@/components/common/WarnBadge";
 import { ValueWithUnit } from "@/components/common/ValueWithUnit";
-import { Zap, CloudRain, Wind, Snowflake } from "lucide-react";
 import type { ForecastBundle, AlertSeverity } from "@/lib/weather/types";
 import { summarizeConvection, summarizeWinter } from "@/lib/weather/analysis/situation";
 import { formatHour } from "@/lib/weather/format";
 import { cn } from "@/lib/utils";
+import { MeteoconIcon } from "@/components/weather/MeteoconIcon";
+import { useLiveNow } from "@/hooks/use-live-now";
+import { liveHourly } from "@/lib/weather/live";
 
 /**
  * Gewitter- & Unwetter-Panel.
@@ -14,7 +16,8 @@ import { cn } from "@/lib/utils";
  * mit einer Einordnung nach DWD-orientierten Schwellen.
  */
 export function SevereWeatherPanel({ bundle }: { bundle: ForecastBundle }) {
-  const horizon = bundle.hourly.slice(0, 24);
+  const now = useLiveNow();
+  const horizon = liveHourly(bundle.hourly, now).slice(0, 24);
   const conv = summarizeConvection(horizon);
   const winter = summarizeWinter(horizon);
 
@@ -42,7 +45,7 @@ export function SevereWeatherPanel({ bundle }: { bundle: ForecastBundle }) {
     >
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Tile
-          icon={<Zap className="h-4 w-4" />}
+          icon={<MeteoconIcon name="thunderstorms-day-rain" className="h-5 w-5" label="Gewitter" />}
           label="CAPE max"
           value={conv.capeMax != null ? conv.capeMax.toFixed(0) : "—"}
           unit="J/kg"
@@ -54,7 +57,7 @@ export function SevereWeatherPanel({ bundle }: { bundle: ForecastBundle }) {
           }}
         />
         <Tile
-          icon={<CloudRain className="h-4 w-4" />}
+          icon={<MeteoconIcon name="rain" className="h-5 w-5" label="Regen" />}
           label="Regen max (1 h)"
           value={rainPeak ? rainPeak.v.toFixed(1) : "—"}
           unit="mm/h"
@@ -66,7 +69,7 @@ export function SevereWeatherPanel({ bundle }: { bundle: ForecastBundle }) {
           }}
         />
         <Tile
-          icon={<Wind className="h-4 w-4" />}
+          icon={<MeteoconIcon name="wind" className="h-5 w-5" label="Wind" />}
           label="Böen max"
           value={gustPeak ? (gustPeak.v * 3.6).toFixed(0) : "—"}
           unit="km/h"
@@ -78,7 +81,7 @@ export function SevereWeatherPanel({ bundle }: { bundle: ForecastBundle }) {
           }}
         />
         <Tile
-          icon={<Snowflake className="h-4 w-4" />}
+          icon={<MeteoconIcon name="snow" className="h-5 w-5" label="Schnee" />}
           label="Neuschnee 24 h"
           value={winter.snowfallSumCm > 0 ? winter.snowfallSumCm.toFixed(1) : "—"}
           unit="cm"
@@ -132,7 +135,7 @@ function Tile({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
           {icon}
-          <span>{label}</span>
+          <span className="truncate">{label}</span>
           <InfoPopover title={info.title}>{info.text}</InfoPopover>
         </div>
         {level !== "none" && <WarnBadge severity={level} />}

@@ -3,7 +3,7 @@
  * Werte stehen immer in SI-Einheiten (°C, m/s, mm, hPa, m), Umrechnung passiert nur im UI.
  */
 
-export type WeatherSource = "open-meteo" | "bright-sky" | "dwd" | "rainviewer";
+export type WeatherSource = "open-meteo" | "bright-sky" | "dwd";
 
 export interface DataMeta {
   source: WeatherSource;

@@ -7,10 +7,13 @@ import { NextChange } from "@/components/dashboard/NextChange";
 import { HourlyStrip } from "@/components/dashboard/HourlyStrip";
 import { DailyStrip } from "@/components/dashboard/DailyStrip";
 import { AlertsSummary } from "@/components/dashboard/AlertsSummary";
+import { SevereOverview } from "@/components/dashboard/SevereOverview";
 import { SevereWeatherPanel } from "@/components/dashboard/SevereWeatherPanel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/ErrorState";
 import { deriveAlertsFromForecast, derivedToAlert } from "@/lib/weather/analysis/situation";
+import { useLiveNow } from "@/hooks/use-live-now";
+import { liveDaily, liveHourly } from "@/lib/weather/live";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -24,6 +27,7 @@ export const Route = createFileRoute("/")({
 
 function Dashboard() {
   const point = useActivePoint();
+  const now = useLiveNow();
   const forecast = useQuery(forecastQuery(point));
   const bsCurrent = useQuery(brightSkyCurrentQuery(point));
   const bsAlerts = useQuery(brightSkyAlertsQuery(point));
@@ -33,7 +37,11 @@ function Dashboard() {
     return <ErrorState message={forecast.error?.message ?? "Forecast nicht verfügbar."} onRetry={() => forecast.refetch()} />;
   }
 
-  const bundle = forecast.data;
+  const bundle = {
+    ...forecast.data,
+    hourly: liveHourly(forecast.data.hourly, now),
+    daily: liveDaily(forecast.data.daily, now),
+  };
   const officialAlerts = bsAlerts.data ?? [];
   const derived = deriveAlertsFromForecast(bundle).map(derivedToAlert);
   const allAlerts = [...officialAlerts, ...derived];
@@ -52,6 +60,9 @@ function Dashboard() {
       </div>
       <div className="lg:col-span-12">
         <AlertsSummary alerts={allAlerts} />
+      </div>
+      <div className="lg:col-span-12">
+        <SevereOverview bundle={bundle} />
       </div>
       <div className="lg:col-span-12">
         <SevereWeatherPanel bundle={bundle} />

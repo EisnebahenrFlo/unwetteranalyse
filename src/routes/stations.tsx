@@ -8,6 +8,7 @@ import { formatTemp, formatWind, formatPressure, formatPrecip, formatRelative } 
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Radio } from "lucide-react";
+import { useLiveNow } from "@/hooks/use-live-now";
 
 export const Route = createFileRoute("/stations")({
   head: () => ({
@@ -23,6 +24,7 @@ function StationsPage() {
   const point = useActivePoint();
   const q = useQuery(brightSkyStationsQuery(point));
   const [settings] = useSettings();
+  useLiveNow();
 
   return (
     <div className="flex flex-col gap-3">
@@ -56,7 +58,7 @@ function StationsPage() {
             </thead>
             <tbody className="font-mono" style={{ fontFamily: "var(--font-mono)" }}>
               {q.data?.map((s) => (
-                <tr key={s.stationId} className="border-t border-border/50">
+                <tr key={`${s.stationId}-${s.observedAt}`} className="border-t border-border/50">
                   <td className="py-1.5 pr-3">
                     <div className="font-sans text-foreground">{s.stationName}</div>
                     <div className="font-sans text-[10px] text-muted-foreground">ID {s.stationId}</div>

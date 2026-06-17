@@ -43,12 +43,26 @@ export function formatDate(iso: string): string {
 }
 
 export function formatRelative(iso: string): string {
-  const diffMin = Math.round((new Date(iso).getTime() - Date.now()) / 60000);
+  return formatRelativeTo(iso, new Date());
+}
+
+export function formatRelativeTo(iso: string, now: Date): string {
+  const diffMin = Math.round((new Date(iso).getTime() - now.getTime()) / 60000);
   const rtf = new Intl.RelativeTimeFormat("de", { numeric: "auto" });
   if (Math.abs(diffMin) < 60) return rtf.format(diffMin, "minute");
   const diffH = Math.round(diffMin / 60);
   if (Math.abs(diffH) < 24) return rtf.format(diffH, "hour");
   return rtf.format(Math.round(diffH / 24), "day");
+}
+
+export function formatLiveHour(iso: string, now = new Date()): string {
+  const date = new Date(iso);
+  const diffHours = Math.round((date.getTime() - now.getTime()) / 3_600_000);
+  const time = formatHour(iso);
+  if (Math.abs(diffHours) <= 1 && date.getHours() === now.getHours()) return `jetzt · ${time}`;
+  if (diffHours > 0 && diffHours < 24) return `in ${diffHours} h · ${time}`;
+  if (diffHours < 0 && diffHours > -24) return `vor ${Math.abs(diffHours)} h · ${time}`;
+  return time;
 }
 
 export function windDirectionLabel(deg: number | undefined): string {

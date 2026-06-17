@@ -4,12 +4,15 @@ import { InfoPopover } from "@/components/common/InfoPopover";
 import { summarizeModelSevere } from "@/lib/weather/analysis/convection";
 import type { ModelSeries } from "@/lib/weather/types";
 import { cn } from "@/lib/utils";
+import { useLiveNow } from "@/hooks/use-live-now";
+import { liveHourly } from "@/lib/weather/live";
 
 /**
  * Zeigt für jedes Modell die wichtigsten Unwetter-Kennzahlen der nächsten 24 h.
  * Ziel: Schneller Überblick, welche Modelle ein Gewitter- oder Unwetter-Signal liefern.
  */
 export function ModelSeverityGrid({ series }: { series: ModelSeries[] }) {
+  const now = useLiveNow();
   return (
     <DataCard
       title="Gewitter & Unwetter pro Modell (24 h)"
@@ -33,7 +36,7 @@ export function ModelSeverityGrid({ series }: { series: ModelSeries[] }) {
           </thead>
           <tbody>
             {series.map((s) => {
-              const sum = summarizeModelSevere(s.hourly);
+              const sum = summarizeModelSevere(liveHourly(s.hourly, now));
               return (
                 <tr key={s.model} className="border-t border-border/50">
                   <td className="py-2 pr-3 font-medium">{s.label}</td>
