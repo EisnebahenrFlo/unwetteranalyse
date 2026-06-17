@@ -123,7 +123,7 @@ export function WeatherMap({ center, layer }: Props) {
             className="min-w-0 accent-primary"
           />
           <div className="shrink-0 font-mono text-xs text-foreground" style={{ fontFamily: "var(--font-mono)" }}>
-            {new Date(currentFrame.time * 1000).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+            {new Date(currentFrame.time).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
           </div>
         </div>
       )}
