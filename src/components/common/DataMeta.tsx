@@ -1,5 +1,6 @@
 import type { DataMeta as DataMetaT } from "@/lib/weather/types";
 import { formatRelative } from "@/lib/weather/format";
+import { useLiveNow } from "@/hooks/use-live-now";
 
 const SOURCE_LABEL: Record<DataMetaT["source"], string> = {
   "open-meteo": "Open-Meteo",
@@ -9,6 +10,7 @@ const SOURCE_LABEL: Record<DataMetaT["source"], string> = {
 };
 
 export function DataMeta({ meta }: { meta: DataMetaT }) {
+  useLiveNow();
   return (
     <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
       <span>Quelle: {SOURCE_LABEL[meta.source]}</span>

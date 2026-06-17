@@ -17,6 +17,7 @@ export function forecastQuery(point: GeoPoint) {
       return mapForecastBundle(raw, point);
     },
     staleTime: STALE,
+    refetchInterval: STALE,
   });
 }
 
@@ -32,6 +33,7 @@ export function brightSkyCurrentQuery(point: GeoPoint) {
       }
     },
     staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
   });
 }
 
@@ -47,6 +49,7 @@ export function brightSkyStationsQuery(point: GeoPoint) {
       }
     },
     staleTime: 10 * 60 * 1000,
+    refetchInterval: 10 * 60 * 1000,
   });
 }
 
@@ -62,6 +65,7 @@ export function brightSkyAlertsQuery(point: GeoPoint) {
       }
     },
     staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
   });
 }
 
@@ -82,6 +86,7 @@ export function modelComparisonQuery(point: GeoPoint) {
       return results;
     },
     staleTime: STALE,
+    refetchInterval: STALE,
   });
 }
 

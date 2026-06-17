@@ -87,7 +87,7 @@ export function WeatherMap({ center, layer }: Props) {
   // update radar overlay
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !radarQ.data) return;
+    if (!map) return;
     const apply = () => {
       ["radar-layer"].forEach((id) => { if (map.getLayer(id)) map.removeLayer(id); });
       ["radar-src"].forEach((id) => { if (map.getSource(id)) map.removeSource(id); });
