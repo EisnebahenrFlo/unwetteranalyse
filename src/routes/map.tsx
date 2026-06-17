@@ -25,7 +25,7 @@ function MapPage() {
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
         <div className="min-w-0">
           <h1 className="truncate text-lg font-semibold tracking-tight">Karte</h1>
-          <p className="truncate text-xs text-muted-foreground">Live-Radar (RainViewer, nahezu global) auf OSM-Basemap.</p>
+          <p className="truncate text-xs text-muted-foreground">Live-Radar vom DWD auf OSM-Basemap.</p>
         </div>
         <div className="flex shrink-0 gap-1">
           <Button size="sm" variant={layer === "radar" ? "default" : "outline"} onClick={() => setLayer("radar")}>Radar</Button>
@@ -34,7 +34,7 @@ function MapPage() {
       </div>
       <WeatherMap center={point} layer={layer} />
       <p className="text-[11px] text-muted-foreground">
-        Niederschlags- und Modell-Overlays werden in Stufe 2 ergänzt. DWD-Warnpolygone benötigen die separate DWD CAP-Schnittstelle und folgen.
+        DWD-Radar deckt Deutschland und angrenzende Bereiche ab. Warnpolygone benötigen die separate DWD CAP-Schnittstelle und folgen.
       </p>
     </div>
   );

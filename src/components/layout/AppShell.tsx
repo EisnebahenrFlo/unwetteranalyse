@@ -56,7 +56,7 @@ function SideNav() {
         ))}
       </nav>
       <div className="absolute bottom-0 left-0 right-0 px-4 py-3 text-[10px] leading-relaxed text-muted-foreground">
-        Daten: Open-Meteo, Bright Sky / DWD, RainViewer. Privat, ohne Login.
+        Daten: Open-Meteo, Bright Sky / DWD, DWD Radar. Privat, ohne Login.
       </div>
     </aside>
   );
