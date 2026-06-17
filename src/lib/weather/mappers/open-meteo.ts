@@ -103,7 +103,7 @@ export function mapForecastBundle(
     daily: mapDaily(raw.daily),
     meta: {
       source: "open-meteo",
-      updatedAt: raw.current?.time ?? new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       resolutionKm: 11,
       uncertainty: "Best-Match Modell-Mix von Open-Meteo, Auflösung variiert je nach Region.",
     },
