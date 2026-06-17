@@ -6,7 +6,6 @@ const SOURCE_LABEL: Record<DataMetaT["source"], string> = {
   "open-meteo": "Open-Meteo",
   "bright-sky": "Bright Sky / DWD",
   "dwd": "DWD-Schwellen",
-  "rainviewer": "RainViewer",
 };
 
 export function DataMeta({ meta }: { meta: DataMetaT }) {
