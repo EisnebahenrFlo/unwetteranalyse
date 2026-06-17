@@ -21,9 +21,11 @@ export function SevereOverview({ bundle }: { bundle: ForecastBundle }) {
   const hourly = liveHourly(bundle.hourly, now);
   const summary = summarizeModelSevere(hourly, 24);
   const timeline = severeTimeline(hourly, 24);
-  const peak = timeline.reduce((best, item) => item.score.value > best.score.value ? item : best, timeline[0] ?? {
-    time: now.toISOString(), score: severeScore(hourly[0] ?? bundle.hourly[0]), thunderProb: 0, hail: "none", downburst: "none",
-  });
+  const firstPoint = hourly[0] ?? bundle.hourly[0];
+  const fallbackPeak = firstPoint
+    ? { time: firstPoint.time, score: severeScore(firstPoint), thunderProb: 0, hail: "none" as const, downburst: "none" as const }
+    : { time: now.toISOString(), score: { value: 0, level: "none" as const, reasons: [] }, thunderProb: 0, hail: "none" as const, downburst: "none" as const };
+  const peak = timeline.reduce((best, item) => item.score.value > best.score.value ? item : best, timeline[0] ?? fallbackPeak);
   const reasons = peak.score.reasons.slice(0, 3);
 
   return (

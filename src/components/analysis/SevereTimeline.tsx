@@ -3,13 +3,16 @@ import { severeTimeline } from "@/lib/weather/analysis/convection";
 import type { HourlyPoint } from "@/lib/weather/types";
 import { formatHour } from "@/lib/weather/format";
 import { cn } from "@/lib/utils";
+import { useLiveNow } from "@/hooks/use-live-now";
+import { isCurrentHour, liveHourly } from "@/lib/weather/live";
 
 /**
  * Stündliche Severity-Heatmap für die nächsten 24 h.
  * Eine Spalte pro Stunde, Farbe = kombiniertes Unwetterrisiko.
  */
 export function SevereTimeline({ hourly }: { hourly: HourlyPoint[] }) {
-  const data = severeTimeline(hourly, 24);
+  const now = useLiveNow();
+  const data = severeTimeline(liveHourly(hourly, now), 24);
   return (
     <DataCard
       title="Unwetter-Timeline (24 h)"
@@ -18,7 +21,7 @@ export function SevereTimeline({ hourly }: { hourly: HourlyPoint[] }) {
       <div className="overflow-x-auto">
         <div className="flex min-w-[640px] items-end gap-1">
           {data.map((d) => (
-            <div key={d.time} className="flex flex-1 flex-col items-center gap-1">
+            <div key={d.time} className={cn("flex flex-1 flex-col items-center gap-1 rounded-sm px-0.5", isCurrentHour(d.time, now) && "bg-accent")}> 
               <div
                 className={cn(
                   "w-full rounded-sm transition-colors",

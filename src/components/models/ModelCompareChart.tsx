@@ -1,6 +1,7 @@
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend } from "recharts";
 import type { ModelSeries } from "@/lib/weather/types";
 import { formatHour } from "@/lib/weather/format";
+import { useLiveNow } from "@/hooks/use-live-now";
 
 const COLORS = ["#2b6cb0", "#dd6b20", "#2f855a", "#805ad5", "#c53030", "#0987a0"];
 
@@ -11,7 +12,11 @@ interface Props {
 }
 
 export function ModelCompareChart({ series, metric, unitLabel }: Props) {
-  const all = series.flatMap((s) => s.hourly.map((h) => h.time));
+  const now = useLiveNow();
+  const cutoff = new Date(now);
+  cutoff.setMinutes(0, 0, 0);
+  const cutoffMs = cutoff.getTime();
+  const all = series.flatMap((s) => s.hourly.map((h) => h.time).filter((time) => new Date(time).getTime() >= cutoffMs));
   const uniqueTimes = Array.from(new Set(all)).sort();
   const data = uniqueTimes.slice(0, 72).map((t) => {
     const row: Record<string, number | string> = { time: t };
