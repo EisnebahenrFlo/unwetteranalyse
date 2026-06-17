@@ -58,7 +58,7 @@ function StationsPage() {
             </thead>
             <tbody className="font-mono" style={{ fontFamily: "var(--font-mono)" }}>
               {q.data?.map((s) => (
-                <tr key={s.stationId} className="border-t border-border/50">
+                <tr key={`${s.stationId}-${s.observedAt}`} className="border-t border-border/50">
                   <td className="py-1.5 pr-3">
                     <div className="font-sans text-foreground">{s.stationName}</div>
                     <div className="font-sans text-[10px] text-muted-foreground">ID {s.stationId}</div>
