@@ -10,6 +10,8 @@ import { formatHour, formatRelative } from "@/lib/weather/format";
 import { deriveAlertsFromForecast, derivedToAlert } from "@/lib/weather/analysis/situation";
 import { severityWeight } from "@/lib/weather/thresholds/dwd";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLiveNow } from "@/hooks/use-live-now";
+import { liveHourly } from "@/lib/weather/live";
 
 export const Route = createFileRoute("/alerts")({
   head: () => ({
@@ -23,10 +25,11 @@ export const Route = createFileRoute("/alerts")({
 
 function AlertsPage() {
   const point = useActivePoint();
+  useLiveNow();
   const official = useQuery(brightSkyAlertsQuery(point));
   const forecast = useQuery(forecastQuery(point));
   const derived = forecast.data
-    ? deriveAlertsFromForecast(forecast.data).map((d) => ({ ...derivedToAlert(d), value: d.value, rule: d.rule }))
+    ? deriveAlertsFromForecast({ ...forecast.data, hourly: liveHourly(forecast.data.hourly, new Date()) }).map((d) => ({ ...derivedToAlert(d), value: d.value, rule: d.rule }))
     : [];
 
   return (

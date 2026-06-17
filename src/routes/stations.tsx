@@ -8,6 +8,7 @@ import { formatTemp, formatWind, formatPressure, formatPrecip, formatRelative } 
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Radio } from "lucide-react";
+import { useLiveNow } from "@/hooks/use-live-now";
 
 export const Route = createFileRoute("/stations")({
   head: () => ({
@@ -23,6 +24,7 @@ function StationsPage() {
   const point = useActivePoint();
   const q = useQuery(brightSkyStationsQuery(point));
   const [settings] = useSettings();
+  useLiveNow();
 
   return (
     <div className="flex flex-col gap-3">
