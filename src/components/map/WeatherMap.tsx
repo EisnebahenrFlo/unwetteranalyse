@@ -97,6 +97,7 @@ export function WeatherMap({ center, layer }: Props) {
         type: "raster",
         tiles: [dwdRadarTileUrl(frame?.time)],
         tileSize: 256,
+        attribution: "© Deutscher Wetterdienst",
       });
       map.addLayer({ id: "radar-layer", type: "raster", source: "radar-src", paint: { "raster-opacity": 0.7 } });
     };
