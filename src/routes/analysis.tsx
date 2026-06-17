@@ -16,6 +16,8 @@ import { SevereTimeline } from "@/components/analysis/SevereTimeline";
 import { useSettings } from "@/hooks/use-settings";
 import { formatTemp } from "@/lib/weather/format";
 import type { AlertSeverity, HourlyPoint } from "@/lib/weather/types";
+import { useLiveNow } from "@/hooks/use-live-now";
+import { liveHourly } from "@/lib/weather/live";
 
 export const Route = createFileRoute("/analysis")({
   head: () => ({
@@ -31,11 +33,12 @@ function AnalysisPage() {
   const point = useActivePoint();
   const q = useQuery(forecastQuery(point));
   const [settings] = useSettings();
+  const liveNow = useLiveNow();
 
   if (q.isLoading) return <Skeleton className="h-72 w-full" />;
   if (!q.data) return null;
 
-  const hourly = q.data.hourly;
+  const hourly = liveHourly(q.data.hourly, liveNow);
   const conv = summarizeConvection(hourly);
   const winter = summarizeWinter(hourly);
   const sum = summarizeModelSevere(hourly);
