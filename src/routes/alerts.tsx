@@ -25,11 +25,11 @@ export const Route = createFileRoute("/alerts")({
 
 function AlertsPage() {
   const point = useActivePoint();
-  useLiveNow();
+  const now = useLiveNow();
   const official = useQuery(brightSkyAlertsQuery(point));
   const forecast = useQuery(forecastQuery(point));
   const derived = forecast.data
-    ? deriveAlertsFromForecast({ ...forecast.data, hourly: liveHourly(forecast.data.hourly, new Date()) }).map((d) => ({ ...derivedToAlert(d), value: d.value, rule: d.rule }))
+    ? deriveAlertsFromForecast({ ...forecast.data, hourly: liveHourly(forecast.data.hourly, now) }).map((d) => ({ ...derivedToAlert(d), value: d.value, rule: d.rule }))
     : [];
 
   return (
