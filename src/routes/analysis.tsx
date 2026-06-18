@@ -13,6 +13,7 @@ import {
   summarizeModelSevere,
 } from "@/lib/weather/analysis/convection";
 import { SevereTimeline } from "@/components/analysis/SevereTimeline";
+import { NowcastDecisionCard } from "@/components/analysis/NowcastDecisionCard";
 import { useSettings } from "@/hooks/use-settings";
 import { formatTemp } from "@/lib/weather/format";
 import type { AlertSeverity, HourlyPoint } from "@/lib/weather/types";
@@ -65,7 +66,8 @@ function AnalysisPage() {
         </p>
       </div>
 
-      {/* Severity-Score oben prominent */}
+      <NowcastDecisionCard hourly={hourly} now={liveNow} />
+
       <DataCard
         title="Unwetter-Score (24 h)"
         subtitle="Kombinierte Einordnung aus Gewitter, Hagel, Sturmböen, Starkregen."

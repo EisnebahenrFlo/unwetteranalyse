@@ -27,7 +27,7 @@ export function SevereTimeline({ hourly }: { hourly: HourlyPoint[] }) {
       subtitle="Pro Stunde: kombinierter Score aus Gewitter, Hagel, Böen und Starkregen."
     >
       <div className="overflow-x-auto">
-        <div className="grid min-w-[760px] grid-cols-24 gap-1">
+        <div className="grid min-w-[760px] gap-1 [grid-template-columns:repeat(24,minmax(0,1fr))]">
           {data.map((d) => (
             <div key={d.time} className={cn("flex min-h-36 flex-col justify-end gap-1 rounded-md border border-transparent px-1 py-1.5", isCurrentHour(d.time, now) && "border-primary bg-accent")}> 
               <div className="text-center font-mono text-[10px] font-semibold" style={{ fontFamily: "var(--font-mono)" }}>{d.score.value}</div>
