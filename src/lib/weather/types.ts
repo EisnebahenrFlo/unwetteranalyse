@@ -90,7 +90,9 @@ export interface ForecastBundle {
 
 export type WeatherModelId =
   | "icon_d2" | "icon_eu" | "icon_seamless" | "ecmwf_ifs025"
-  | "gfs_seamless" | "meteofrance_arome_france";
+  | "ecmwf_aifs025" | "gfs_seamless" | "meteofrance_arome_france"
+  | "meteofrance_arpege_europe" | "knmi_seamless" | "dmi_seamless"
+  | "gem_seamless" | "ukmo_seamless";
 
 export interface ModelSeries {
   model: WeatherModelId;

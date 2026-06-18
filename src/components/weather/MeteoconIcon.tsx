@@ -25,7 +25,7 @@ const ICONS: Record<MeteoconName, string> = {
 
 export function MeteoconIcon({ code, name, label, className }: { code?: number; name?: MeteoconName; label?: string; className?: string }) {
   const iconName = name ?? meteoconNameForCode(code);
-  return <img src={ICONS[iconName]} alt={label ?? iconName} className={cn("h-8 w-8 shrink-0", className)} loading="lazy" />;
+  return <img src={ICONS[iconName]} alt={label ?? iconName} className={cn("h-10 w-10 shrink-0", className)} loading="lazy" />;
 }
 
 export function meteoconNameForCode(code: number | undefined): MeteoconName {
