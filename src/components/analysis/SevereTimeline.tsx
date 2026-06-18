@@ -6,6 +6,14 @@ import { cn } from "@/lib/utils";
 import { useLiveNow } from "@/hooks/use-live-now";
 import { isCurrentHour, liveHourly } from "@/lib/weather/live";
 
+const LEVEL_CLASS = {
+  none: "bg-muted",
+  minor: "bg-warn-minor",
+  moderate: "bg-warn-moderate",
+  severe: "bg-warn-severe",
+  extreme: "bg-warn-extreme",
+} as const;
+
 /**
  * Stündliche Severity-Heatmap für die nächsten 24 h.
  * Eine Spalte pro Stunde, Farbe = kombiniertes Unwetterrisiko.
@@ -19,22 +27,22 @@ export function SevereTimeline({ hourly }: { hourly: HourlyPoint[] }) {
       subtitle="Pro Stunde: kombinierter Score aus Gewitter, Hagel, Böen und Starkregen."
     >
       <div className="overflow-x-auto">
-        <div className="flex min-w-[640px] items-end gap-1">
+        <div className="grid min-w-[760px] grid-cols-24 gap-1">
           {data.map((d) => (
-            <div key={d.time} className={cn("flex flex-1 flex-col items-center gap-1 rounded-sm px-0.5", isCurrentHour(d.time, now) && "bg-accent")}> 
+            <div key={d.time} className={cn("flex min-h-36 flex-col justify-end gap-1 rounded-md border border-transparent px-1 py-1.5", isCurrentHour(d.time, now) && "border-primary bg-accent")}> 
+              <div className="text-center font-mono text-[10px] font-semibold" style={{ fontFamily: "var(--font-mono)" }}>{d.score.value}</div>
               <div
                 className={cn(
                   "w-full rounded-sm transition-colors",
-                  d.score.level === "severe" ? "bg-warn-severe" :
-                  d.score.level === "moderate" ? "bg-warn-moderate" :
-                  d.score.level === "minor" ? "bg-warn-minor" : "bg-muted",
+                  LEVEL_CLASS[d.score.level],
                 )}
-                style={{ height: `${Math.max(6, d.score.value)}px` }}
+                style={{ height: `${Math.max(8, d.score.value)}px` }}
                 title={`${formatHour(d.time)} · ${d.score.value} · ${d.score.reasons.join(", ") || "ruhig"}`}
               />
-              <span className="font-mono text-[9px] text-muted-foreground" style={{ fontFamily: "var(--font-mono)" }}>
+              <span className="font-mono text-[10px] text-muted-foreground" style={{ fontFamily: "var(--font-mono)" }}>
                 {new Date(d.time).getHours().toString().padStart(2, "0")}
               </span>
+              <span className="font-mono text-[9px] text-muted-foreground" style={{ fontFamily: "var(--font-mono)" }}>{Math.round(d.thunderProb * 100)}%</span>
             </div>
           ))}
         </div>
@@ -44,6 +52,7 @@ export function SevereTimeline({ hourly }: { hourly: HourlyPoint[] }) {
         <Legend color="bg-warn-minor" label="markant" />
         <Legend color="bg-warn-moderate" label="Unwetter" />
         <Legend color="bg-warn-severe" label="schweres Unwetter" />
+        <Legend color="bg-warn-extreme" label="extrem" />
       </div>
     </DataCard>
   );
