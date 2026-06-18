@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useActivePoint } from "@/components/layout/LocationSwitcher";
 import { modelComparisonQuery } from "@/lib/weather/queries";
 import { DataCard } from "@/components/common/DataCard";
-import { ModelCompareChart } from "@/components/models/ModelCompareChart";
+import { ModelCompareChart, type ModelMetric } from "@/components/models/ModelCompareChart";
 import { ModelSeverityGrid } from "@/components/models/ModelSeverityGrid";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,18 +22,20 @@ export const Route = createFileRoute("/models")({
   component: ModelsPage,
 });
 
-type Metric = "temperatureC" | "precipitationMm" | "windGustMs";
-
-const METRICS: Record<Metric, { label: string; unit: string }> = {
+const METRICS: Record<ModelMetric, { label: string; unit: string }> = {
   temperatureC: { label: "Temperatur", unit: "°C" },
+  dewPointC: { label: "Taupunkt", unit: "°C" },
   precipitationMm: { label: "Niederschlag", unit: "mm/h" },
+  precipitationProbability: { label: "Regenchance", unit: "%" },
   windGustMs: { label: "Böen", unit: "m/s" },
+  cape: { label: "CAPE", unit: "J/kg" },
+  liftedIndex: { label: "Lifted Index", unit: "K" },
 };
 
 function ModelsPage() {
   const point = useActivePoint();
   const q = useQuery(modelComparisonQuery(point));
-  const [metric, setMetric] = useState<Metric>("temperatureC");
+  const [metric, setMetric] = useState<ModelMetric>("temperatureC");
 
   return (
     <div className="flex flex-col gap-3">
@@ -45,7 +47,7 @@ function ModelsPage() {
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-1">
-          {(Object.keys(METRICS) as Metric[]).map((m) => (
+          {(Object.keys(METRICS) as ModelMetric[]).map((m) => (
             <Button key={m} size="sm" variant={metric === m ? "default" : "outline"} onClick={() => setMetric(m)}>
               {METRICS[m].label}
             </Button>

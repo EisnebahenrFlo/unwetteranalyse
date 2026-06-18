@@ -76,7 +76,7 @@ export function modelComparisonQuery(point: GeoPoint) {
       const results = await Promise.all(WEATHER_MODELS.map(async (info) => {
         try {
           const raw = await fetchOpenMeteoSingleModel({
-            lat: point.lat, lon: point.lon, model: info.id, forecastDays: 3,
+              lat: point.lat, lon: point.lon, model: info.id, forecastDays: 5,
           });
           return mapModelSeries(raw, info.id, info.label, info.resolutionKm);
         } catch {

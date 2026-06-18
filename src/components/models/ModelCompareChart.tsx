@@ -4,10 +4,11 @@ import { formatHour } from "@/lib/weather/format";
 import { useLiveNow } from "@/hooks/use-live-now";
 
 const COLORS = ["#2b6cb0", "#dd6b20", "#2f855a", "#805ad5", "#c53030", "#0987a0"];
+export type ModelMetric = "temperatureC" | "precipitationMm" | "precipitationProbability" | "windGustMs" | "dewPointC" | "cape" | "liftedIndex";
 
 interface Props {
   series: ModelSeries[];
-  metric: "temperatureC" | "precipitationMm" | "windGustMs";
+  metric: ModelMetric;
   unitLabel: string;
 }
 
