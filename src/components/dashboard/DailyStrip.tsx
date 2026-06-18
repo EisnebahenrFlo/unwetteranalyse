@@ -16,9 +16,9 @@ export function DailyStrip({ bundle }: { bundle: ForecastBundle }) {
           const left = ((d.tempMinC - min) / (max - min || 1)) * 100;
           const width = ((d.tempMaxC - d.tempMinC) / (max - min || 1)) * 100;
           return (
-            <div key={d.date} className="grid grid-cols-[108px_minmax(0,1fr)_70px] items-center gap-3 border-b border-border/50 py-2 last:border-0">
+            <div key={d.date} className="grid grid-cols-[132px_minmax(0,1fr)_70px] items-center gap-3 border-b border-border/50 py-2 last:border-0">
               <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 text-sm">
-                <MeteoconIcon code={d.weatherCode} className="h-7 w-7" label={weatherCodeLabel(d.weatherCode)} />
+                <MeteoconIcon code={d.weatherCode} className="h-10 w-10" label={weatherCodeLabel(d.weatherCode)} />
                 <div className="min-w-0">
                 <div className="font-medium text-foreground">{formatDate(d.date)}</div>
                 <div className="text-[10px] text-muted-foreground">{weatherCodeLabel(d.weatherCode)}</div>
