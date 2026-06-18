@@ -22,7 +22,7 @@ export function ModelSeverityGrid({ series }: { series: ModelSeries[] }) {
       </InfoPopover>}
     >
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] text-sm">
+          <table className="w-full min-w-[860px] text-sm">
           <thead>
             <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground">
               <th className="py-1.5 pr-3">Modell</th>
@@ -30,13 +30,18 @@ export function ModelSeverityGrid({ series }: { series: ModelSeries[] }) {
               <th className="py-1.5 pr-3">CAPE max</th>
               <th className="py-1.5 pr-3">LI min</th>
               <th className="py-1.5 pr-3">Böen max</th>
+              <th className="py-1.5 pr-3">Schwüle</th>
+              <th className="py-1.5 pr-3">0 °C min</th>
               <th className="py-1.5 pr-3">Regen max</th>
               <th className="py-1.5 pr-3">Gewitter</th>
             </tr>
           </thead>
           <tbody>
             {series.map((s) => {
-              const sum = summarizeModelSevere(liveHourly(s.hourly, now));
+              const live = liveHourly(s.hourly, now);
+              const sum = summarizeModelSevere(live);
+              const dewMax = Math.max(0, ...live.slice(0, 24).map((p) => p.dewPointC ?? 0));
+              const freezingMin = Math.min(...live.slice(0, 24).map((p) => p.freezingLevelM ?? Number.POSITIVE_INFINITY));
               return (
                 <tr key={s.model} className="border-t border-border/50">
                   <td className="py-2 pr-3 font-medium">{s.label}</td>
@@ -54,6 +59,12 @@ export function ModelSeverityGrid({ series }: { series: ModelSeries[] }) {
                   </td>
                   <td className="py-2 pr-3 font-mono" style={{ fontFamily: "var(--font-mono)" }}>
                     {(sum.gustMaxMs * 3.6).toFixed(0)} km/h
+                  </td>
+                  <td className="py-2 pr-3 font-mono" style={{ fontFamily: "var(--font-mono)" }}>
+                    {dewMax > 0 ? `${dewMax.toFixed(1)} °C` : "—"}
+                  </td>
+                  <td className="py-2 pr-3 font-mono" style={{ fontFamily: "var(--font-mono)" }}>
+                    {Number.isFinite(freezingMin) ? `${Math.round(freezingMin)} m` : "—"}
                   </td>
                   <td className="py-2 pr-3 font-mono" style={{ fontFamily: "var(--font-mono)" }}>
                     {sum.precipMaxMm.toFixed(1)} mm
