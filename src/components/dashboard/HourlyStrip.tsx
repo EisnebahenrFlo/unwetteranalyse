@@ -26,7 +26,7 @@ export function HourlyStrip({ bundle }: { bundle: ForecastBundle }) {
                   <div>{hourOffset === 0 ? "jetzt" : `+${hourOffset} h`}</div>
                   <div>{formatHour(h.time)}</div>
                 </div>
-                <MeteoconIcon code={h.weatherCode} className="h-7 w-7" label="Wetter" />
+                <MeteoconIcon code={h.weatherCode} className="h-10 w-10" label="Wetter" />
                 <div className="font-mono text-sm font-semibold" style={{ fontFamily: "var(--font-mono)" }}>
                   {formatTemp(h.temperatureC, settings.tempUnit).split(" ")[0]}°
                 </div>

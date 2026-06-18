@@ -23,7 +23,7 @@ export function CurrentConditions({ current, meta, fallbackLabel }: { current?: 
     >
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,2fr)]">
         <div className="flex min-w-0 items-center gap-3">
-          <MeteoconIcon code={current.weatherCode} label={weatherCodeLabel(current.weatherCode)} className="h-14 w-14 md:h-16 md:w-16" />
+          <MeteoconIcon code={current.weatherCode} label={weatherCodeLabel(current.weatherCode)} className="h-20 w-20 md:h-24 md:w-24" />
           <ValueWithUnit
             value={formatTemp(current.temperatureC, settings.tempUnit).split(" ")[0]}
             unit={`°${settings.tempUnit}`}

@@ -28,8 +28,9 @@ export function WeatherMap({ center, layer }: Props) {
   // init
   useEffect(() => {
     if (!ref.current || mapRef.current) return;
+    const container = ref.current;
     const map = new maplibregl.Map({
-      container: ref.current,
+      container,
       style: {
         version: 8,
         glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
@@ -57,11 +58,11 @@ export function WeatherMap({ center, layer }: Props) {
     });
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), "top-right");
     mapRef.current = map;
-    // Falls Container erst spät seine Größe bekommt (z. B. Tab-Wechsel),
-    // ein Resize nachreichen, sonst bleibt die Karte unsichtbar.
+    map.once("load", () => map.resize());
+    window.setTimeout(() => map.resize(), 250);
     const ro = new ResizeObserver(() => map.resize());
-    ro.observe(ref.current);
-    return () => { map.remove(); mapRef.current = null; };
+    ro.observe(container);
+    return () => { ro.disconnect(); map.remove(); mapRef.current = null; };
   }, []);
 
   // recenter when active point changes
@@ -108,8 +109,8 @@ export function WeatherMap({ center, layer }: Props) {
   const currentFrame = frames[frameIdx];
 
   return (
-    <div className="relative h-[60vh] min-h-[400px] w-full overflow-hidden rounded-lg border border-border">
-      <div ref={ref} className="absolute inset-0" />
+    <div className="relative h-[62vh] min-h-[420px] w-full overflow-hidden rounded-lg border border-border bg-muted md:h-[68vh]">
+      <div ref={ref} className="h-full w-full" />
       {layer === "radar" && currentFrame && (
         <div className="absolute bottom-3 left-3 right-3 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-border bg-background/90 px-3 py-2 backdrop-blur">
           <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setPlaying((p) => !p)}>

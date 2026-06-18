@@ -8,6 +8,7 @@ import { HourlyStrip } from "@/components/dashboard/HourlyStrip";
 import { DailyStrip } from "@/components/dashboard/DailyStrip";
 import { AlertsSummary } from "@/components/dashboard/AlertsSummary";
 import { SevereOverview } from "@/components/dashboard/SevereOverview";
+import { NowcastPanel } from "@/components/dashboard/NowcastPanel";
 import { SevereWeatherPanel } from "@/components/dashboard/SevereWeatherPanel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/ErrorState";
@@ -60,6 +61,9 @@ function Dashboard() {
       </div>
       <div className="lg:col-span-12">
         <AlertsSummary alerts={allAlerts} />
+      </div>
+      <div className="lg:col-span-12">
+        <NowcastPanel bundle={bundle} />
       </div>
       <div className="lg:col-span-12">
         <SevereOverview bundle={bundle} />

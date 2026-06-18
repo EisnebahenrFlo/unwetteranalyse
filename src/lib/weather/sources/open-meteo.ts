@@ -66,9 +66,12 @@ export async function fetchOpenMeteoSingleModel(input: {
   url.searchParams.set("wind_speed_unit", "ms");
   url.searchParams.set("hourly", [
     "temperature_2m","precipitation","precipitation_probability",
-    "wind_speed_10m","wind_gusts_10m",
+    "wind_speed_10m","wind_gusts_10m","wind_direction_10m",
     "cape","lifted_index","convective_inhibition",
     "dew_point_2m","weather_code","snowfall","freezing_level_height",
+    "relative_humidity_2m","pressure_msl","cloud_cover",
+    "wind_speed_80m","wind_speed_180m","wind_direction_80m","wind_direction_180m",
+    "boundary_layer_height","visibility","uv_index",
   ].join(","));
   url.searchParams.set("forecast_days", String(input.forecastDays ?? 3));
   url.searchParams.set("models", input.model);
