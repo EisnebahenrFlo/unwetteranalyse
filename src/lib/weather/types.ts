@@ -85,7 +85,15 @@ export interface ForecastBundle {
   current?: CurrentConditions;
   hourly: HourlyPoint[];
   daily: DailyPoint[];
+  minutely?: MinutelyPoint[];
   meta: DataMeta;
+}
+
+export interface MinutelyPoint {
+  time: string;
+  precipitationMm?: number;
+  precipitationProbability?: number;
+  weatherCode?: number;
 }
 
 export type WeatherModelId =

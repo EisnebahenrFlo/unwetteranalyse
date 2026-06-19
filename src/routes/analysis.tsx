@@ -10,15 +10,16 @@ import { WarnBadge } from "@/components/common/WarnBadge";
 import { summarizeConvection, summarizeWinter } from "@/lib/weather/analysis/situation";
 import {
   thunderProbability, hailRisk, downburstRisk, lowLevelShearMs, sultriness,
-  summarizeModelSevere,
+  summarizeModelSevere, severeTimeline,
 } from "@/lib/weather/analysis/convection";
 import { SevereTimeline } from "@/components/analysis/SevereTimeline";
 import { NowcastDecisionCard } from "@/components/analysis/NowcastDecisionCard";
 import { useSettings } from "@/hooks/use-settings";
-import { formatTemp } from "@/lib/weather/format";
+import { formatTemp, formatHour } from "@/lib/weather/format";
 import type { AlertSeverity, HourlyPoint } from "@/lib/weather/types";
 import { useLiveNow } from "@/hooks/use-live-now";
 import { liveHourly } from "@/lib/weather/live";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/analysis")({
   head: () => ({
@@ -42,7 +43,8 @@ function AnalysisPage() {
   const hourly = liveHourly(q.data.hourly, liveNow);
   const conv = summarizeConvection(hourly);
   const winter = summarizeWinter(hourly);
-  const sum = summarizeModelSevere(hourly);
+  const sum6h = summarizeModelSevere(hourly, 6);
+  const sum24h = summarizeModelSevere(hourly, 24);
   const now = hourly[0];
   const spread = now?.dewPointC != null ? now.temperatureC - now.dewPointC : null;
 
@@ -56,35 +58,69 @@ function AnalysisPage() {
 
   const shearNow = lowLevelShearMs(now);
   const sult = sultriness(now);
+  const tl24 = severeTimeline(hourly, 24);
+  const activeHours24 = tl24.filter((h) => h.score.level !== "none").length;
+  const firstSignal = tl24.find((h) => h.score.level !== "none");
 
   return (
     <div className="flex flex-col gap-3 md:gap-4">
-      <div>
-        <h1 className="text-lg font-semibold tracking-tight">Analyse</h1>
-        <p className="text-xs text-muted-foreground">
-          Abgeleitete Parameter und Unwetter-Einordnung für die nächsten 24 Stunden.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Unwetter-Analyse</h1>
+          <p className="text-xs text-muted-foreground">
+            Drei Zeithorizonte: 0–2 h Nowcast, 0–6 h Kurzfrist, 0–24 h Tagesausblick.
+          </p>
+        </div>
+        <div className="flex gap-2 text-xs">
+          <HorizonChip label="0–2 h" level={"none"} note="Nowcast" />
+          <HorizonChip label="0–6 h" level={sum6h.level} note={`Score ${sum6h.worstScore}`} />
+          <HorizonChip label="0–24 h" level={sum24h.level} note={`Score ${sum24h.worstScore}`} />
+        </div>
       </div>
 
-      <NowcastDecisionCard hourly={hourly} now={liveNow} />
+      {/* 0 – 2 h */}
+      <NowcastDecisionCard hourly={q.data.hourly} minutely={q.data.minutely} now={liveNow} />
 
+      {/* 0 – 6 h Kurzfrist */}
       <DataCard
-        title="Unwetter-Score (24 h)"
+        title="Kurzfrist 0–6 Stunden"
+        subtitle="Peak-Werte aus dem stündlichen Lauf für die nächsten sechs Stunden."
+        meta={q.data.meta}
+      >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[auto_minmax(0,1fr)]">
+          <div className="flex items-center gap-3">
+            <div className="font-mono text-5xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-mono)" }}>
+              {sum6h.worstScore}
+            </div>
+            {sum6h.level !== "none" && <WarnBadge severity={sum6h.level} />}
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+            <KV label="Gewitter peak" value={`${Math.round(sum6h.thunderProbMax * 100)} %`} />
+            <KV label="CAPE max" value={sum6h.capeMax != null ? `${sum6h.capeMax.toFixed(0)} J/kg` : "—"} />
+            <KV label="Regen peak" value={`${sum6h.precipMaxMm.toFixed(1)} mm/h`} />
+            <KV label="Böen max" value={`${(sum6h.gustMaxMs * 3.6).toFixed(0)} km/h`} />
+          </div>
+        </div>
+      </DataCard>
+
+      {/* 0 – 24 h Score */}
+      <DataCard
+        title="Tagesausblick 0–24 Stunden"
         subtitle="Kombinierte Einordnung aus Gewitter, Hagel, Sturmböen, Starkregen."
         meta={q.data.meta}
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[auto_minmax(0,1fr)]">
           <div className="flex items-center gap-3">
             <div className="font-mono text-5xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-mono)" }}>
-              {sum.worstScore}
+              {sum24h.worstScore}
             </div>
-            {sum.level !== "none" && <WarnBadge severity={sum.level} />}
+            {sum24h.level !== "none" && <WarnBadge severity={sum24h.level} />}
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
-            <KV label="Gewitter peak" value={`${Math.round(sum.thunderProbMax * 100)} %`} />
-            <KV label="CAPE max" value={sum.capeMax != null ? `${sum.capeMax.toFixed(0)} J/kg` : "—"} />
-            <KV label="LI min" value={sum.liMin != null ? sum.liMin.toFixed(1) : "—"} />
-            <KV label="Böen max" value={`${(sum.gustMaxMs * 3.6).toFixed(0)} km/h`} />
+            <KV label="Aktive Stunden" value={`${activeHours24} / 24`} />
+            <KV label="Erstes Signal" value={firstSignal ? formatHour(firstSignal.time) : "—"} />
+            <KV label="LI min" value={sum24h.liMin != null ? sum24h.liMin.toFixed(1) : "—"} />
+            <KV label="Regen Σ Peak" value={`${sum24h.precipMaxMm.toFixed(1)} mm/h`} />
           </div>
         </div>
       </DataCard>
@@ -137,13 +173,13 @@ function AnalysisPage() {
         <ParamCard
           title="Starkregen-Peak"
           info={{ title: "Starkregen", text: "DWD-Schwellen: ≥ 15 mm/h markant, ≥ 25 heftig, ≥ 40 extrem." }}
-          big={sum.precipMaxMm.toFixed(1)}
+          big={sum24h.precipMaxMm.toFixed(1)}
           unit="mm/h"
         />
         <ParamCard
           title="Wind & Böen"
           info={{ title: "Böen", text: "≥ 50 km/h markant, ≥ 65 Sturmböen, ≥ 90 schwerer Sturm, ≥ 118 Orkan." }}
-          big={`${(sum.gustMaxMs * 3.6).toFixed(0)}`}
+          big={`${(sum24h.gustMaxMs * 3.6).toFixed(0)}`}
           unit="km/h Spitze"
           hint={now?.windSpeedMs != null ? `Mittel jetzt ${(now.windSpeedMs * 3.6).toFixed(0)} km/h` : undefined}
         />
@@ -155,6 +191,20 @@ function AnalysisPage() {
           hint={winter.freezingLevelMinM != null ? `0 °C bei ${Math.round(winter.freezingLevelMinM)} m` : undefined}
         />
       </div>
+    </div>
+  );
+}
+
+function HorizonChip({ label, level, note }: { label: string; level: AlertSeverity | "none"; note: string }) {
+  const color = level === "extreme" ? "border-warn-extreme bg-warn-extreme/10"
+    : level === "severe" ? "border-warn-severe bg-warn-severe/10"
+    : level === "moderate" ? "border-warn-moderate bg-warn-moderate/10"
+    : level === "minor" ? "border-warn-minor bg-warn-minor/10"
+    : "border-border bg-background/60";
+  return (
+    <div className={cn("rounded-md border px-2.5 py-1", color)}>
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="text-xs font-semibold text-foreground">{note}</div>
     </div>
   );
 }
