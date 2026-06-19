@@ -1,6 +1,6 @@
 import type {
   CurrentConditions, DailyPoint, ForecastBundle, GeoPoint, HourlyPoint,
-  ModelSeries, WeatherModelId,
+  ModelSeries, MinutelyPoint, WeatherModelId,
 } from "../types";
 
 interface OmHourly {
@@ -28,6 +28,22 @@ interface OmCurrent {
   relative_humidity_2m?: number; precipitation?: number;
   wind_speed_10m: number; wind_gusts_10m?: number; wind_direction_10m?: number;
   pressure_msl?: number; cloud_cover?: number; weather_code?: number;
+}
+interface OmMinutely {
+  time: string[];
+  precipitation?: number[];
+  precipitation_probability?: number[];
+  weather_code?: number[];
+}
+
+export function mapMinutely(m: OmMinutely | undefined): MinutelyPoint[] {
+  if (!m?.time) return [];
+  return m.time.map((t, i) => ({
+    time: t,
+    precipitationMm: m.precipitation?.[i],
+    precipitationProbability: m.precipitation_probability?.[i],
+    weatherCode: m.weather_code?.[i],
+  }));
 }
 
 export function mapHourly(h: OmHourly | undefined): HourlyPoint[] {
@@ -93,7 +109,7 @@ export function mapCurrent(c: OmCurrent | undefined): CurrentConditions | undefi
 }
 
 export function mapForecastBundle(
-  raw: { hourly?: OmHourly; daily?: OmDaily; current?: OmCurrent; elevation?: number },
+  raw: { hourly?: OmHourly; daily?: OmDaily; current?: OmCurrent; minutely_15?: OmMinutely; elevation?: number },
   point: GeoPoint,
 ): ForecastBundle {
   return {
@@ -101,6 +117,7 @@ export function mapForecastBundle(
     current: mapCurrent(raw.current),
     hourly: mapHourly(raw.hourly),
     daily: mapDaily(raw.daily),
+    minutely: mapMinutely(raw.minutely_15),
     meta: {
       source: "open-meteo",
       updatedAt: new Date().toISOString(),

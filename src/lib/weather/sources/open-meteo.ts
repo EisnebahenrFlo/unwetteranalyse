@@ -26,6 +26,10 @@ const CURRENT_VARS = [
   "cloud_cover","weather_code",
 ].join(",");
 
+const MINUTELY_VARS = [
+  "precipitation","precipitation_probability","weather_code",
+].join(",");
+
 export interface FetchForecastInput {
   lat: number;
   lon: number;
@@ -43,6 +47,7 @@ export async function fetchOpenMeteoForecast(input: FetchForecastInput) {
   url.searchParams.set("hourly", HOURLY_VARS);
   url.searchParams.set("daily", DAILY_VARS);
   url.searchParams.set("current", CURRENT_VARS);
+  url.searchParams.set("minutely_15", MINUTELY_VARS);
   url.searchParams.set("forecast_days", String(input.forecastDays ?? 7));
   if (input.pastDays) url.searchParams.set("past_days", String(input.pastDays));
   if (input.model) url.searchParams.set("models", input.model);
