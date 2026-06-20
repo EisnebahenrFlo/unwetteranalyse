@@ -310,7 +310,7 @@ function TodayTab({ bundle, hazardSet }: { bundle: ForecastBundle; hazardSet: Re
           <span>Severity 24 h</span>
           <span>Score {sum24.worstScore}/100</span>
         </div>
-        <div className="grid grid-cols-24 gap-[2px]">
+        <div className="grid gap-[2px]" style={{ gridTemplateColumns: "repeat(24, minmax(0, 1fr))" }}>
           {tl.map((h, i) => (
             <div
               key={h.time}
