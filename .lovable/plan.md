@@ -1,142 +1,105 @@
-# MeteoFlo Plan
+## Ziel
 
-Privates Wetteranalysetool für DACH und Italien, DWD-orientiert, mit Lernmodus. Alle 8 Module gehen direkt in den MVP, jedes mit Basisfunktionen, sauber erweiterbar.
+App mobiltauglich machen, Doppelanzeigen entfernen, alle Visualisierungen auf Premium-Niveau heben und die Gewitter-/Unwettererkennung deutlich verbreitern — ohne Grundstruktur oder bestehende Funktionen zu brechen.
 
-## Produktstruktur
+## 1. Navigation & Mobile
 
-Mobile first, ruhige nordische Optik, Light als Default, Dark mitgepflegt. Kein Login, keine Cloud, alle Einstellungen lokal in `localStorage`. Keine reißerische Wetter-Sprache, klare DWD-Schwellenlogik.
+- `AppShell`: Seitenleiste auf **6 Top-Tabs** verschlanken durch logische Gruppierung. Sub-Tabs innerhalb der Routen, keine neuen Routen.
+  - **Dashboard** (`/`)
+  - **Wetter** (`/forecast` als Alias für `/`) — entfällt; siehe unten
+  - **Radar & Karte** (`/map`)
+  - **Analyse** (`/analysis`) — mit Sub-Tabs: *Nowcast 0–2h*, *Kurzfrist 0–6h*, *24h Ausblick*, *Modelle*, *Stationen*
+  - **Warnungen** (`/alerts`)
+  - **Lernen** (`/learn`)
+  - **Einstellungen** (`/settings`)
+  - `Modelle` und `Stationen` ziehen als Sub-Tabs in Analyse ein, behalten aber ihre Routen (Redirect/Verlinkung bleibt erhalten — Grundstruktur unverändert).
+- **Mobile**: BottomNav wird zu **5 Tabs** (Dashboard / Karte / Analyse / Warnungen / Mehr). „Mehr" öffnet ein Sheet mit den restlichen Punkten.
+- Header: Logo wird auf Mobile zum reinen Icon, Location-Switcher bekommt volle Breite, Theme-Toggle als Icon-Button.
+- Touch-Targets ≥ 44 px, horizontale Scrollstreifen (Hourly/Daily/Nowcast) mit Snap-Scroll + Edge-Fades.
 
-## Seitenarchitektur (TanStack Router)
+## 2. Doppelanzeigen entfernen / Konsolidierung Dashboard
 
-```text
-src/routes/
-  __root.tsx            App-Shell, Header, Bottom-Nav (mobil), Sidebar (desktop)
-  index.tsx             Dashboard
-  map.tsx               Kartenansicht (Radar, Niederschlag, Warnungen, Modelle)
-  models.tsx            Modellvergleich
-  alerts.tsx            Warnlagen (Bright Sky Alerts + eigene Schwellen)
-  stations.tsx          Stationsdaten / Beobachtungen
-  analysis.tsx          Interpretierte Wetterlage
-  learn.tsx             Lernmodus (Glossar, Schwellen, Konzepte)
-  settings.tsx          Einheiten, Orte, Layer, Farben, Theme
-```
+Heute zeigt das Dashboard **vier ähnliche Severe-Karten**: `NowcastPanel`, `SevereOverview`, `SevereWeatherPanel`, plus Teile in `AlertsSummary`. Konsolidierung:
 
-Aktiver Ort lebt als URL-Search-Param (`?lat=&lon=&name=`), damit jede Seite den gleichen Kontext zeigt und Links teilbar sind. Ortsliste in `localStorage`.
+- **Neu: `ThreatBoard`** — eine intelligente Karte mit Sub-Tabs:
+  - *Jetzt* (Live-Stufe, aktive Warnungen, Kurzdiagnose)
+  - *Nowcast 0–2 h* (10-min-Raster, Regen/Hagel/Blitz)
+  - *Heute 0–24 h* (Peaks, Zeitfenster, Hauptrisiko)
+- Ersetzt `NowcastPanel` + `SevereOverview` + `SevereWeatherPanel` auf dem Dashboard. Die Komponenten bleiben als Bausteine bestehen, werden nur nicht mehr dreifach gerendert.
+- `AlertsSummary` zeigt nur noch offizielle + abgeleitete Warnungen kompakt (Chips), Details im Tab Warnungen.
 
-## Datenarchitektur
+## 3. Premium UI/UX
 
-Drei saubere Layer, jeweils eigene Ordner:
+Globale Designsprache (in `src/styles.css`, keine Tokens hardcoden):
 
-```text
-src/lib/
-  weather/
-    sources/
-      open-meteo.ts        Forecast, Modelle, historisch, Luftqualität
-      bright-sky.ts        DWD Beobachtungen, Radar, Alerts
-    mappers/               Roh-JSON → typsichere DTOs (camelCase, SI-Einheiten)
-    thresholds/            DWD-Schwellen für Wind, Regen, Schnee, Gewitter, Hitze, Frost
-    analysis/              Ableitungen: Taupunkt-Spread, Schneefallgrenze, CAPE-Einordnung
-    types.ts               Gemeinsame Domain-Typen
-  geo/
-    geocoding.ts           Open-Meteo Geocoding (DACH + IT Filter)
-  storage/
-    saved-locations.ts     localStorage CRUD
-    settings.ts            Einheiten, Theme, Layer-Defaults
-```
+- Karten: weiche Layer (`bg-card/80` + `backdrop-blur` + dezenter Innenschein per `shadow-elegant`-Token).
+- Severity-Farbskala über semantische Tokens `--warn-info / minor / moderate / severe / extreme` plus passende `--warn-*-glow` Varianten für Verlauf.
+- Premium-Charts:
+  - Nowcast-Heatmap: SVG-Streifen mit Verlauf + Mikro-Sparklines für Regenrate, Blitz-Wahrscheinlichkeit, Hagelrisiko.
+  - Severe-Timeline (24 h): mehrlagige Heatmap (Wind / Regen / CAPE / Blitz / Hagel) mit Hover-Tooltips.
+  - Daily-Strip-Pillen: Verlaufshintergrund nach Schwere, Mini-Icons für dominantes Risiko.
+- Typografie: Display-Font für Werte (z. B. Inter Tight / „Geist"), tabular-nums überall wo Zahlen tickern.
+- Bewegung: dezente `framer-motion`-Übergänge für Sub-Tab-Wechsel (nur falls Paket schon da; sonst CSS-Transitions).
+- Konsequenter Einsatz von `DataCard` mit neuem `tone`-Prop (default / accent / severe).
 
-Jeder Datenblock im UI bekommt ein Mini-Meta-Objekt: `{ source, updatedAt, resolutionKm, uncertainty }`. Wird in einer kleinen `<DataMeta />` Komponente unten an jeder Karte angezeigt, damit Beobachtung, Nowcast und Modellprognose sichtbar getrennt sind.
+## 4. Gewitter-Peak überarbeiten
 
-Datenabruf via TanStack Query, Loader primt den Cache via `ensureQueryData`, Komponenten lesen via `useSuspenseQuery`. Keine API-Calls in Komponenten. Alle Quellen sind kostenlos und ohne Key, daher kein Backend nötig im MVP.
+`SevereWeatherPanel` & neuer Threat-Tab „Heute":
 
-## Komponentenliste
+- Klare **Peak-Karte**: Zeitfenster („17–20 Uhr"), Spitzenwerte (CAPE, LI, Böen, Regenrate, Blitzdichte), Konfidenz-Badge (1–5) basierend auf Modell-Konsens.
+- Erklärtext in Klartext: was bedeutet der Peak, was ist zu erwarten.
+- Mini-Multimetric-Chart über das Peak-Fenster (CAPE, Shear, Regen, Blitz).
 
-```text
-src/components/
-  layout/
-    AppShell.tsx           Header + Nav-Wechsel mobil/desktop
-    LocationSwitcher.tsx   Aktiver Ort, Suche, gespeicherte Orte
-    BottomNav.tsx, SideNav.tsx
-  common/
-    DataCard.tsx           Einheitlicher Rahmen für jede Analysekarte
-    DataMeta.tsx           Quelle, Stand, Auflösung, Unsicherheit
-    ValueWithUnit.tsx
-    TrendSparkline.tsx
-    WarnBadge.tsx          markant / Unwetter / extrem, DWD-Farblogik
-    InfoPopover.tsx        Lern-Tooltip pro Parameter
-    EmptyState.tsx, ErrorState.tsx, LoadingSkeleton.tsx
-  dashboard/
-    CurrentConditions.tsx
-    NextChange.tsx         „Nächster relevanter Wetterumschwung“
-    HourlyStrip.tsx
-    DailyStrip.tsx
-    AlertsSummary.tsx
-  map/
-    WeatherMap.tsx         MapLibre GL Wrapper
-    LayerToggle.tsx        Radar, Niederschlag, Wind, Temp, Warnungen
-    LegendBar.tsx
-  models/
-    ModelCompareChart.tsx  Mehrere Modelle in einem Diagramm
-    ModelSpreadIndicator.tsx
-  alerts/
-    AlertList.tsx, AlertDetail.tsx, ThresholdExplain.tsx
-  stations/
-    StationList.tsx, StationDetail.tsx
-  analysis/
-    SoundingSummary.tsx    CAPE, LI, Nullgrad-/Schneefallgrenze
-    ConvectionPanel.tsx
-    WinterPanel.tsx
-  learn/
-    GlossaryList.tsx, ConceptCard.tsx, ThresholdTable.tsx
-  settings/
-    UnitSettings.tsx, LocationSettings.tsx, LayerSettings.tsx, ThemeToggle.tsx
-```
+## 5. Mehr Warntypen
 
-Jede Analysekarte rendert via `DataCard` mit fester Struktur: Titel, Wert, Trend, `WarnBadge` falls relevant, `InfoPopover` mit Lern-Erklärung, `DataMeta` unten. Konsistenz schlägt Variation.
+Erweiterung in `src/lib/weather/thresholds/dwd.ts` + neue Auswertung in `situation.ts`. Hitze wird klar von „Unwetter" getrennt (eigene Kategorie `heat`, nicht `severe`):
 
-## UI-Konzept
+- **Gewitter-Klassen**: Einzelzelle / Mehrzellig / Superzelle (Heuristik aus CAPE × Shear × Helizität).
+- **Hagel**: Wahrscheinlichkeit + Korngröße (CAPE × LI × Freezing-Level × Updraft-Proxy).
+- **Starkregen / Dauerregen** (≥6h Akkumulation, getrennt von kurzem Starkregen).
+- **Sturm / Orkan / Downburst-Risiko** (Böen + DCAPE + Lapse Rate).
+- **Tornadorisiko** (SRH, Shear, LCL — Klartextlevel niedrig/mäßig/erhöht).
+- **Glatteis / gefrierender Regen / Schneeglätte** (Niederschlag bei T<0).
+- **Schneefall / Schneeverwehung** (Schneefall + Wind).
+- **Nebel / Sichtweite < 200 m** (visibility aus Open-Meteo).
+- **UV-Belastung** (UV-Index als Hinweis, keine Unwetter-Schwere).
+- **Hitze / Tropennacht / Hitzewelle** als eigene Kategorie `heat` mit eigenem Farbschema (orange/rot, nicht Unwetter-Lila).
+- **Luftqualität / Pollen** (Open-Meteo Air-Quality API) — optional als „Hinweis"-Tag.
 
-- Light-Default, kühles Off-White, ein einzelner sachlicher Akzent (gedecktes Blau). Dark-Variante mit tiefem Anthrazit.
-- Typografie: Inter für UI, JetBrains Mono für Werte/Zeiten.
-- Layout: mobil eine Spalte, Desktop 12-Spalten-Grid mit max. 1440px.
-- Warnfarben strikt nach DWD-Logik: gelb (markant), orange (Unwetter), rot (extremes Unwetter), violett (extrem). Nie für Dekoration verwenden.
-- Above the fold im Dashboard: aktueller Zustand, aktive Warnung, nächste 6 Stunden, nächster Wetterumschwung.
-- Animationen nur als kurze Opacity/Translate-Transitions, keine Spielereien.
+Jede Warnung trägt: Kategorie, Schwere, Konfidenz, Zeitfenster, Begründung in Klartext.
 
-## MVP-Umfang (Stufe 1)
+## 6. Mehr Daten für Erkennung
 
-Alle 8 Module live, jeweils Basisfunktion:
+Erweiterung `open-meteo.ts` (Hourly + Minutely_15):
 
-1. **Dashboard**: Current Conditions (Bright Sky nächste Station + Open-Meteo aktueller Punkt), Hourly 24h, Daily 7d, aktive Alerts, „Nächster Umschwung“ heuristisch aus Forecast.
-2. **Karte**: MapLibre mit OSM-Basemap, Radar-Overlay (Bright Sky), Niederschlags- und Temperatur-Overlay (Open-Meteo Tiles), Warnpolygone, Layer-Toggle, Legende.
-3. **Modellvergleich**: ICON-D2, ICON-EU, IFS, GFS, AROME als Linien für Temperatur, Niederschlag, Wind; Modell-Spread visualisiert.
-4. **Warnlagen**: Bright Sky Alerts gelistet + eigene Schwellen-Auswertung mit Begründung in einfacher Sprache.
-5. **Stationsdaten**: Liste DWD-Stationen im Umkreis, Detailansicht mit aktuellen Werten und letzten 24h.
-6. **Analyse**: Taupunkt-Spread, Nullgrad-/Schneefallgrenze, CAPE, Lifted Index, Konvektionsbewertung in Worten.
-7. **Lernmodus**: Glossar (Taupunkt, CAPE, LI, Bft, mm/h, Bewölkungsschichten), Schwellen-Tabelle, Konzeptkarten zu Beobachtung vs. Nowcast vs. Modell.
-8. **Einstellungen**: Einheiten (°C, m/s vs. km/h, mm), Orte verwalten, Default-Layer, Theme.
+- Zusätzliche Convective-Felder: `convective_inhibition`, `lifted_index`, `cape`, `boundary_layer_height`, `wind_shear` (aus 10 m vs 500 m), `helicity_3000m` (Proxy aus Wind-Profilen), `vertical_velocity_*hPa`.
+- Modelle: ICON-D2 (1 km, 0–48 h) hinzufügen für Nowcast-Stütze; Konsens über ICON-D2 / ICON-EU / ECMWF / AROME / HARMONIE → Konfidenz.
+- Open-Meteo **Air-Quality API** (PM2.5, PM10, NO2, O3, UV, Pollen).
+- Open-Meteo **Flood API** (optional, für Starkregen-Kontext) — nur wenn ohne Schlüssel verfügbar.
+- DWD-Blitzdichte via Open-Meteo `lightning_potential` falls vorhanden, sonst Heuristik aus CAPE×LI×PrecipRate.
 
-Italien: Geocoding und Forecast über Open-Meteo funktionieren direkt. Bright Sky wird nur dort genutzt, wo Daten existieren (DACH); ansonsten klarer Fallback-Hinweis statt leerer Fläche.
+Alles per `useQuery` mit `refetchInterval` (5–10 min) — Live-Verhalten bleibt erhalten.
 
-## Ausbaustufen
+## Technisches
 
-- **Stufe 2**: Historischer Vergleich (Open-Meteo Archive), Favoriten-Layouts pro Ort, Export von Analysen als PDF, Push-fähige Warnschwellen-Logik im Browser.
-- **Stufe 3**: Eigene Sounding-Ansicht (Open-Meteo Pressure Levels), Ensemble-Mitglieder, Vergleich mit MeteoSwiss/ZAMG offenen Daten, Italien-spezifische Quellen (ARPA-Feeds), optional Lovable Cloud für Sync und Verlauf.
-- **Stufe 4**: Lernpfade im Lernmodus, eigene Notizen pro Wetterlage, Vergleich „Prognose vs. eingetroffen“.
+- Neue Dateien:
+  - `src/components/dashboard/ThreatBoard.tsx`
+  - `src/components/common/SegmentedTabs.tsx` (Sub-Tab-Komponente, Touch-optimiert)
+  - `src/components/layout/MoreMenu.tsx` (Mobile-Sheet)
+  - `src/components/charts/SeverityHeatmap.tsx` (mehrlagige Heatmap)
+  - `src/lib/weather/sources/open-meteo-air.ts` (Air-Quality)
+  - `src/lib/weather/analysis/hazards.ts` (neue Warntypen)
+  - `src/lib/weather/analysis/peak.ts` (Peak-Fenster-Logik)
+- Geänderte Dateien (nicht-strukturell):
+  - `AppShell.tsx` (Nav-Reduktion + MoreMenu)
+  - `routes/index.tsx` (ThreatBoard statt 3 Karten)
+  - `routes/analysis.tsx` (SegmentedTabs für Sub-Bereiche; Modelle/Stationen als Sub-Inhalte einbinden)
+  - `thresholds/dwd.ts`, `situation.ts` (mehr Regeln + Kategorien)
+  - `types.ts` (neue Felder, neue Kategorien)
+  - `styles.css` (Warn-Token, Glows)
+- **Nicht angefasst**: Router-Setup, bestehende Query-Keys / Quellen-APIs (nur Felder erweitert), Storage-Schema, Routen-Pfade.
 
-## Technik (kurz)
+## Out of scope
 
-- TanStack Start, TypeScript strict, Tailwind v4 mit Design-Tokens in `src/styles.css`, shadcn-Komponenten.
-- TanStack Query für alle Wetterdaten, Loader primen Cache.
-- MapLibre GL für Karten, kein Mapbox-Key nötig.
-- Recharts für Modellvergleich und Zeitachsen.
-- Lucide-Icons. Keine schweren Abhängigkeiten.
-- Kein Backend, kein Login, keine Cookies. Alle Nutzerdaten in `localStorage`.
-
-## Was ich beim Bauen explizit weglasse
-
-- Kein Social, kein Sharing, keine Accounts.
-- Keine dekorativen Animationen, keine Glassmorphism-Effekte.
-- Keine Logik in UI-Komponenten, alle Ableitungen in `analysis/` bzw. `mappers/`.
-- Keine kostenpflichtigen APIs, keine API-Keys im MVP.
-
-Sag Bescheid, wenn ich loslegen soll, oder ob Du etwas am Zuschnitt drehen willst.
+- Keine Auth, kein Backend, keine neuen Routen, keine Änderung am Geocoding oder LocationSwitcher-API.
+- Bestehende Komponenten werden nicht gelöscht (nur Verwendung reduziert), damit der Analyse-Tab sie weiterverwenden kann.
