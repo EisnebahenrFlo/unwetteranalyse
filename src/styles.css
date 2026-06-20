@@ -67,6 +67,14 @@
   --color-warn-moderate-fg: var(--warn-moderate-fg);
   --color-warn-severe-fg: var(--warn-severe-fg);
   --color-warn-extreme-fg: var(--warn-extreme-fg);
+  --color-heat: var(--heat);
+  --color-heat-fg: var(--heat-fg);
+  --color-cold: var(--cold);
+  --color-cold-fg: var(--cold-fg);
+  --color-info: var(--info);
+  --color-info-fg: var(--info-fg);
+  --shadow-elegant: var(--shadow-elegant);
+  --shadow-glow: var(--shadow-glow);
 }
 
 :root {
@@ -101,6 +109,17 @@
   --warn-moderate-fg: oklch(0.99 0 0);
   --warn-severe-fg: oklch(0.99 0 0);
   --warn-extreme-fg: oklch(0.99 0 0);
+
+  /* Zusätzliche Kategorien jenseits von Unwetter */
+  --heat: oklch(0.72 0.17 45);            /* Hitze: warmes Orange */
+  --heat-fg: oklch(0.99 0 0);
+  --cold: oklch(0.7 0.12 230);            /* Kälte / Glätte: kühles Blau */
+  --cold-fg: oklch(0.99 0 0);
+  --info: oklch(0.6 0.08 220);            /* neutrale Hinweise */
+  --info-fg: oklch(0.99 0 0);
+
+  --shadow-elegant: 0 1px 0 0 oklch(1 0 0 / 0.6) inset, 0 12px 32px -18px oklch(0.22 0.03 250 / 0.25);
+  --shadow-glow: 0 0 0 1px oklch(0.5 0.11 240 / 0.15), 0 18px 40px -16px oklch(0.5 0.11 240 / 0.35);
 
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
@@ -149,6 +168,16 @@
   --warn-severe-fg: oklch(0.99 0 0);
   --warn-extreme-fg: oklch(0.99 0 0);
 
+  --heat: oklch(0.68 0.18 45);
+  --heat-fg: oklch(0.99 0 0);
+  --cold: oklch(0.7 0.12 230);
+  --cold-fg: oklch(0.99 0 0);
+  --info: oklch(0.65 0.08 220);
+  --info-fg: oklch(0.99 0 0);
+
+  --shadow-elegant: 0 1px 0 0 oklch(1 0 0 / 0.04) inset, 0 18px 48px -22px oklch(0 0 0 / 0.6);
+  --shadow-glow: 0 0 0 1px oklch(0.7 0.11 235 / 0.25), 0 22px 48px -18px oklch(0.7 0.11 235 / 0.45);
+
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -172,5 +201,22 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-feature-settings: "cv11", "ss01", "ss03";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Tabular numerals für alle Datenwerte */
+  .num, .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Snap-Scroll Streifen mit dezenten Edge-Fades */
+  .scroll-snap-x {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  .scroll-snap-x > * {
+    scroll-snap-align: start;
   }
 }
