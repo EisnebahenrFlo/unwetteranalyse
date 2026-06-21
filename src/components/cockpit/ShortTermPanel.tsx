@@ -1,4 +1,3 @@
-import { Card } from "@/components/ui/card";
 import { NowcastPanel } from "@/components/dashboard/NowcastPanel";
 import { TendencyBadge, deriveTendency } from "./TendencyBadge";
 import { useLiveNow } from "@/hooks/use-live-now";
@@ -24,9 +23,7 @@ export function ShortTermPanel({ bundle }: { bundle: ForecastBundle }) {
         <div className="min-w-0 text-[12px] text-muted-foreground">{consistency}</div>
         <TendencyBadge tendency={tendency} />
       </div>
-      <Card className="p-0">
-        <NowcastPanel bundle={bundle} />
-      </Card>
+      <NowcastPanel bundle={bundle} />
     </div>
   );
 }
