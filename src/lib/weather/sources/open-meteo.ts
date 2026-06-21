@@ -13,6 +13,8 @@ const HOURLY_VARS = [
   "convective_inhibition","wind_speed_80m","wind_speed_180m",
   "wind_direction_80m","wind_direction_180m","boundary_layer_height",
   "visibility","uv_index",
+  "temperature_850hPa","temperature_700hPa","temperature_500hPa",
+  "dew_point_850hPa","dew_point_700hPa",
 ].join(",");
 
 const DAILY_VARS = [
