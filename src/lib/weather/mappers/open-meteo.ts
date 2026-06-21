@@ -15,6 +15,8 @@ interface OmHourly {
   wind_direction_80m?: number[]; wind_direction_180m?: number[];
   boundary_layer_height?: number[]; visibility?: number[]; uv_index?: number[];
   relative_humidity_2m?: number[];
+  temperature_850hPa?: number[]; temperature_700hPa?: number[]; temperature_500hPa?: number[];
+  dew_point_850hPa?: number[]; dew_point_700hPa?: number[];
 }
 interface OmDaily {
   time: string[];
@@ -73,6 +75,11 @@ export function mapHourly(h: OmHourly | undefined): HourlyPoint[] {
     relativeHumidity: h.relative_humidity_2m?.[i],
     freezingLevelM: h.freezing_level_height?.[i],
     snowfallCm: h.snowfall?.[i],
+    temperature850hPa: h.temperature_850hPa?.[i],
+    temperature700hPa: h.temperature_700hPa?.[i],
+    temperature500hPa: h.temperature_500hPa?.[i],
+    dewPoint850hPa: h.dew_point_850hPa?.[i],
+    dewPoint700hPa: h.dew_point_700hPa?.[i],
   }));
 }
 
