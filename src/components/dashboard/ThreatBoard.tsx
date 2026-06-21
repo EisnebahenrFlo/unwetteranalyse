@@ -3,7 +3,8 @@ import { Card } from "@/components/ui/card";
 import { SegmentedTabs } from "@/components/common/SegmentedTabs";
 import { DataMeta } from "@/components/common/DataMeta";
 import { WarnBadge } from "@/components/common/WarnBadge";
-import { MeteoconIcon } from "@/components/weather/MeteoconIcon";
+import { MeteoconIcon, isNightAt } from "@/components/weather/MeteoconIcon";
+import { formatHour } from "@/lib/weather/format";
 import { useLiveNow } from "@/hooks/use-live-now";
 import { liveHourly } from "@/lib/weather/live";
 import { buildNowcast2h, type NowcastStep } from "@/lib/weather/analysis/nowcast";
@@ -55,7 +56,7 @@ export function ThreatBoard({ bundle, alerts }: { bundle: ForecastBundle; alerts
 
       <div className="min-h-[260px]">
         {tab === "now" && <NowTab hazardSet={hazardSet} alerts={alerts} bundle={bundle} />}
-        {tab === "nowcast" && <NowcastTab steps={nc.steps} headline={nc.headline} confidence={nc.confidence} thunderProbMax={nc.thunderProbMax} precipMax={nc.precipMaxMmPerH} precipSum={nc.precipSumMm} hailMax={nc.hailMax} />}
+        {tab === "nowcast" && <NowcastTab steps={nc.steps} daily={bundle.daily} headline={nc.headline} confidence={nc.confidence} thunderProbMax={nc.thunderProbMax} precipMax={nc.precipMaxMmPerH} precipSum={nc.precipSumMm} hailMax={nc.hailMax} />}
         {tab === "today" && <TodayTab bundle={bundle} hazardSet={hazardSet} />}
       </div>
 
@@ -201,9 +202,10 @@ const ICON_BY_CAT: Record<Hazard["category"], string> = {
 /* ---------- Tab: Nowcast 2h ---------- */
 
 function NowcastTab({
-  steps, headline, confidence, thunderProbMax, precipMax, precipSum, hailMax,
+  steps, daily, headline, confidence, thunderProbMax, precipMax, precipSum, hailMax,
 }: {
   steps: NowcastStep[];
+  daily: ForecastBundle["daily"];
   headline: string;
   confidence: "niedrig" | "mittel" | "hoch";
   thunderProbMax: number;
@@ -211,25 +213,120 @@ function NowcastTab({
   precipSum: number;
   hailMax: AlertSeverity | "none";
 }) {
-  const maxBar = Math.max(10, ...steps.map((s) => Math.max(s.severeScore, s.precipMmPerH * 4)));
+  const maxPrecip = Math.max(1, ...steps.map((s) => s.precipMmPerH));
+  const maxGust = Math.max(0, ...steps.map((s) => s.windGustMs ?? 0));
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div className="text-sm font-medium text-foreground">{headline}</div>
         <div className="text-[11px] text-muted-foreground">Vertrauen {confidence}</div>
       </div>
-      <div className="grid grid-cols-12 gap-1.5">
-        {steps.map((s) => (
-          <NowcastBar key={s.time} step={s} max={maxBar} />
-        ))}
-      </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Stat label="Gewitter Peak" value={`${Math.round(thunderProbMax * 100)}`} unit="%" tone={thunderProbMax >= 0.5 ? "moderate" : thunderProbMax >= 0.3 ? "minor" : "none"} />
         <Stat label="Regen Spitze" value={precipMax.toFixed(1)} unit="mm/h" tone={precipMax >= 15 ? "moderate" : precipMax >= 5 ? "minor" : "none"} />
         <Stat label="Regen Σ 2h" value={precipSum.toFixed(1)} unit="mm" tone={precipSum >= 10 ? "moderate" : precipSum >= 3 ? "minor" : "none"} />
-        <Stat label="Hagel" value={hailMax === "none" ? "—" : labelSev(hailMax)} unit="" tone={hailMax === "none" ? "none" : hailMax} />
+        <Stat label="Böen Peak" value={(maxGust * 3.6).toFixed(0)} unit="km/h" tone={maxGust * 3.6 >= 80 ? "severe" : maxGust * 3.6 >= 50 ? "moderate" : "none"} />
       </div>
+
+      {/* Detail-Liste mit allen wichtigen Werten */}
+      <div className="overflow-hidden rounded-lg border border-border">
+        <div className="grid grid-cols-[58px_40px_minmax(0,1fr)_64px_64px_50px] items-center gap-2 border-b border-border bg-muted/40 px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <div>Zeit</div>
+          <div>Wetter</div>
+          <div>Severity & Signal</div>
+          <div className="text-right">Regen</div>
+          <div className="text-right">Wind</div>
+          <div className="text-right">Score</div>
+        </div>
+        <div className="divide-y divide-border/60">
+          {steps.map((s) => <NowcastRow key={s.time} step={s} maxPrecip={maxPrecip} daily={daily} />)}
+        </div>
+      </div>
+      {hailMax !== "none" && (
+        <div className="rounded-md border border-warn-severe/40 bg-warn-severe/10 px-3 py-2 text-xs text-warn-severe">
+          Hagelpotenzial: {labelSev(hailMax)}.
+        </div>
+      )}
     </div>
+  );
+}
+
+function NowcastRow({ step, maxPrecip, daily }: { step: NowcastStep; maxPrecip: number; daily: ForecastBundle["daily"] }) {
+  const night = isNightAt(step.time, daily);
+  const sevPct = Math.max(2, Math.min(100, step.severeScore));
+  const precipPct = Math.max(0, Math.min(100, (step.precipMmPerH / maxPrecip) * 100));
+  const gustK = step.windGustMs != null ? step.windGustMs * 3.6 : null;
+  const windK = step.windSpeedMs != null ? step.windSpeedMs * 3.6 : null;
+  const sevBg = step.level === "extreme" ? "bg-warn-extreme"
+    : step.level === "severe" ? "bg-warn-severe"
+    : step.level === "moderate" ? "bg-warn-moderate"
+    : step.level === "minor" ? "bg-warn-minor"
+    : step.precipMmPerH >= 0.5 ? "bg-primary/60" : "bg-muted";
+  const rainBg = step.precipMmPerH >= 25 ? "bg-warn-severe"
+    : step.precipMmPerH >= 10 ? "bg-warn-moderate"
+    : step.precipMmPerH >= 2.5 ? "bg-primary"
+    : step.precipMmPerH >= 0.2 ? "bg-primary/50" : "bg-muted";
+  return (
+    <div className={cn(
+      "grid grid-cols-[58px_40px_minmax(0,1fr)_64px_64px_50px] items-center gap-2 px-2 py-1.5",
+      step.minutesFromNow === 0 && "bg-accent/40",
+    )}>
+      <div className="font-mono text-[11px] leading-tight tabular-nums">
+        <div className="font-semibold text-foreground">{step.minutesFromNow === 0 ? "jetzt" : `+${step.minutesFromNow}m`}</div>
+        <div className="text-[10px] text-muted-foreground">{formatHour(step.time)}</div>
+      </div>
+      <div className="flex items-center justify-center">
+        <MeteoconIcon code={step.weatherCode} isNight={night} className="h-8 w-8" label="Wetter" />
+      </div>
+      <div className="min-w-0">
+        <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-muted">
+          <div className={cn("absolute inset-y-0 left-0 rounded-full", sevBg)} style={{ width: `${sevPct}%` }} />
+        </div>
+        <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px]">
+          {step.level !== "none" ? (
+            <span className="rounded bg-foreground/5 px-1.5 py-0.5 font-semibold uppercase tracking-wide text-foreground">{labelSev(step.level)}</span>
+          ) : null}
+          {step.hail !== "none" && (
+            <span className="rounded bg-warn-severe/15 px-1.5 py-0.5 font-semibold uppercase tracking-wide text-warn-severe">Hagel</span>
+          )}
+          {step.thunderProb >= 0.3 && (
+            <span className="rounded bg-warn-moderate/15 px-1.5 py-0.5 font-semibold uppercase tracking-wide text-warn-moderate">⚡ {Math.round(step.thunderProb * 100)} %</span>
+          )}
+          {step.level === "none" && step.hail === "none" && step.thunderProb < 0.3 && (
+            <span className="text-muted-foreground">ruhig</span>
+          )}
+        </div>
+      </div>
+      <div className="text-right font-mono text-[11px] tabular-nums">
+        <div className="font-semibold text-foreground">{step.precipMmPerH >= 0.05 ? `${step.precipMmPerH.toFixed(1)}` : "—"}</div>
+        <div className="relative ml-auto h-1 w-12 rounded-full bg-muted">
+          <div className={cn("absolute inset-y-0 left-0 rounded-full", rainBg)} style={{ width: `${precipPct}%` }} />
+        </div>
+      </div>
+      <div className="text-right font-mono text-[11px] tabular-nums">
+        <div className="font-semibold text-foreground">{windK != null ? windK.toFixed(0) : "—"}</div>
+        <div className="text-[10px] text-muted-foreground">{gustK != null ? `Bö ${gustK.toFixed(0)}` : ""}</div>
+      </div>
+      <div className="text-right font-mono text-[12px] font-semibold tabular-nums text-foreground">{step.severeScore}</div>
+    </div>
+  );
+}
+
+/* legacy bar kept removed */
+const _unused_old: undefined = undefined; void _unused_old;
+function _legacy() { return null; }
+
+function _legacyBar({ step, max }: { step: NowcastStep; max: number }) {
+  const h = Math.max(6, Math.round((step.severeScore / max) * 100));
+  void h; void step; void max;
+  return null;
+}
+
+/* keep file footer */
+function _noop() {
+  return (
+    <div className="flex flex-col gap-3">
+      </div>
   );
 }
 
