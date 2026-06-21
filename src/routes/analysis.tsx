@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useActivePoint } from "@/components/layout/LocationSwitcher";
@@ -7,15 +8,16 @@ import { ValueWithUnit } from "@/components/common/ValueWithUnit";
 import { InfoPopover } from "@/components/common/InfoPopover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WarnBadge } from "@/components/common/WarnBadge";
+import { SegmentedTabs } from "@/components/common/SegmentedTabs";
 import { summarizeConvection, summarizeWinter } from "@/lib/weather/analysis/situation";
 import {
-  thunderProbability, hailRisk, downburstRisk, lowLevelShearMs, sultriness,
-  summarizeModelSevere, severeTimeline,
+  hailRisk, downburstRisk, lowLevelShearMs, sultriness,
+  summarizeModelSevere,
 } from "@/lib/weather/analysis/convection";
 import { SevereTimeline } from "@/components/analysis/SevereTimeline";
 import { NowcastDecisionCard } from "@/components/analysis/NowcastDecisionCard";
 import { useSettings } from "@/hooks/use-settings";
-import { formatTemp, formatHour } from "@/lib/weather/format";
+import { formatTemp } from "@/lib/weather/format";
 import type { AlertSeverity, HourlyPoint } from "@/lib/weather/types";
 import { useLiveNow } from "@/hooks/use-live-now";
 import { liveHourly } from "@/lib/weather/live";
@@ -36,6 +38,7 @@ function AnalysisPage() {
   const q = useQuery(forecastQuery(point));
   const [settings] = useSettings();
   const liveNow = useLiveNow();
+  const [tab, setTab] = useState<"nowcast" | "today" | "params">("nowcast");
 
   if (q.isLoading) return <Skeleton className="h-72 w-full" />;
   if (!q.data) return null;
@@ -47,20 +50,8 @@ function AnalysisPage() {
   const sum24h = summarizeModelSevere(hourly, 24);
   const now = hourly[0];
   const spread = now?.dewPointC != null ? now.temperatureC - now.dewPointC : null;
-
-  // Peak-Stunde für Gewitter
-  let peakTp = 0; let peakIdx = 0;
-  hourly.slice(0, 24).forEach((p, i) => {
-    const t = thunderProbability(p);
-    if (t > peakTp) { peakTp = t; peakIdx = i; }
-  });
-  const peakHour = hourly[peakIdx];
-
   const shearNow = lowLevelShearMs(now);
   const sult = sultriness(now);
-  const tl24 = severeTimeline(hourly, 24);
-  const activeHours24 = tl24.filter((h) => h.score.level !== "none").length;
-  const firstSignal = tl24.find((h) => h.score.level !== "none");
 
   return (
     <div className="flex flex-col gap-3 md:gap-4">
@@ -68,129 +59,115 @@ function AnalysisPage() {
         <div>
           <h1 className="text-lg font-semibold tracking-tight">Unwetter-Analyse</h1>
           <p className="text-xs text-muted-foreground">
-            Drei Zeithorizonte: 0–2 h Nowcast, 0–6 h Kurzfrist, 0–24 h Tagesausblick.
+            Klar getrennt: Nowcast 0–2 h, Heute 0–24 h, Parameter im Detail.
           </p>
         </div>
         <div className="flex gap-2 text-xs">
-          <HorizonChip label="0–2 h" level={"none"} note="Nowcast" />
+          <HorizonChip label="0–2 h" level="none" note="Nowcast" />
           <HorizonChip label="0–6 h" level={sum6h.level} note={`Score ${sum6h.worstScore}`} />
           <HorizonChip label="0–24 h" level={sum24h.level} note={`Score ${sum24h.worstScore}`} />
         </div>
       </div>
 
-      {/* 0 – 2 h */}
-      <NowcastDecisionCard hourly={q.data.hourly} minutely={q.data.minutely} now={liveNow} />
+      <SegmentedTabs<"nowcast" | "today" | "params">
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { id: "nowcast", label: "Nowcast 0–2 h" },
+          { id: "today", label: "Heute 0–24 h" },
+          { id: "params", label: "Parameter" },
+        ]}
+      />
 
-      {/* 0 – 6 h Kurzfrist */}
-      <DataCard
-        title="Kurzfrist 0–6 Stunden"
-        subtitle="Peak-Werte aus dem stündlichen Lauf für die nächsten sechs Stunden."
-        meta={q.data.meta}
-      >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-[auto_minmax(0,1fr)]">
-          <div className="flex items-center gap-3">
-            <div className="font-mono text-5xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-mono)" }}>
-              {sum6h.worstScore}
+      {tab === "nowcast" && (
+        <NowcastDecisionCard hourly={q.data.hourly} minutely={q.data.minutely} now={liveNow} />
+      )}
+
+      {tab === "today" && (
+        <div className="flex flex-col gap-3">
+          <DataCard
+            title="Tagesausblick 0–24 Stunden"
+            subtitle="Kombinierte Einordnung aus Gewitter, Hagel, Sturmböen, Starkregen."
+            meta={q.data.meta}
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-[auto_minmax(0,1fr)]">
+              <div className="flex items-center gap-3">
+                <div className="font-mono text-5xl font-semibold tracking-tight tabular-nums" style={{ fontFamily: "var(--font-mono)" }}>
+                  {sum24h.worstScore}
+                  <span className="ml-1 text-sm font-normal text-muted-foreground">/100</span>
+                </div>
+                {sum24h.level !== "none" && <WarnBadge severity={sum24h.level} />}
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+                <KV label="Gewitter Peak" value={`${Math.round(sum24h.thunderProbMax * 100)} %`} />
+                <KV label="CAPE max" value={sum24h.capeMax != null ? `${sum24h.capeMax.toFixed(0)} J/kg` : "—"} />
+                <KV label="Regen Peak" value={`${sum24h.precipMaxMm.toFixed(1)} mm/h`} />
+                <KV label="Böen Peak" value={`${(sum24h.gustMaxMs * 3.6).toFixed(0)} km/h`} />
+              </div>
             </div>
-            {sum6h.level !== "none" && <WarnBadge severity={sum6h.level} />}
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
-            <KV label="Gewitter peak" value={`${Math.round(sum6h.thunderProbMax * 100)} %`} />
-            <KV label="CAPE max" value={sum6h.capeMax != null ? `${sum6h.capeMax.toFixed(0)} J/kg` : "—"} />
-            <KV label="Regen peak" value={`${sum6h.precipMaxMm.toFixed(1)} mm/h`} />
-            <KV label="Böen max" value={`${(sum6h.gustMaxMs * 3.6).toFixed(0)} km/h`} />
-          </div>
+          </DataCard>
+          <SevereTimeline hourly={hourly} />
         </div>
-      </DataCard>
+      )}
 
-      {/* 0 – 24 h Score */}
-      <DataCard
-        title="Tagesausblick 0–24 Stunden"
-        subtitle="Kombinierte Einordnung aus Gewitter, Hagel, Sturmböen, Starkregen."
-        meta={q.data.meta}
-      >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-[auto_minmax(0,1fr)]">
-          <div className="flex items-center gap-3">
-            <div className="font-mono text-5xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-mono)" }}>
-              {sum24h.worstScore}
-            </div>
-            {sum24h.level !== "none" && <WarnBadge severity={sum24h.level} />}
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
-            <KV label="Aktive Stunden" value={`${activeHours24} / 24`} />
-            <KV label="Erstes Signal" value={firstSignal ? formatHour(firstSignal.time) : "—"} />
-            <KV label="LI min" value={sum24h.liMin != null ? sum24h.liMin.toFixed(1) : "—"} />
-            <KV label="Regen Σ Peak" value={`${sum24h.precipMaxMm.toFixed(1)} mm/h`} />
-          </div>
+      {tab === "params" && (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <ParamCard
+            title="Hagel-Risiko"
+            info={{ title: "Hagel", text: "Hohes CAPE plus stark negativer LI plus tiefe Nullgradgrenze erhöhen das Hagelpotenzial deutlich." }}
+            big={labelSeverity(peakRisk(hourly, hailRisk))}
+            unit=""
+          />
+          <ParamCard
+            title="Downburst / Sturmböen"
+            info={{ title: "Downburst", text: "Konvektion plus hohe Böen ergeben das Risiko für gefährliche Fallböen aus Gewittern." }}
+            big={labelSeverity(peakRisk(hourly, downburstRisk))}
+            unit=""
+          />
+          <ParamCard
+            title="Konvektive Energie"
+            info={{ title: "CAPE", text: "Convective Available Potential Energy. ≥ 500 mäßig, ≥ 1500 hoch, ≥ 2500 extrem." }}
+            big={conv.capeMax != null ? conv.capeMax.toFixed(0) : "—"}
+            unit="J/kg max"
+            hint={conv.liMin != null ? `LI min ${conv.liMin.toFixed(1)}` : undefined}
+            level={conv.level}
+          />
+          <ParamCard
+            title="Low-Level Shear"
+            info={{ title: "Windscherung 10 m → 180 m", text: "Höhere Werte begünstigen organisierte Gewitter." }}
+            big={shearNow != null ? shearNow.toFixed(1) : "—"}
+            unit="m/s"
+            hint="0–4 schwach · 4–8 mäßig · > 8 stark"
+          />
+          <ParamCard
+            title="Taupunkt & Schwüle"
+            info={{ title: "Taupunkt", text: "Über 16 °C schwül, über 20 °C drückend." }}
+            big={formatTemp(now?.dewPointC, settings.tempUnit)}
+            unit={sult}
+            hint={spread != null ? `Spread ${spread.toFixed(1)} K` : undefined}
+          />
+          <ParamCard
+            title="Starkregen-Peak"
+            info={{ title: "Starkregen", text: "DWD-Schwellen: ≥ 15 mm/h markant, ≥ 25 heftig, ≥ 40 extrem." }}
+            big={sum24h.precipMaxMm.toFixed(1)}
+            unit="mm/h"
+          />
+          <ParamCard
+            title="Wind & Böen"
+            info={{ title: "Böen", text: "≥ 50 km/h markant, ≥ 65 Sturmböen, ≥ 90 schwerer Sturm, ≥ 118 Orkan." }}
+            big={`${(sum24h.gustMaxMs * 3.6).toFixed(0)}`}
+            unit="km/h Spitze"
+            hint={now?.windSpeedMs != null ? `Mittel jetzt ${(now.windSpeedMs * 3.6).toFixed(0)} km/h` : undefined}
+          />
+          <ParamCard
+            title="Winter / Schnee"
+            info={{ title: "Schneefallgrenze", text: "Liegt die Nullgradgrenze unter der Geländehöhe, fällt Niederschlag als Schnee." }}
+            big={winter.snowfallSumCm > 0 ? winter.snowfallSumCm.toFixed(1) : "—"}
+            unit="cm Neuschnee 24 h"
+            hint={winter.freezingLevelMinM != null ? `0 °C bei ${Math.round(winter.freezingLevelMinM)} m` : undefined}
+          />
         </div>
-      </DataCard>
-
-      <SevereTimeline hourly={hourly} />
-
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-        <ParamCard
-          title="Gewitter-Peak"
-          info={{ title: "Gewitter-Wahrscheinlichkeit", text: "Heuristik aus CAPE, LI, CIN und WMO-Wettercode. Über 60 % als wahrscheinlich einordnen." }}
-          big={`${Math.round(peakTp * 100)} %`}
-          unit=""
-          hint={peakHour ? `gegen ${new Date(peakHour.time).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr` : undefined}
-          level={peakTp >= 0.7 ? "severe" : peakTp >= 0.45 ? "moderate" : peakTp >= 0.25 ? "minor" : "none"}
-        />
-        <ParamCard
-          title="Hagel-Risiko"
-          info={{ title: "Hagel", text: "Hohes CAPE plus stark negativer LI plus tiefe Nullgradgrenze erhöhen das Hagelpotenzial deutlich." }}
-          big={labelSeverity(peakRisk(hourly, hailRisk))}
-          unit=""
-        />
-        <ParamCard
-          title="Downburst / Sturm­böen"
-          info={{ title: "Downburst", text: "Konvektion plus hohe Böen ergeben das Risiko für gefährliche Fallböen aus Gewittern." }}
-          big={labelSeverity(peakRisk(hourly, downburstRisk))}
-          unit=""
-        />
-        <ParamCard
-          title="Konvektive Energie"
-          info={{ title: "CAPE", text: "Convective Available Potential Energy. ≥ 500 mäßig, ≥ 1500 hoch, ≥ 2500 extrem." }}
-          big={conv.capeMax != null ? conv.capeMax.toFixed(0) : "—"}
-          unit="J/kg max"
-          hint={conv.liMin != null ? `LI min ${conv.liMin.toFixed(1)}` : undefined}
-          level={conv.level}
-        />
-        <ParamCard
-          title="Low-Level Shear"
-          info={{ title: "Wind­scherung 10 m → 180 m", text: "Höhenunterschied zwischen Wind in 10 m und 180 m. Höhere Werte begünstigen organisierte Gewitter." }}
-          big={shearNow != null ? shearNow.toFixed(1) : "—"}
-          unit="m/s"
-          hint="0–4 schwach · 4–8 mäßig · > 8 stark"
-        />
-        <ParamCard
-          title="Taupunkt & Schwüle"
-          info={{ title: "Taupunkt", text: "Maß für absolute Feuchte. Über 16 °C wird es schwül, über 20 °C drückend." }}
-          big={formatTemp(now?.dewPointC, settings.tempUnit)}
-          unit={sult}
-          hint={spread != null ? `Spread ${spread.toFixed(1)} K` : undefined}
-        />
-        <ParamCard
-          title="Starkregen-Peak"
-          info={{ title: "Starkregen", text: "DWD-Schwellen: ≥ 15 mm/h markant, ≥ 25 heftig, ≥ 40 extrem." }}
-          big={sum24h.precipMaxMm.toFixed(1)}
-          unit="mm/h"
-        />
-        <ParamCard
-          title="Wind & Böen"
-          info={{ title: "Böen", text: "≥ 50 km/h markant, ≥ 65 Sturmböen, ≥ 90 schwerer Sturm, ≥ 118 Orkan." }}
-          big={`${(sum24h.gustMaxMs * 3.6).toFixed(0)}`}
-          unit="km/h Spitze"
-          hint={now?.windSpeedMs != null ? `Mittel jetzt ${(now.windSpeedMs * 3.6).toFixed(0)} km/h` : undefined}
-        />
-        <ParamCard
-          title="Winter / Schnee"
-          info={{ title: "Schneefallgrenze", text: "Liegt die Nullgradgrenze unter der Geländehöhe, fällt Niederschlag als Schnee." }}
-          big={winter.snowfallSumCm > 0 ? winter.snowfallSumCm.toFixed(1) : "—"}
-          unit="cm Neuschnee 24 h"
-          hint={winter.freezingLevelMinM != null ? `0 °C bei ${Math.round(winter.freezingLevelMinM)} m` : undefined}
-        />
-      </div>
+      )}
     </div>
   );
 }
