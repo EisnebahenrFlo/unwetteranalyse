@@ -312,53 +312,6 @@ function NowcastRow({ step, maxPrecip, daily }: { step: NowcastStep; maxPrecip: 
   );
 }
 
-/* legacy bar kept removed */
-const _unused_old: undefined = undefined; void _unused_old;
-function _legacy() { return null; }
-
-function _legacyBar({ step, max }: { step: NowcastStep; max: number }) {
-  const h = Math.max(6, Math.round((step.severeScore / max) * 100));
-  void h; void step; void max;
-  return null;
-}
-
-/* keep file footer */
-function _noop() {
-  return (
-    <div className="flex flex-col gap-3">
-      </div>
-  );
-}
-
-function NowcastBar({ step, max }: { step: NowcastStep; max: number }) {
-  const h = Math.max(6, Math.round((step.severeScore / max) * 100));
-  const bg = step.level === "extreme" ? "bg-warn-extreme"
-    : step.level === "severe" ? "bg-warn-severe"
-    : step.level === "moderate" ? "bg-warn-moderate"
-    : step.level === "minor" ? "bg-warn-minor"
-    : step.precipMmPerH >= 0.5 ? "bg-primary/60" : "bg-muted";
-  return (
-    <div
-      className="flex min-w-0 flex-col items-center gap-1"
-      title={`+${step.minutesFromNow} min · Score ${step.severeScore} · Regen ${step.precipMmPerH.toFixed(1)} mm/h · Gewitter ${Math.round(step.thunderProb * 100)} %`}
-    >
-      <div className="font-mono text-[9px] leading-none text-muted-foreground">
-        {step.minutesFromNow === 0 ? "jetzt" : `+${step.minutesFromNow}`}
-      </div>
-      <div className="relative flex h-24 w-full items-end overflow-hidden rounded-md bg-muted/40">
-        <div className={cn("w-full transition-all", bg)} style={{ height: `${h}%` }} />
-        {step.hail !== "none" && (
-          <div className="absolute left-0 right-0 top-0 h-1 bg-warn-extreme" title="Hagelrisiko" />
-        )}
-        {step.thunderProb >= 0.3 && step.hail === "none" && (
-          <div className="absolute left-0 right-0 top-0 h-1 bg-warn-moderate/80" title="Gewitter" />
-        )}
-      </div>
-      <div className="font-mono text-[10px] font-semibold leading-none">{step.severeScore}</div>
-    </div>
-  );
-}
-
 /* ---------- Tab: Heute 24h ---------- */
 
 function TodayTab({ bundle, hazardSet }: { bundle: ForecastBundle; hazardSet: ReturnType<typeof buildHazards> }) {
