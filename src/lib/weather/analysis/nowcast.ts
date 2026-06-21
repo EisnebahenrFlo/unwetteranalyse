@@ -23,6 +23,11 @@ export interface NowcastStep {
   severeScore: number;
   level: AlertSeverity | "none";
   weatherCode?: number;
+  windSpeedMs?: number;
+  windGustMs?: number;
+  temperatureC?: number;
+  capeJkg?: number;
+  liftedIndex?: number;
 }
 
 export interface Nowcast2h {
@@ -75,6 +80,11 @@ export function buildNowcast2h(hourly: HourlyPoint[], minutely: MinutelyPoint[] 
       severeScore: score.value,
       level: score.level,
       weatherCode,
+      windSpeedMs: interp?.windSpeedMs,
+      windGustMs: interp?.windGustMs,
+      temperatureC: interp?.temperatureC,
+      capeJkg: interp?.cape,
+      liftedIndex: interp?.liftedIndex,
     });
   }
 
