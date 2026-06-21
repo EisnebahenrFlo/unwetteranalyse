@@ -80,7 +80,7 @@ function AnalysisPage() {
       />
 
       {tab === "nowcast" && (
-        <NowcastDecisionCard hourly={q.data.hourly} minutely={q.data.minutely} now={liveNow} />
+        <NowcastDecisionCard hourly={q.data.hourly} minutely={q.data.minutely} daily={q.data.daily} now={liveNow} />
       )}
 
       {tab === "today" && (
