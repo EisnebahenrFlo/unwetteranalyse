@@ -120,3 +120,17 @@ export function wmsTileUrl(layer: WmsLayerKey, time?: string | null) {
   if (time) url.searchParams.set("TIME", time);
   return url.toString().replace("%7Bbbox-epsg-3857%7D", "{bbox-epsg-3857}");
 }
+
+/** Expand WMS time dimension (comma list or ISO start/end/PTxM). */
+function expandTime(raw: string): string[] {
+  if (raw.includes(",")) return raw.split(",").map((v) => v.trim()).filter(Boolean);
+  const [startRaw, endRaw, stepRaw] = raw.split("/");
+  const start = new Date(startRaw).getTime();
+  const end = new Date(endRaw).getTime();
+  const stepMinutes = Number(stepRaw?.match(/PT(\d+)M/)?.[1] ?? 5);
+  const stepMs = stepMinutes * 60_000;
+  if (!Number.isFinite(start) || !Number.isFinite(end) || stepMs <= 0) return [];
+  const out: string[] = [];
+  for (let t = start; t <= end; t += stepMs) out.push(new Date(t).toISOString());
+  return out;
+}
