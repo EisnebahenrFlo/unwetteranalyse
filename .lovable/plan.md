@@ -1,119 +1,140 @@
-Hi Flo, hier mein Vorschlag für den Komplettumbau der UI/UX, ohne deine bestehenden Datenquellen, Queries und Analysefunktionen anzufassen. Nur Präsentation, Layout, Hierarchie und Navigation werden neu.
+# Radar-Cockpit-Umbau
 
-## Leitidee
+Ziel: Aus der bestehenden App ein operatives, kostenfreies Unwetter-Radar-Tool machen. Eine zentrale Karte mit intelligenten Layern, sauberem Zeitregler, Blitz-Live-Bestätigung und kompakter Analyseleiste. Bestehende Funktionen, Datenmodelle und Routen außerhalb der Karte bleiben unangetastet.
 
-Die App wird zu einem Analyse-Cockpit, das deiner Denkfolge folgt:
-Lage → Gefahr → Kurzfrist → Live → Trend → System.
-Keine Kartenwüste, klare Größenstufen, ruhige Optik, fachliche Färbung nur wo sie hilft.
+## 1. Datenquellen-Layer (alle kostenlos)
 
-## Neue Informationsarchitektur (Dashboard `/`)
+DWD GeoServer WMS (verifiziert vorhanden):
 
-Eine einzige scrollbare Hauptansicht mit Sprungankern und Sticky-Sub-Header. Anker-IDs: `lage`, `gefahren`, `nowcast`, `live`, `trend`, `system`.
+- **RY** → `RADOLAN-RY`, 5-min Beobachtung, Hauptlayer
+- **WN** → `Radar_wn-product_1x1km_ger`, Nowcast bis +2 h in 5-min-Schritten
+- **PI / Mitteleuropa** → `Radar_eucom_zeros` (EU-Composite des DWD)
+- **QY / Qualitätslayer**: im öffentlichen DWD-WMS nicht als separater Layer verfügbar. Lösung: aus der WMS-Capabilities die jeweils letzte verfügbare Frame-Zeit pro Layer + Frame-Lücken extrahieren und als "Datenvertrauen"-Signal anzeigen (frisch / verzögert / Lücken). So bleibt die Qualitätsaussage real und nicht erfunden. Falls später ein QY-Endpoint gefunden wird, kann er als Tile-Layer ergänzt werden, die UI-Slot dafür existiert.
+- **Blitze** → Blitzortung.org via öffentlichem WebSocket `wss://ws1.blitzortung.org/`. Live-Strikes werden im Browser empfangen, in 0–5 / 5–15 / 15–30 min gestaffelt als GeoJSON-Layer dargestellt.
+- **Stationen** → Bright Sky `/current_weather` für Punkte rund um Kartenmitte (bereits im Code vorhanden, wird wiederverwendet).
+- **Warnungen** → Bright Sky `/alerts` als optionaler dezenter Polygon-Layer (bereits angebunden).
+
+## 2. Produktstruktur
+
+Die Karte wird zur Hauptansicht. Routen-Update:
+
+- `/` Dashboard bleibt als Lage-Übersicht, bekommt aber unten einen Quick-Link "Radar-Cockpit öffnen"
+- `/map` wird zum **Radar-Cockpit** (kompletter Umbau)
+- Restliche Routen (`/analysis`, `/alerts`, `/models`, `/stations`, `/learn`, `/settings`) unverändert
+
+Drei Karten-Modi, oben rechts als Segmented Switch:
+
+1. **Fokus DE** – Zentrum DACH, RY Standard, WN über Zeitregler, Blitz/Stationen/Warn zuschaltbar
+2. **Mitteleuropa** – PI (`Radar_eucom_zeros`), weiter herausgezoomt, Blitz zuschaltbar
+3. **Bodencheck** – RY gedimmt + große Stations-Pins mit Wind/Böen/Druck/Taupunkt
+
+## 3. Layout des Cockpits
 
 ```text
-┌─ Header ─────────────────────────────────────────────────────────┐
-│ MeteoFlo │ Ort / Suche (zentriert)            │ Status · Theme   │
-├─ Sticky-Subnav ──────────────────────────────────────────────────┤
-│ Lage · Gefahren · Nowcast · Live · Trend · System                │
-├─ 1 Lage (primär, volle Breite) ──────────────────────────────────┤
-│ Lage-Headline + Kernsatz + Lage-Score · Hauptgefahr · Fenster    │
-├─ 2 Gefahren (sekundär, 2-spaltig auf Desktop) ───────────────────┤
-│ Priorisierte Gefahrenliste (Starkregen, Gewitter, Wind, Hagel…)  │
-├─ 3 Kurzfrist 0–2 h (sekundär) ───────────────────────────────────┤
-│ Nowcast-Verlauf + Konvektions-Kontext + Tendenz-Pfeil            │
-├─ 4 Live (sekundär, 12-col Grid) ─────────────────────────────────┤
-│ Radar · Aktuelle Beobachtung · Wind/Böen · Druck/Tendenz         │
-├─ 5 Trend 24 h / 7 d (tertiär, kompakt) ──────────────────────────┤
-│ Hourly-Strip (kompakt) + Daily-Strip mit Gefahrenpillen          │
-├─ 6 System (tertiär, kollabierbar) ───────────────────────────────┤
-│ Quellen, letzte Aktualisierung, Verzögerungen, Unsicherheiten    │
-└──────────────────────────────────────────────────────────────────┘
++--------------------------------------------------------------+
+| Topbar: Modus [Fokus DE | Mitteleuropa | Bodencheck]         |
+|         Quellenstatus · Letzte Aktualisierung · Datenvertrauen|
++----------------------------+---------------------------------+
+|                            | Analyseleiste                   |
+|                            |  · Jetzt                        |
+|         Hauptkarte         |  · Nächste 30 min               |
+|       (volle Höhe)         |  · Nächste 2 h                  |
+|                            |  · Datenvertrauen               |
+|                            |  · Aktive Layer                 |
++----------------------------+---------------------------------+
+| Zeitregler:  [-2h … Jetzt … +2h Nowcast]   Play/Pause  Step  |
+| Layer-Toolbar: RY  WN  PI  Blitz  Stationen  Warnungen  QY   |
++--------------------------------------------------------------+
 ```
 
-### 1. Lage (neu, `SituationHeadline`)
-Eine einzige große Karte, kein Grid. Inhalte:
-- Lage-Score 0–100 als großer Wert + Label (ruhig / erhöht / markant / unwetterartig)
-- Ein klarer Kernsatz, generiert aus `situation.ts` und `hazards.ts` (z. B. „Konvektive Lage erhöht, Hauptfenster 16–20 Uhr, Starkregen führend.")
-- Hauptgefahr als großer Chip
-- Zeitfenster der Hauptphase
-- Tendenz-Pfeil (verschärft / stabil / entspannt) auf Basis Nowcast-Slope
+- Desktop: Karte links (≈ 70 %), Analyseleiste rechts (≈ 30 %), unten Zeitregler + Layer-Toolbar als ein Streifen
+- Mobile: Karte oben (60 vh), darunter Zeitregler, Layer-Toolbar horizontal scrollbar, Analyseleiste als ausklappbares Bottom-Sheet
 
-### 2. Gefahren (`HazardPriorityList`)
-- Liste statt Kacheln, max. 6 Einträge, sortiert nach Severity × Confidence
-- Pro Zeile: Icon, Name, Severity-Balken, Confidence (1–5), Kurzbewertung, Zeitfenster
-- Heat/Cold/Frost klar abgesetzt, nicht als Unwetter
-- Detail per Accordion (kein Modal), Rohwerte zweite Ebene
+## 4. Karten- und Layer-Architektur
 
-### 3. Kurzfrist 0–2 h (`ShortTermPanel`)
-- Nutzt bestehende `NowcastPanel`-Logik in neuer, ruhigerer Darstellung
-- Multimetrik-Strip 10-min: Severe, Regen mm/h, Böen, Konvektionsindex
-- Tendenz-Badge oben rechts: verschärft / stabil / entspannt
-- Konsistenz-Hinweis: Radar vs. Modell („konsistent" / „Radar voraus")
+Neuer Ordner `src/lib/weather/sources/dwd-wms.ts`:
 
-### 4. Live (`LiveSignals`, 12-col Grid)
-- Radar (DWD) groß, 8 Spalten
-- Rechts gestapelt: Aktuelle Bright-Sky-Beobachtung, Wind/Böen, Druck-Tendenz
-- Klar getrennt von Bewertung durch eigene Sektion + Label „Beobachtung"
+- konstanten für RY / WN / PI inkl. Layer-Name, Capabilities-Selector, Default-Frame-Schritt
+- `fetchWmsTimeline(layer)` → Liste der verfügbaren Frame-Zeiten + `latest`, `oldest`, `stepMs`, `lagMs`
+- `wmsTileUrl(layer, time)` baut die Tile-URL für maplibre
 
-### 5. Trend (`TrendStrip`)
-- Hourly-Strip kompakt, 24 h
-- Daily-Strip 7 d mit Gefahren-Pille pro Tag (Severity-Farbe)
-- Kein Hero-Status mehr, klar nachgelagert
+Neuer Ordner `src/lib/weather/sources/blitzortung.ts`:
 
-### 6. System (`SystemStatus`, default kollabiert)
-- Quellenliste mit Zeitstempel, Latenz, Status (ok / verzögert / aus)
-- Hinweise zu Unsicherheiten (Modellspread, fehlende Stationen)
-- Ersetzt das bisherige `DataMeta` verstreut auf der Seite
+- `useLightningStream({ enabled, bbox })` Hook mit WebSocket-Connect, automatischer Reconnect-Backoff, In-Memory-Buffer der letzten 60 min, Bbox-Filter clientseitig
+- Strikes werden mit Alter klassifiziert (0–5 / 5–15 / 15–30 min) für die Farbgebung
 
-## Header & Navigation
+`src/components/map/WeatherMap.tsx` wird zur „dummen“ Map-Shell (Init, Resize, Center) und exportiert imperative Hooks (`setRasterLayer`, `setGeoJsonLayer`, `clearLayer`). Die gesamte Layer-Orchestrierung passiert in einer neuen Cockpit-Komponente, damit Karte performant bleibt:
 
-- Header: Logo links · `LocationSwitcher` zentriert · rechts `SystemStatusPill` (grün/gelb/rot, klickbar → springt zu `#system`) + `ThemeToggle`
-- Sticky Subnav mit 6 Ankern, scroll-spy aktiv, auf Mobile horizontal scrollbar mit Snap
-- Seitenleiste auf Desktop bleibt erhalten, wird aber ruhiger: Primär = Dashboard, Karte, Analyse, Warnungen. „Mehr" wie heute. Sidebar-Active-Highlight subtiler.
+- Nur **ein** Raster-Layer gleichzeitig sichtbar (RY oder WN oder PI)
+- WN-Frames werden lazy nachgeladen (nur wenn Modus Nowcast aktiv ist)
+- Bei Frame-Wechsel wird ausschließlich der `tiles`-Source ausgetauscht, nicht der Layer neu erzeugt → kein Flackern, kein Map-Reload
+- Animation läuft per `requestAnimationFrame`-Throttle (max 1 Frame / 600 ms), pausiert automatisch beim Pan/Zoom
 
-## Sekundäre Routen
+## 5. Zeitregler-Logik
 
-Werden visuell an die neue Sprache angeglichen, Struktur bleibt:
-- `/analysis`, `/map`, `/alerts`, `/models`, `/stations`, `/learn`, `/settings`
-- Gemeinsamer Section-Header (`SectionHeader` mit Titel + Kernfrage) auf allen Seiten
+Ein einziger Slider, dreiteilig:
 
-## Neue UI-Bausteine (rein präsentationell)
+```text
+[-2 h ……… Jetzt ……… +2 h]
+   RY-Verlauf      WN-Nowcast
+```
 
-Neu in `src/components/cockpit/`:
-- `SectionHeader.tsx` — Titel, Kernfrage, Anker-ID
-- `StickySubnav.tsx` — Sprunganker mit Scroll-Spy
-- `SituationHeadline.tsx` — Primärbereich Lage
-- `HazardPriorityList.tsx` — priorisierte Gefahrenliste
-- `ShortTermPanel.tsx` — Wrapper um bestehende Nowcast-Logik
-- `LiveSignals.tsx` — Radar + Beobachtung + Wind + Druck
-- `TrendStrip.tsx` — Wrapper um `HourlyStrip` + `DailyStrip`
-- `SystemStatus.tsx` — Quellen/Status, kollabierbar
-- `SystemStatusPill.tsx` — Header-Indikator
-- `TendencyBadge.tsx` — verschärft / stabil / entspannt
+- Position links von „Jetzt“ → RY-Frame zum gewählten Zeitpunkt
+- Position rechts von „Jetzt“ → WN-Frame
+- Snap auf 5-min-Raster, Play-Button spielt nahtlos -30 min → +30 min
+- Aktueller Modus (Verlauf / Jetzt / Nowcast) wird als farbige Badge oben am Slider angezeigt
 
-Bestehende Komponenten bleiben als Datenlieferanten und werden intern weiterverwendet (`ThreatBoard`-Logik fliesst in `HazardPriorityList` + `ShortTermPanel` ein, `CurrentConditions` + `NextChange` werden Teil von `LiveSignals` bzw. `SituationHeadline`).
+## 6. Analyseleiste (rechts)
 
-## Visuelle Sprache (`src/styles.css`)
+Vier Blöcke, jeder ist eine kleine Karte mit einer Headline + 1–2 Belegen:
 
-- Hintergrund: ruhige, leicht kühle Neutraltöne, klarer Light/Dark-Mode
-- Typo-Skala mit echten Größenstufen für Hero/Section/Body/Meta
-- Severity-Skala bleibt, dekorative Farben raus
-- Card-Stile: 3 Varianten via `tone`: `primary` (Lage), `default` (Sektionen), `muted` (System/Trend)
-- Keine Glows, keine Hero-Gradients, dezente Borders, hoher Kontrast
+- **Jetzt**: stärkste RY-Intensität im sichtbaren Bbox, Anzahl Blitze letzte 5 min, höchste Bö aus Stationen
+- **Nächste 30 min**: Trend Niederschlagsintensität aus WN-Frames +0…+30, Richtung der Verlagerung (vektoriell aus 3 Frames), Blitz-Trend (steigend/fallend/konstant)
+- **Nächste 2 h**: Peak-Intensität aus WN, Zeitpunkt des Peaks, ob neue Zellen am Westrand entstehen
+- **Datenvertrauen**: Frische der RY/WN/PI-Frames (min seit letzter Aktualisierung), erkannte Frame-Lücken, Blitz-Stream-Status, Stationsabdeckung im Bbox
 
-## Was nicht angefasst wird
+Logik liegt in `src/lib/weather/analysis/radar-cockpit.ts`. Keine Behauptungen ohne Daten – wenn Quelle fehlt, steht dort ehrlich „keine Live-Bestätigung“.
 
-- Datenquellen, Queries, `analysis/*`, `sources/*`, `mappers/*`, `live.ts`, `hooks/*`
-- Routenstruktur und Routenamen
-- Bestehende Funktionalität von `NowcastPanel`, `ThreatBoard`, `SevereTimeline`, `WeatherMap`
+## 7. Performance-Regeln
 
-## Umsetzungsschritte
+- Standardmäßig **kein** Auto-Loop, nur aktueller Frame
+- Animation startet erst auf Play-Klick und lädt vorher die benötigten Frames vor (max 24 für RY, 24 für WN)
+- Tiles werden gecached, Layerwechsel räumt alte Sources auf
+- Map-Resize per ResizeObserver gedrosselt
+- Blitz-WS pausiert bei Tab-Inaktivität (`document.visibilityState`)
 
-1. Neue Cockpit-Komponenten anlegen (leere Hüllen, dann gefüllt)
-2. `src/routes/index.tsx` auf neue Sektionsstruktur umstellen
-3. `AppShell.tsx` Header anpassen (`SystemStatusPill` + Sticky-Subnav)
-4. `styles.css` Tokens ruhiger und konsistenter
-5. Sekundäre Routen mit `SectionHeader` vereinheitlichen
-6. Mobile-Pass: Sticky-Subnav scrollbar, Sektionen volle Breite, BottomNav bleibt
+## 8. Visuelle Sprache
 
-Soll ich so loslegen, oder willst du vorher noch Reihenfolge, Sticky-Subnav oder die Sidebar-Logik anpassen?
+- Bestehendes Cockpit-Farbset, keine neuen Akzentfarben
+- Layer-Toolbar als nüchterne Icon-Buttons mit Label, aktiver Zustand = volle Fläche, inaktiv = nur Outline
+- Warnpolygone dezent (1 px Stroke, 8 % Fill), Blitze als kleine, scharfe Symbole, keine Glow-Effekte
+- Legende minimal: vier RY-Klassen, drei Blitz-Altersstufen, fertig
+
+## 9. Dateien
+
+**Neu:**
+- `src/lib/weather/sources/dwd-wms.ts`
+- `src/lib/weather/sources/blitzortung.ts`
+- `src/lib/weather/analysis/radar-cockpit.ts`
+- `src/components/radar/RadarCockpit.tsx` (Layout-Orchestrierung)
+- `src/components/radar/LayerToolbar.tsx`
+- `src/components/radar/TimeScrubber.tsx`
+- `src/components/radar/ModeSwitch.tsx`
+- `src/components/radar/AnalysisRail.tsx`
+- `src/components/radar/LightningLayer.tsx`
+- `src/components/radar/StationsLayer.tsx`
+
+**Geändert:**
+- `src/components/map/WeatherMap.tsx` → schlanke Map-Shell mit imperativen Layer-APIs
+- `src/routes/map.tsx` → rendert nur noch `<RadarCockpit />`, eigene `head()`-Metadaten
+- `src/components/cockpit/LiveSignals.tsx` → Map-Embed bleibt, nutzt die neue Map-Shell mit Standard-Layer RY
+- `src/components/layout/AppShell.tsx` → Label „Karte“ → „Radar-Cockpit“
+
+**Nicht angefasst:** alle Analyse-/Forecast-/Mapper-/Live-Module, alle übrigen Routen, Settings, Stationen, Modelle, Lernen, Alerts, Dashboard-Strukturen außer dem Map-Embed.
+
+## 10. Out of scope
+
+- Eigenes Tile-Hosting oder Proxy
+- Kommerzielle Quellen (Meteomatics, MeteoGroup etc.)
+- Push-Benachrichtigungen / Service Worker
+- Mehrere parallele Karten / Split-View

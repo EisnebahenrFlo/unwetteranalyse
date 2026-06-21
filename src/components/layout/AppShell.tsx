@@ -14,7 +14,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
  */
 const PRIMARY_NAV = [
   { to: "/", label: "Dashboard", icon: Compass },
-  { to: "/map", label: "Karte", icon: Map },
+  { to: "/map", label: "Radar", icon: Map },
   { to: "/analysis", label: "Analyse", icon: LineChart },
   { to: "/alerts", label: "Warnungen", icon: AlertTriangle },
 ] as const;
