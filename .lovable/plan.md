@@ -1,140 +1,108 @@
-# Radar-Cockpit-Umbau
+## Ziel
 
-Ziel: Aus der bestehenden App ein operatives, kostenfreies Unwetter-Radar-Tool machen. Eine zentrale Karte mit intelligenten Layern, sauberem Zeitregler, Blitz-Live-Bestätigung und kompakter Analyseleiste. Bestehende Funktionen, Datenmodelle und Routen außerhalb der Karte bleiben unangetastet.
+Die App bekommt eine saubere, mehrstufige Scoring-Architektur und eine neu gegliederte Analyse-Seite. Jeder Score ist nachvollziehbar: Rohdaten → abgeleitete Parameter → Teilrisiken (0–100) → Gesamtscore (gewichtet je Zeitfenster) → Vertrauen → verbales Label. Keine Blackbox.
 
-## 1. Datenquellen-Layer (alle kostenlos)
+## 1. Neue Scoring-Architektur (`src/lib/weather/scoring/`)
 
-DWD GeoServer WMS (verifiziert vorhanden):
+Komplett neu, klar getrennt von der alten `convection.ts`/`hazards.ts`-Logik (die bleibt als Helfer bestehen, wird aber von der neuen Schicht orchestriert).
 
-- **RY** → `RADOLAN-RY`, 5-min Beobachtung, Hauptlayer
-- **WN** → `Radar_wn-product_1x1km_ger`, Nowcast bis +2 h in 5-min-Schritten
-- **PI / Mitteleuropa** → `Radar_eucom_zeros` (EU-Composite des DWD)
-- **QY / Qualitätslayer**: im öffentlichen DWD-WMS nicht als separater Layer verfügbar. Lösung: aus der WMS-Capabilities die jeweils letzte verfügbare Frame-Zeit pro Layer + Frame-Lücken extrahieren und als "Datenvertrauen"-Signal anzeigen (frisch / verzögert / Lücken). So bleibt die Qualitätsaussage real und nicht erfunden. Falls später ein QY-Endpoint gefunden wird, kann er als Tile-Layer ergänzt werden, die UI-Slot dafür existiert.
-- **Blitze** → Blitzortung.org via öffentlichem WebSocket `wss://ws1.blitzortung.org/`. Live-Strikes werden im Browser empfangen, in 0–5 / 5–15 / 15–30 min gestaffelt als GeoJSON-Layer dargestellt.
-- **Stationen** → Bright Sky `/current_weather` für Punkte rund um Kartenmitte (bereits im Code vorhanden, wird wiederverwendet).
-- **Warnungen** → Bright Sky `/alerts` als optionaler dezenter Polygon-Layer (bereits angebunden).
+### Dateien
+- `scoring/labels.ts` — zentrale Schwellen + Labels (`ruhig` 0–14, `aufmerksam` 15–34, `markant` 35–59, `kritisch` 60–79, `hochkritisch` 80–100), App-weit verwendet.
+- `scoring/normalize.ts` — Normalisierung roher Werte auf 0–100 (CAPE, LI, K, TT, Niederschlag, Böen, Blitzaktivität, Radarintensität).
+- `scoring/subscores.ts` — fünf Teilscores 0–100, jeder mit `value`, `contributors[]`, `confidence`:
+  - `rainScore`
+  - `windScore`
+  - `thunderScore`
+  - `convectionScore` (CAPE, LI, K, TT, CIN)
+  - `dataConfidence`
+- `scoring/derived.ts` — abgeleitete Kennwerte: K-Index (`(T850-T500)+Td850-(T700-Td700)`), Total Totals (`T850+Td850-2·T500`), Schwüle, Spread, Low-Level-Shear. Für Open-Meteo nutzen wir die geopotenziellen Levels (`temperature_850hPa`, `dew_point_850hPa`, `temperature_700hPa`, `dew_point_700hPa`, `temperature_500hPa`) — diese Variablen werden zur API-Abfrage hinzugefügt.
+- `scoring/nowcast.ts` — Score für 0–2 h auf 10-min Raster. Gewichtung: Radar/Blitz/Niederschlag/Böen/Live-Signale hoch, Konvektion mittel. Nutzt `minutely_15` + interpolierte Stunden + (falls verfügbar) Blitz-Live-Buffer aus `useLightningStream`.
+- `scoring/today.ts` — Score für 0–24 h auf Stundenbasis. Gewichtung: CAPE, LI, Gewitterwahrscheinlichkeit, Niederschlag, Böen, K/TT.
+- `scoring/explain.ts` — strukturierte Erklärung: pro Score Liste der Beitragenden mit Wert + Punktbeitrag, plus Confidence-Faktoren.
 
-## 2. Produktstruktur
+### Datenmodelle
+```ts
+type Band = "ruhig" | "aufmerksam" | "markant" | "kritisch" | "hochkritisch";
 
-Die Karte wird zur Hauptansicht. Routen-Update:
+interface Subscore {
+  value: number;            // 0–100
+  band: Band;
+  contributors: { label: string; raw: string; points: number }[];
+  confidence: number;       // 0–100
+}
 
-- `/` Dashboard bleibt als Lage-Übersicht, bekommt aber unten einen Quick-Link "Radar-Cockpit öffnen"
-- `/map` wird zum **Radar-Cockpit** (kompletter Umbau)
-- Restliche Routen (`/analysis`, `/alerts`, `/models`, `/stations`, `/learn`, `/settings`) unverändert
-
-Drei Karten-Modi, oben rechts als Segmented Switch:
-
-1. **Fokus DE** – Zentrum DACH, RY Standard, WN über Zeitregler, Blitz/Stationen/Warn zuschaltbar
-2. **Mitteleuropa** – PI (`Radar_eucom_zeros`), weiter herausgezoomt, Blitz zuschaltbar
-3. **Bodencheck** – RY gedimmt + große Stations-Pins mit Wind/Böen/Druck/Taupunkt
-
-## 3. Layout des Cockpits
-
-```text
-+--------------------------------------------------------------+
-| Topbar: Modus [Fokus DE | Mitteleuropa | Bodencheck]         |
-|         Quellenstatus · Letzte Aktualisierung · Datenvertrauen|
-+----------------------------+---------------------------------+
-|                            | Analyseleiste                   |
-|                            |  · Jetzt                        |
-|         Hauptkarte         |  · Nächste 30 min               |
-|       (volle Höhe)         |  · Nächste 2 h                  |
-|                            |  · Datenvertrauen               |
-|                            |  · Aktive Layer                 |
-+----------------------------+---------------------------------+
-| Zeitregler:  [-2h … Jetzt … +2h Nowcast]   Play/Pause  Step  |
-| Layer-Toolbar: RY  WN  PI  Blitz  Stationen  Warnungen  QY   |
-+--------------------------------------------------------------+
+interface CompositeScore {
+  total: number;            // 0–100
+  band: Band;
+  peakAt?: string;          // ISO
+  subs: { rain: Subscore; wind: Subscore; thunder: Subscore; convection: Subscore };
+  data: Subscore;           // Datenvertrauen
+  reasons: string[];        // kurze Klartextzeilen
+}
 ```
 
-- Desktop: Karte links (≈ 70 %), Analyseleiste rechts (≈ 30 %), unten Zeitregler + Layer-Toolbar als ein Streifen
-- Mobile: Karte oben (60 vh), darunter Zeitregler, Layer-Toolbar horizontal scrollbar, Analyseleiste als ausklappbares Bottom-Sheet
+### Confidence-Berechnung
+Basiert auf: Datenabdeckung (welche Felder vorhanden), Aktualität (Alter der Beobachtung), Konsistenz Modell↔Beobachtung (Live vs. interpolierte Stunde), Radar-Frame-Frische (aus `dwd-wms`), Blitz-Stream-Status, Plausibilität (z. B. CAPE>2000 ohne Niederschlagssignal → Abzug).
 
-## 4. Karten- und Layer-Architektur
+## 2. Neue Analyse-Seite (`src/routes/analysis.tsx`)
 
-Neuer Ordner `src/lib/weather/sources/dwd-wms.ts`:
+Drei Tabs bleiben (`Nowcast 0–2 h`, `Heute 0–24 h`, `Parameter`), Inhalte neu:
 
-- konstanten für RY / WN / PI inkl. Layer-Name, Capabilities-Selector, Default-Frame-Schritt
-- `fetchWmsTimeline(layer)` → Liste der verfügbaren Frame-Zeiten + `latest`, `oldest`, `stepMs`, `lagMs`
-- `wmsTileUrl(layer, time)` baut die Tile-URL für maplibre
+### Tab „Nowcast 0–2 h"
+Reihenfolge:
+1. **Hauptblock** `NowcastHeadline` — großer Score, Band-Label, Peak-Zeitpunkt (+min), Confidence-Balken, eine Klartextzeile.
+2. **Teilrisiken** `SubscoreBars` — vier horizontale Balken (Regen, Wind, Gewitter, Konvektion) mit Wert + Top-3-Beitragenden als kleinen Text.
+3. **Zeitachse** `NowcastTable` — pro 10-min Schritt: Zeit, Wetter-Icon, Gewittersignal (⚡/–), Regen (mm/h + Balken), Wind (km/h + Bö), Score-Pille, Confidence-Punkt, Radar/Blitz-Bestätigung.
+4. **Erklärung** `ScoreExplainPanel` — ausklappbar, listet alle Beiträge mit Punkten.
+5. **Datenstatus** `DataStatusStrip` — Quellen + Frische (Open-Meteo, Bright Sky, DWD Radar, Blitz).
 
-Neuer Ordner `src/lib/weather/sources/blitzortung.ts`:
+### Tab „Heute 0–24 h"
+1. `TodayHeadline` — Tagesscore + Band + Peak-Fenster (Stundenbereich, nicht Punkt).
+2. `SubscoreBars` für die Tageslogik (andere Gewichtung).
+3. `SevereTimeline` (vorhanden, leicht erweitert um Band-Farben).
+4. `ScoreExplainPanel`.
+5. `DataStatusStrip`.
 
-- `useLightningStream({ enabled, bbox })` Hook mit WebSocket-Connect, automatischer Reconnect-Backoff, In-Memory-Buffer der letzten 60 min, Bbox-Filter clientseitig
-- Strikes werden mit Alter klassifiziert (0–5 / 5–15 / 15–30 min) für die Farbgebung
+### Tab „Parameter"
+Karten-Grid, jeweils mit Rohwert + abgeleitetem Wert + Interpretationstext:
+- Temperatur / Taupunkt / Spread / Schwüle
+- Wind / Böen / Low-Level-Shear
+- Niederschlag / Wahrscheinlichkeit
+- Druck / Druck-Tendenz
+- CAPE / Lifted Index / CIN
+- K-Index (mit Schwellen ≥20 möglich, ≥30 wahrscheinlich, ≥40 sehr wahrscheinlich)
+- Total Totals (≥44 möglich, ≥50 wahrscheinlich, ≥55 schwer)
+- Gewitterwahrscheinlichkeit (Modell + heuristisch nebeneinander)
 
-`src/components/map/WeatherMap.tsx` wird zur „dummen“ Map-Shell (Init, Resize, Center) und exportiert imperative Hooks (`setRasterLayer`, `setGeoJsonLayer`, `clearLayer`). Die gesamte Layer-Orchestrierung passiert in einer neuen Cockpit-Komponente, damit Karte performant bleibt:
+## 3. Datenquellen-Erweiterung
 
-- Nur **ein** Raster-Layer gleichzeitig sichtbar (RY oder WN oder PI)
-- WN-Frames werden lazy nachgeladen (nur wenn Modus Nowcast aktiv ist)
-- Bei Frame-Wechsel wird ausschließlich der `tiles`-Source ausgetauscht, nicht der Layer neu erzeugt → kein Flackern, kein Map-Reload
-- Animation läuft per `requestAnimationFrame`-Throttle (max 1 Frame / 600 ms), pausiert automatisch beim Pan/Zoom
+- `sources/open-meteo.ts` — `HOURLY_VARS` um `temperature_850hPa`, `temperature_700hPa`, `temperature_500hPa`, `dew_point_850hPa`, `dew_point_700hPa` ergänzen.
+- `types.ts` — `HourlyPoint` um diese Felder erweitern.
+- `mappers/open-meteo.ts` — neue Felder mappen.
+- Blitz-Daten: bestehender `useLightningStream` wird optional in `nowcast.ts` injiziert (über Hook-Wrapper-Komponente).
 
-## 5. Zeitregler-Logik
+## 4. App-weite Vereinheitlichung
 
-Ein einziger Slider, dreiteilig:
+- `severeScore` in `convection.ts` bleibt für Rückwärtskompatibilität (Dashboard, Karte), bekommt aber intern eine Brücke auf das neue Banding (`labels.ts`).
+- `WarnBadge` bekommt eine Variante `band` zusätzlich zu `severity`, damit die neuen 5-stufigen Labels überall konsistent angezeigt werden können.
+- Bestehende Cockpit-Komponenten auf der Startseite werden nicht angefasst, nur Analyse + Scoring.
 
-```text
-[-2 h ……… Jetzt ……… +2 h]
-   RY-Verlauf      WN-Nowcast
-```
+## 5. Was bewusst NICHT geändert wird
 
-- Position links von „Jetzt“ → RY-Frame zum gewählten Zeitpunkt
-- Position rechts von „Jetzt“ → WN-Frame
-- Snap auf 5-min-Raster, Play-Button spielt nahtlos -30 min → +30 min
-- Aktueller Modus (Verlauf / Jetzt / Nowcast) wird als farbige Badge oben am Slider angezeigt
+- Radar-Cockpit (`/map`), Stationen, Modelle, Settings, Lernen.
+- Dashboard-Layout (`/`) — nur falls `severeScore` sich verhält, sonst Brücke.
+- Bright-Sky / DWD-Quellen bleiben unverändert (Beobachtungen werden bereits über `live.ts` ins Nowcast eingespeist).
 
-## 6. Analyseleiste (rechts)
+## Reihenfolge der Umsetzung
 
-Vier Blöcke, jeder ist eine kleine Karte mit einer Headline + 1–2 Belegen:
+1. Typen + Open-Meteo-Felder erweitern.
+2. `scoring/`-Modul komplett anlegen (labels, normalize, derived, subscores, nowcast, today, explain).
+3. Analyse-Komponenten neu: `NowcastHeadline`, `TodayHeadline`, `SubscoreBars`, `NowcastTable` (ersetzt `NowcastDecisionCard`-Inhalt), `ScoreExplainPanel`, `DataStatusStrip`, `ParamCardPro`.
+4. `analysis.tsx` neu zusammenbauen.
+5. `severeScore`-Brücke prüfen, damit das Dashboard stabil bleibt.
 
-- **Jetzt**: stärkste RY-Intensität im sichtbaren Bbox, Anzahl Blitze letzte 5 min, höchste Bö aus Stationen
-- **Nächste 30 min**: Trend Niederschlagsintensität aus WN-Frames +0…+30, Richtung der Verlagerung (vektoriell aus 3 Frames), Blitz-Trend (steigend/fallend/konstant)
-- **Nächste 2 h**: Peak-Intensität aus WN, Zeitpunkt des Peaks, ob neue Zellen am Westrand entstehen
-- **Datenvertrauen**: Frische der RY/WN/PI-Frames (min seit letzter Aktualisierung), erkannte Frame-Lücken, Blitz-Stream-Status, Stationsabdeckung im Bbox
+## Aufwand / Risiken
 
-Logik liegt in `src/lib/weather/analysis/radar-cockpit.ts`. Keine Behauptungen ohne Daten – wenn Quelle fehlt, steht dort ehrlich „keine Live-Bestätigung“.
-
-## 7. Performance-Regeln
-
-- Standardmäßig **kein** Auto-Loop, nur aktueller Frame
-- Animation startet erst auf Play-Klick und lädt vorher die benötigten Frames vor (max 24 für RY, 24 für WN)
-- Tiles werden gecached, Layerwechsel räumt alte Sources auf
-- Map-Resize per ResizeObserver gedrosselt
-- Blitz-WS pausiert bei Tab-Inaktivität (`document.visibilityState`)
-
-## 8. Visuelle Sprache
-
-- Bestehendes Cockpit-Farbset, keine neuen Akzentfarben
-- Layer-Toolbar als nüchterne Icon-Buttons mit Label, aktiver Zustand = volle Fläche, inaktiv = nur Outline
-- Warnpolygone dezent (1 px Stroke, 8 % Fill), Blitze als kleine, scharfe Symbole, keine Glow-Effekte
-- Legende minimal: vier RY-Klassen, drei Blitz-Altersstufen, fertig
-
-## 9. Dateien
-
-**Neu:**
-- `src/lib/weather/sources/dwd-wms.ts`
-- `src/lib/weather/sources/blitzortung.ts`
-- `src/lib/weather/analysis/radar-cockpit.ts`
-- `src/components/radar/RadarCockpit.tsx` (Layout-Orchestrierung)
-- `src/components/radar/LayerToolbar.tsx`
-- `src/components/radar/TimeScrubber.tsx`
-- `src/components/radar/ModeSwitch.tsx`
-- `src/components/radar/AnalysisRail.tsx`
-- `src/components/radar/LightningLayer.tsx`
-- `src/components/radar/StationsLayer.tsx`
-
-**Geändert:**
-- `src/components/map/WeatherMap.tsx` → schlanke Map-Shell mit imperativen Layer-APIs
-- `src/routes/map.tsx` → rendert nur noch `<RadarCockpit />`, eigene `head()`-Metadaten
-- `src/components/cockpit/LiveSignals.tsx` → Map-Embed bleibt, nutzt die neue Map-Shell mit Standard-Layer RY
-- `src/components/layout/AppShell.tsx` → Label „Karte“ → „Radar-Cockpit“
-
-**Nicht angefasst:** alle Analyse-/Forecast-/Mapper-/Live-Module, alle übrigen Routen, Settings, Stationen, Modelle, Lernen, Alerts, Dashboard-Strukturen außer dem Map-Embed.
-
-## 10. Out of scope
-
-- Eigenes Tile-Hosting oder Proxy
-- Kommerzielle Quellen (Meteomatics, MeteoGroup etc.)
-- Push-Benachrichtigungen / Service Worker
-- Mehrere parallele Karten / Split-View
+- 850/700/500 hPa-Levels von Open-Meteo sind nicht für jedes Modell verfügbar — wir fallen sauber auf `K = null`/`TT = null` zurück und ziehen das Datenvertrauen entsprechend.
+- Blitz-Live ist nur im Browser verfügbar (WebSocket) — auf SSR/Initial-Render rechnet der Nowcast ohne Blitz, was korrekt im Confidence-Score abgebildet wird.
+- Keine Migrationen, keine Auth-Änderungen.
