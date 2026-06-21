@@ -15,14 +15,6 @@ const LEVEL_BG: Record<AlertSeverity | "none", string> = {
   extreme: "bg-warn-extreme",
 };
 
-const LEVEL_BORDER: Record<AlertSeverity | "none", string> = {
-  none: "border-border",
-  minor: "border-warn-minor",
-  moderate: "border-warn-moderate",
-  severe: "border-warn-severe",
-  extreme: "border-warn-extreme",
-};
-
 /**
  * Premium 2 h Nowcast – lesbare Zeile-pro-Step-Darstellung mit Meteocon,
  * Wind, Regen, Temperatur, Gewitter-/Hagelmarker und Severity-Balken.
