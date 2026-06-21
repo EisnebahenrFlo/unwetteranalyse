@@ -66,6 +66,12 @@ export interface HourlyPoint {
   relativeHumidity?: number;
   freezingLevelM?: number;
   snowfallCm?: number;
+  // Höhenwerte für K-Index, Total Totals etc. (Open-Meteo Pressure-Level-API)
+  temperature850hPa?: number;
+  temperature700hPa?: number;
+  temperature500hPa?: number;
+  dewPoint850hPa?: number;
+  dewPoint700hPa?: number;
 }
 
 export interface DailyPoint {
