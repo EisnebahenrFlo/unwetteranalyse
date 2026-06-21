@@ -2,7 +2,7 @@ import { DataCard } from "@/components/common/DataCard";
 import type { ForecastBundle } from "@/lib/weather/types";
 import { useSettings } from "@/hooks/use-settings";
 import { formatHour, formatTemp, formatPrecip } from "@/lib/weather/format";
-import { MeteoconIcon } from "@/components/weather/MeteoconIcon";
+import { MeteoconIcon, isNightAt } from "@/components/weather/MeteoconIcon";
 import { useLiveNow } from "@/hooks/use-live-now";
 import { isCurrentHour } from "@/lib/weather/live";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,7 @@ export function HourlyStrip({ bundle }: { bundle: ForecastBundle }) {
                   <div>{hourOffset === 0 ? "jetzt" : `+${hourOffset} h`}</div>
                   <div>{formatHour(h.time)}</div>
                 </div>
-                <MeteoconIcon code={h.weatherCode} className="h-10 w-10" label="Wetter" />
+                <MeteoconIcon code={h.weatherCode} isNight={isNightAt(h.time, bundle.daily)} className="h-10 w-10" label="Wetter" />
                 <div className="font-mono text-sm font-semibold" style={{ fontFamily: "var(--font-mono)" }}>
                   {formatTemp(h.temperatureC, settings.tempUnit).split(" ")[0]}°
                 </div>
