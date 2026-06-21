@@ -1,105 +1,119 @@
-## Ziel
+Hi Flo, hier mein Vorschlag für den Komplettumbau der UI/UX, ohne deine bestehenden Datenquellen, Queries und Analysefunktionen anzufassen. Nur Präsentation, Layout, Hierarchie und Navigation werden neu.
 
-App mobiltauglich machen, Doppelanzeigen entfernen, alle Visualisierungen auf Premium-Niveau heben und die Gewitter-/Unwettererkennung deutlich verbreitern — ohne Grundstruktur oder bestehende Funktionen zu brechen.
+## Leitidee
 
-## 1. Navigation & Mobile
+Die App wird zu einem Analyse-Cockpit, das deiner Denkfolge folgt:
+Lage → Gefahr → Kurzfrist → Live → Trend → System.
+Keine Kartenwüste, klare Größenstufen, ruhige Optik, fachliche Färbung nur wo sie hilft.
 
-- `AppShell`: Seitenleiste auf **6 Top-Tabs** verschlanken durch logische Gruppierung. Sub-Tabs innerhalb der Routen, keine neuen Routen.
-  - **Dashboard** (`/`)
-  - **Wetter** (`/forecast` als Alias für `/`) — entfällt; siehe unten
-  - **Radar & Karte** (`/map`)
-  - **Analyse** (`/analysis`) — mit Sub-Tabs: *Nowcast 0–2h*, *Kurzfrist 0–6h*, *24h Ausblick*, *Modelle*, *Stationen*
-  - **Warnungen** (`/alerts`)
-  - **Lernen** (`/learn`)
-  - **Einstellungen** (`/settings`)
-  - `Modelle` und `Stationen` ziehen als Sub-Tabs in Analyse ein, behalten aber ihre Routen (Redirect/Verlinkung bleibt erhalten — Grundstruktur unverändert).
-- **Mobile**: BottomNav wird zu **5 Tabs** (Dashboard / Karte / Analyse / Warnungen / Mehr). „Mehr" öffnet ein Sheet mit den restlichen Punkten.
-- Header: Logo wird auf Mobile zum reinen Icon, Location-Switcher bekommt volle Breite, Theme-Toggle als Icon-Button.
-- Touch-Targets ≥ 44 px, horizontale Scrollstreifen (Hourly/Daily/Nowcast) mit Snap-Scroll + Edge-Fades.
+## Neue Informationsarchitektur (Dashboard `/`)
 
-## 2. Doppelanzeigen entfernen / Konsolidierung Dashboard
+Eine einzige scrollbare Hauptansicht mit Sprungankern und Sticky-Sub-Header. Anker-IDs: `lage`, `gefahren`, `nowcast`, `live`, `trend`, `system`.
 
-Heute zeigt das Dashboard **vier ähnliche Severe-Karten**: `NowcastPanel`, `SevereOverview`, `SevereWeatherPanel`, plus Teile in `AlertsSummary`. Konsolidierung:
+```text
+┌─ Header ─────────────────────────────────────────────────────────┐
+│ MeteoFlo │ Ort / Suche (zentriert)            │ Status · Theme   │
+├─ Sticky-Subnav ──────────────────────────────────────────────────┤
+│ Lage · Gefahren · Nowcast · Live · Trend · System                │
+├─ 1 Lage (primär, volle Breite) ──────────────────────────────────┤
+│ Lage-Headline + Kernsatz + Lage-Score · Hauptgefahr · Fenster    │
+├─ 2 Gefahren (sekundär, 2-spaltig auf Desktop) ───────────────────┤
+│ Priorisierte Gefahrenliste (Starkregen, Gewitter, Wind, Hagel…)  │
+├─ 3 Kurzfrist 0–2 h (sekundär) ───────────────────────────────────┤
+│ Nowcast-Verlauf + Konvektions-Kontext + Tendenz-Pfeil            │
+├─ 4 Live (sekundär, 12-col Grid) ─────────────────────────────────┤
+│ Radar · Aktuelle Beobachtung · Wind/Böen · Druck/Tendenz         │
+├─ 5 Trend 24 h / 7 d (tertiär, kompakt) ──────────────────────────┤
+│ Hourly-Strip (kompakt) + Daily-Strip mit Gefahrenpillen          │
+├─ 6 System (tertiär, kollabierbar) ───────────────────────────────┤
+│ Quellen, letzte Aktualisierung, Verzögerungen, Unsicherheiten    │
+└──────────────────────────────────────────────────────────────────┘
+```
 
-- **Neu: `ThreatBoard`** — eine intelligente Karte mit Sub-Tabs:
-  - *Jetzt* (Live-Stufe, aktive Warnungen, Kurzdiagnose)
-  - *Nowcast 0–2 h* (10-min-Raster, Regen/Hagel/Blitz)
-  - *Heute 0–24 h* (Peaks, Zeitfenster, Hauptrisiko)
-- Ersetzt `NowcastPanel` + `SevereOverview` + `SevereWeatherPanel` auf dem Dashboard. Die Komponenten bleiben als Bausteine bestehen, werden nur nicht mehr dreifach gerendert.
-- `AlertsSummary` zeigt nur noch offizielle + abgeleitete Warnungen kompakt (Chips), Details im Tab Warnungen.
+### 1. Lage (neu, `SituationHeadline`)
+Eine einzige große Karte, kein Grid. Inhalte:
+- Lage-Score 0–100 als großer Wert + Label (ruhig / erhöht / markant / unwetterartig)
+- Ein klarer Kernsatz, generiert aus `situation.ts` und `hazards.ts` (z. B. „Konvektive Lage erhöht, Hauptfenster 16–20 Uhr, Starkregen führend.")
+- Hauptgefahr als großer Chip
+- Zeitfenster der Hauptphase
+- Tendenz-Pfeil (verschärft / stabil / entspannt) auf Basis Nowcast-Slope
 
-## 3. Premium UI/UX
+### 2. Gefahren (`HazardPriorityList`)
+- Liste statt Kacheln, max. 6 Einträge, sortiert nach Severity × Confidence
+- Pro Zeile: Icon, Name, Severity-Balken, Confidence (1–5), Kurzbewertung, Zeitfenster
+- Heat/Cold/Frost klar abgesetzt, nicht als Unwetter
+- Detail per Accordion (kein Modal), Rohwerte zweite Ebene
 
-Globale Designsprache (in `src/styles.css`, keine Tokens hardcoden):
+### 3. Kurzfrist 0–2 h (`ShortTermPanel`)
+- Nutzt bestehende `NowcastPanel`-Logik in neuer, ruhigerer Darstellung
+- Multimetrik-Strip 10-min: Severe, Regen mm/h, Böen, Konvektionsindex
+- Tendenz-Badge oben rechts: verschärft / stabil / entspannt
+- Konsistenz-Hinweis: Radar vs. Modell („konsistent" / „Radar voraus")
 
-- Karten: weiche Layer (`bg-card/80` + `backdrop-blur` + dezenter Innenschein per `shadow-elegant`-Token).
-- Severity-Farbskala über semantische Tokens `--warn-info / minor / moderate / severe / extreme` plus passende `--warn-*-glow` Varianten für Verlauf.
-- Premium-Charts:
-  - Nowcast-Heatmap: SVG-Streifen mit Verlauf + Mikro-Sparklines für Regenrate, Blitz-Wahrscheinlichkeit, Hagelrisiko.
-  - Severe-Timeline (24 h): mehrlagige Heatmap (Wind / Regen / CAPE / Blitz / Hagel) mit Hover-Tooltips.
-  - Daily-Strip-Pillen: Verlaufshintergrund nach Schwere, Mini-Icons für dominantes Risiko.
-- Typografie: Display-Font für Werte (z. B. Inter Tight / „Geist"), tabular-nums überall wo Zahlen tickern.
-- Bewegung: dezente `framer-motion`-Übergänge für Sub-Tab-Wechsel (nur falls Paket schon da; sonst CSS-Transitions).
-- Konsequenter Einsatz von `DataCard` mit neuem `tone`-Prop (default / accent / severe).
+### 4. Live (`LiveSignals`, 12-col Grid)
+- Radar (DWD) groß, 8 Spalten
+- Rechts gestapelt: Aktuelle Bright-Sky-Beobachtung, Wind/Böen, Druck-Tendenz
+- Klar getrennt von Bewertung durch eigene Sektion + Label „Beobachtung"
 
-## 4. Gewitter-Peak überarbeiten
+### 5. Trend (`TrendStrip`)
+- Hourly-Strip kompakt, 24 h
+- Daily-Strip 7 d mit Gefahren-Pille pro Tag (Severity-Farbe)
+- Kein Hero-Status mehr, klar nachgelagert
 
-`SevereWeatherPanel` & neuer Threat-Tab „Heute":
+### 6. System (`SystemStatus`, default kollabiert)
+- Quellenliste mit Zeitstempel, Latenz, Status (ok / verzögert / aus)
+- Hinweise zu Unsicherheiten (Modellspread, fehlende Stationen)
+- Ersetzt das bisherige `DataMeta` verstreut auf der Seite
 
-- Klare **Peak-Karte**: Zeitfenster („17–20 Uhr"), Spitzenwerte (CAPE, LI, Böen, Regenrate, Blitzdichte), Konfidenz-Badge (1–5) basierend auf Modell-Konsens.
-- Erklärtext in Klartext: was bedeutet der Peak, was ist zu erwarten.
-- Mini-Multimetric-Chart über das Peak-Fenster (CAPE, Shear, Regen, Blitz).
+## Header & Navigation
 
-## 5. Mehr Warntypen
+- Header: Logo links · `LocationSwitcher` zentriert · rechts `SystemStatusPill` (grün/gelb/rot, klickbar → springt zu `#system`) + `ThemeToggle`
+- Sticky Subnav mit 6 Ankern, scroll-spy aktiv, auf Mobile horizontal scrollbar mit Snap
+- Seitenleiste auf Desktop bleibt erhalten, wird aber ruhiger: Primär = Dashboard, Karte, Analyse, Warnungen. „Mehr" wie heute. Sidebar-Active-Highlight subtiler.
 
-Erweiterung in `src/lib/weather/thresholds/dwd.ts` + neue Auswertung in `situation.ts`. Hitze wird klar von „Unwetter" getrennt (eigene Kategorie `heat`, nicht `severe`):
+## Sekundäre Routen
 
-- **Gewitter-Klassen**: Einzelzelle / Mehrzellig / Superzelle (Heuristik aus CAPE × Shear × Helizität).
-- **Hagel**: Wahrscheinlichkeit + Korngröße (CAPE × LI × Freezing-Level × Updraft-Proxy).
-- **Starkregen / Dauerregen** (≥6h Akkumulation, getrennt von kurzem Starkregen).
-- **Sturm / Orkan / Downburst-Risiko** (Böen + DCAPE + Lapse Rate).
-- **Tornadorisiko** (SRH, Shear, LCL — Klartextlevel niedrig/mäßig/erhöht).
-- **Glatteis / gefrierender Regen / Schneeglätte** (Niederschlag bei T<0).
-- **Schneefall / Schneeverwehung** (Schneefall + Wind).
-- **Nebel / Sichtweite < 200 m** (visibility aus Open-Meteo).
-- **UV-Belastung** (UV-Index als Hinweis, keine Unwetter-Schwere).
-- **Hitze / Tropennacht / Hitzewelle** als eigene Kategorie `heat` mit eigenem Farbschema (orange/rot, nicht Unwetter-Lila).
-- **Luftqualität / Pollen** (Open-Meteo Air-Quality API) — optional als „Hinweis"-Tag.
+Werden visuell an die neue Sprache angeglichen, Struktur bleibt:
+- `/analysis`, `/map`, `/alerts`, `/models`, `/stations`, `/learn`, `/settings`
+- Gemeinsamer Section-Header (`SectionHeader` mit Titel + Kernfrage) auf allen Seiten
 
-Jede Warnung trägt: Kategorie, Schwere, Konfidenz, Zeitfenster, Begründung in Klartext.
+## Neue UI-Bausteine (rein präsentationell)
 
-## 6. Mehr Daten für Erkennung
+Neu in `src/components/cockpit/`:
+- `SectionHeader.tsx` — Titel, Kernfrage, Anker-ID
+- `StickySubnav.tsx` — Sprunganker mit Scroll-Spy
+- `SituationHeadline.tsx` — Primärbereich Lage
+- `HazardPriorityList.tsx` — priorisierte Gefahrenliste
+- `ShortTermPanel.tsx` — Wrapper um bestehende Nowcast-Logik
+- `LiveSignals.tsx` — Radar + Beobachtung + Wind + Druck
+- `TrendStrip.tsx` — Wrapper um `HourlyStrip` + `DailyStrip`
+- `SystemStatus.tsx` — Quellen/Status, kollabierbar
+- `SystemStatusPill.tsx` — Header-Indikator
+- `TendencyBadge.tsx` — verschärft / stabil / entspannt
 
-Erweiterung `open-meteo.ts` (Hourly + Minutely_15):
+Bestehende Komponenten bleiben als Datenlieferanten und werden intern weiterverwendet (`ThreatBoard`-Logik fliesst in `HazardPriorityList` + `ShortTermPanel` ein, `CurrentConditions` + `NextChange` werden Teil von `LiveSignals` bzw. `SituationHeadline`).
 
-- Zusätzliche Convective-Felder: `convective_inhibition`, `lifted_index`, `cape`, `boundary_layer_height`, `wind_shear` (aus 10 m vs 500 m), `helicity_3000m` (Proxy aus Wind-Profilen), `vertical_velocity_*hPa`.
-- Modelle: ICON-D2 (1 km, 0–48 h) hinzufügen für Nowcast-Stütze; Konsens über ICON-D2 / ICON-EU / ECMWF / AROME / HARMONIE → Konfidenz.
-- Open-Meteo **Air-Quality API** (PM2.5, PM10, NO2, O3, UV, Pollen).
-- Open-Meteo **Flood API** (optional, für Starkregen-Kontext) — nur wenn ohne Schlüssel verfügbar.
-- DWD-Blitzdichte via Open-Meteo `lightning_potential` falls vorhanden, sonst Heuristik aus CAPE×LI×PrecipRate.
+## Visuelle Sprache (`src/styles.css`)
 
-Alles per `useQuery` mit `refetchInterval` (5–10 min) — Live-Verhalten bleibt erhalten.
+- Hintergrund: ruhige, leicht kühle Neutraltöne, klarer Light/Dark-Mode
+- Typo-Skala mit echten Größenstufen für Hero/Section/Body/Meta
+- Severity-Skala bleibt, dekorative Farben raus
+- Card-Stile: 3 Varianten via `tone`: `primary` (Lage), `default` (Sektionen), `muted` (System/Trend)
+- Keine Glows, keine Hero-Gradients, dezente Borders, hoher Kontrast
 
-## Technisches
+## Was nicht angefasst wird
 
-- Neue Dateien:
-  - `src/components/dashboard/ThreatBoard.tsx`
-  - `src/components/common/SegmentedTabs.tsx` (Sub-Tab-Komponente, Touch-optimiert)
-  - `src/components/layout/MoreMenu.tsx` (Mobile-Sheet)
-  - `src/components/charts/SeverityHeatmap.tsx` (mehrlagige Heatmap)
-  - `src/lib/weather/sources/open-meteo-air.ts` (Air-Quality)
-  - `src/lib/weather/analysis/hazards.ts` (neue Warntypen)
-  - `src/lib/weather/analysis/peak.ts` (Peak-Fenster-Logik)
-- Geänderte Dateien (nicht-strukturell):
-  - `AppShell.tsx` (Nav-Reduktion + MoreMenu)
-  - `routes/index.tsx` (ThreatBoard statt 3 Karten)
-  - `routes/analysis.tsx` (SegmentedTabs für Sub-Bereiche; Modelle/Stationen als Sub-Inhalte einbinden)
-  - `thresholds/dwd.ts`, `situation.ts` (mehr Regeln + Kategorien)
-  - `types.ts` (neue Felder, neue Kategorien)
-  - `styles.css` (Warn-Token, Glows)
-- **Nicht angefasst**: Router-Setup, bestehende Query-Keys / Quellen-APIs (nur Felder erweitert), Storage-Schema, Routen-Pfade.
+- Datenquellen, Queries, `analysis/*`, `sources/*`, `mappers/*`, `live.ts`, `hooks/*`
+- Routenstruktur und Routenamen
+- Bestehende Funktionalität von `NowcastPanel`, `ThreatBoard`, `SevereTimeline`, `WeatherMap`
 
-## Out of scope
+## Umsetzungsschritte
 
-- Keine Auth, kein Backend, keine neuen Routen, keine Änderung am Geocoding oder LocationSwitcher-API.
-- Bestehende Komponenten werden nicht gelöscht (nur Verwendung reduziert), damit der Analyse-Tab sie weiterverwenden kann.
+1. Neue Cockpit-Komponenten anlegen (leere Hüllen, dann gefüllt)
+2. `src/routes/index.tsx` auf neue Sektionsstruktur umstellen
+3. `AppShell.tsx` Header anpassen (`SystemStatusPill` + Sticky-Subnav)
+4. `styles.css` Tokens ruhiger und konsistenter
+5. Sekundäre Routen mit `SectionHeader` vereinheitlichen
+6. Mobile-Pass: Sticky-Subnav scrollbar, Sektionen volle Breite, BottomNav bleibt
+
+Soll ich so loslegen, oder willst du vorher noch Reihenfolge, Sticky-Subnav oder die Sidebar-Logik anpassen?
