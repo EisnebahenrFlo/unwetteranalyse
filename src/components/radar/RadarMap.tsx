@@ -4,6 +4,18 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import type { LightningStrike } from "@/lib/weather/sources/blitzortung";
 import { classifyAge } from "@/lib/weather/sources/blitzortung";
 
+/** 64-Punkt-Approximation eines Kreises in Lon/Lat um (lat, lon) mit Radius in km. */
+function ringCoords(lat: number, lon: number, km: number, steps = 64): [number, number][] {
+  const coords: [number, number][] = [];
+  const latKm = 111.32;
+  const lonKm = 111.32 * Math.cos((lat * Math.PI) / 180);
+  for (let i = 0; i <= steps; i++) {
+    const a = (i / steps) * 2 * Math.PI;
+    coords.push([lon + (km * Math.cos(a)) / lonKm, lat + (km * Math.sin(a)) / latKm]);
+  }
+  return coords;
+}
+
 export interface RadarMapHandle {
   setRasterTiles: (id: string, tileUrl: string | null, opacity?: number) => void;
   setLightning: (strikes: LightningStrike[]) => void;
