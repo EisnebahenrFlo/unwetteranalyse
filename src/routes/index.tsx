@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useActivePoint } from "@/components/layout/LocationSwitcher";
-import { brightSkyAlertsQuery, brightSkyCurrentQuery, forecastQuery } from "@/lib/weather/queries";
+import { brightSkyAlertsQuery, brightSkyCurrentQuery, dwdRadarFramesQuery, forecastQuery } from "@/lib/weather/queries";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/ErrorState";
 import { deriveAlertsFromForecast, derivedToAlert } from "@/lib/weather/analysis/situation";
@@ -15,6 +15,7 @@ import { ShortTermPanel } from "@/components/cockpit/ShortTermPanel";
 import { LiveSignals } from "@/components/cockpit/LiveSignals";
 import { TrendStrip } from "@/components/cockpit/TrendStrip";
 import { SystemStatus, type SourceEntry } from "@/components/cockpit/SystemStatus";
+import { DataFreshnessStrip } from "@/components/cockpit/DataFreshnessStrip";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -41,6 +42,7 @@ function Dashboard() {
   const forecast = useQuery(forecastQuery(point));
   const bsCurrent = useQuery(brightSkyCurrentQuery(point));
   const bsAlerts = useQuery(brightSkyAlertsQuery(point));
+  const radarFrames = useQuery(dwdRadarFramesQuery);
 
   if (forecast.isLoading) return <DashboardSkeleton />;
   if (forecast.error || !forecast.data) {
@@ -58,6 +60,8 @@ function Dashboard() {
   const bsMeta = bsCurrent.data
     ? { source: "bright-sky" as const, updatedAt: bsCurrent.data.observedAt, resolutionKm: 1, uncertainty: "Punktwert der nächsten DWD-Station." }
     : bundle.meta;
+
+  const latestRadarFrame = radarFrames.data?.[radarFrames.data.length - 1]?.time;
 
   const sources: SourceEntry[] = [
     {
@@ -87,8 +91,15 @@ function Dashboard() {
       id: "dwd-radar",
       label: "DWD · Radarkomposit",
       description: "Animiertes Niederschlagsechobild über Deutschland.",
-      meta: { source: "dwd", updatedAt: new Date().toISOString(), resolutionKm: 1 },
-      ok: true,
+      meta: latestRadarFrame ? { source: "dwd", updatedAt: latestRadarFrame, resolutionKm: 1 } : undefined,
+      ok: !radarFrames.isError && (radarFrames.isLoading || (radarFrames.data?.length ?? 0) > 0),
+      note: radarFrames.isError
+        ? "DWD WMS antwortet nicht"
+        : radarFrames.data && radarFrames.data.length === 0
+          ? "Keine Frames im Capabilities-Dokument"
+          : radarFrames.data
+            ? `${radarFrames.data.length} Frames geladen`
+            : undefined,
     },
     {
       id: "rules",
@@ -101,6 +112,14 @@ function Dashboard() {
 
   return (
     <div className="flex flex-col gap-4 md:gap-6">
+      <DataFreshnessStrip
+        entries={[
+          { label: "Modell", updatedAt: bundle.meta.updatedAt, warnAfterMin: 120 },
+          { label: "Beobachtung", updatedAt: bsCurrent.data?.observedAt, warnAfterMin: 60, ok: !!bsCurrent.data },
+          { label: "Radar", updatedAt: latestRadarFrame, warnAfterMin: 20, ok: !radarFrames.isError },
+          { label: "Warnungen", updatedAt: bsAlerts.data ? new Date().toISOString() : undefined, warnAfterMin: 30, ok: bsAlerts.data != null },
+        ]}
+      />
       <StickySubnav items={SECTIONS} />
 
       {/* 1. Lage */}
