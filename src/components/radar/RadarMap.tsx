@@ -603,11 +603,12 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
       const pastSrc = map.getSource("storm-past-src") as maplibregl.GeoJSONSource | undefined;
       const pastPtsSrc = map.getSource("storm-past-pts-src") as maplibregl.GeoJSONSource | undefined;
       const etaSrc = map.getSource("storm-eta-src") as maplibregl.GeoJSONSource | undefined;
-      if (!coneSrc || !polySrc || !fcSrc || !cenSrc || !pastSrc || !pastPtsSrc || !etaSrc) return;
+      const arrowSrc = map.getSource("storm-fc-arrow-src") as maplibregl.GeoJSONSource | undefined;
+      if (!coneSrc || !polySrc || !fcSrc || !cenSrc || !pastSrc || !pastPtsSrc || !etaSrc || !arrowSrc) return;
       const empty = { type: "FeatureCollection" as const, features: [] };
       if (cells.length === 0) {
         coneSrc.setData(empty); polySrc.setData(empty); fcSrc.setData(empty); cenSrc.setData(empty);
-        pastSrc.setData(empty); pastPtsSrc.setData(empty); etaSrc.setData(empty);
+        pastSrc.setData(empty); pastPtsSrc.setData(empty); etaSrc.setData(empty); arrowSrc.setData(empty);
         return;
       }
       type AnyFeature = {
@@ -625,6 +626,7 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
       const pastLines: AnyFeature[] = [];
       const pastPts: AnyFeature[] = [];
       const etaPts: AnyFeature[] = [];
+      const arrows: AnyFeature[] = [];
       const ETA_OFFSETS = [15, 30, 60];
 
       for (const cell of cells) {
@@ -683,6 +685,14 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
               properties: { color, label: `+${off}` },
             });
           }
+          // Pfeilspitze am Ende der Forecast-Linie, Rotation aus Bewegungsrichtung.
+          const tip = cell.forecast[cell.forecast.length - 1];
+          const bearing = cell.motion?.bearingDeg ?? 0;
+          arrows.push({
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [tip.lon, tip.lat] },
+            properties: { color, bearing },
+          });
         }
         const motionTag = cell.motion && cell.motion.speedKmh > 1
           ? ` ${Math.round(cell.motion.speedKmh)}·${cell.motion.bearingCompass}`
@@ -701,6 +711,7 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
       pastSrc.setData({ type: "FeatureCollection", features: pastLines as unknown as never[] });
       pastPtsSrc.setData({ type: "FeatureCollection", features: pastPts as unknown as never[] });
       etaSrc.setData({ type: "FeatureCollection", features: etaPts as unknown as never[] });
+      arrowSrc.setData({ type: "FeatureCollection", features: arrows as unknown as never[] });
     },
     getBbox() {
       const map = mapRef.current;
