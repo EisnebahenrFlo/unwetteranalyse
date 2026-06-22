@@ -348,7 +348,12 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         pastSrc.setData(empty); fcSrc.setData(empty); ptsSrc.setData(empty);
         return;
       }
-      const features: GeoJSON.Feature[] = [
+      type Feat = {
+        type: "Feature";
+        geometry: { type: "Point"; coordinates: [number, number] };
+        properties: Record<string, unknown>;
+      };
+      const features: Feat[] = [
         {
           type: "Feature",
           geometry: { type: "Point", coordinates: [track.freshCentroid.lon, track.freshCentroid.lat] },
