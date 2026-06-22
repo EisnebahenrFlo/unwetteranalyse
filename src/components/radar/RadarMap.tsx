@@ -4,11 +4,24 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import type { LightningStrike } from "@/lib/weather/sources/blitzortung";
 import { classifyAge } from "@/lib/weather/sources/blitzortung";
 
+/** 64-Punkt-Approximation eines Kreises in Lon/Lat um (lat, lon) mit Radius in km. */
+function ringCoords(lat: number, lon: number, km: number, steps = 64): [number, number][] {
+  const coords: [number, number][] = [];
+  const latKm = 111.32;
+  const lonKm = 111.32 * Math.cos((lat * Math.PI) / 180);
+  for (let i = 0; i <= steps; i++) {
+    const a = (i / steps) * 2 * Math.PI;
+    coords.push([lon + (km * Math.cos(a)) / lonKm, lat + (km * Math.sin(a)) / latKm]);
+  }
+  return coords;
+}
+
 export interface RadarMapHandle {
   setRasterTiles: (id: string, tileUrl: string | null, opacity?: number) => void;
   setLightning: (strikes: LightningStrike[]) => void;
   getBbox: () => [number, number, number, number] | null;
   flyTo: (lon: number, lat: number, zoom?: number) => void;
+  setFocusRings: (center: { lat: number; lon: number } | null, kmRadii?: number[]) => void;
 }
 
 interface Props {
@@ -86,6 +99,49 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
           "circle-opacity": ["match", ["get", "age"], "fresh", 0.95, "recent", 0.7, 0.4],
         },
       });
+      // Fokusringe (Relevanzradius) als geojson polygon + labels.
+      map.addSource("focus-rings-src", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addLayer({
+        id: "focus-rings-line",
+        type: "line",
+        source: "focus-rings-src",
+        paint: {
+          "line-color": "#0ea5e9",
+          "line-width": 1.2,
+          "line-dasharray": [2, 2],
+          "line-opacity": 0.75,
+        },
+      });
+      map.addSource("focus-labels-src", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addLayer({
+        id: "focus-labels",
+        type: "symbol",
+        source: "focus-labels-src",
+        layout: {
+          "text-field": ["get", "label"],
+          "text-size": 10,
+          "text-anchor": "left",
+          "text-offset": [0.4, 0],
+          "text-allow-overlap": true,
+        },
+        paint: {
+          "text-color": "#0c4a6e",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 1.2,
+        },
+      });
+      map.addSource("focus-center-src", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addLayer({
+        id: "focus-center",
+        type: "circle",
+        source: "focus-center-src",
+        paint: {
+          "circle-radius": 5,
+          "circle-color": "#0ea5e9",
+          "circle-stroke-color": "#ffffff",
+          "circle-stroke-width": 2,
+        },
+      });
     });
 
     map.on("movestart", () => onInteractionChange?.(true));
@@ -136,6 +192,35 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
           geometry: { type: "Point", coordinates: [s.lon, s.lat] },
           properties: { age: classifyAge(s.time, now), time: s.time },
         })),
+      });
+    },
+    setFocusRings(center, kmRadii = [10, 25, 50, 100]) {
+      const map = mapRef.current;
+      if (!map || !readyRef.current) return;
+      const ringsSrc = map.getSource("focus-rings-src") as maplibregl.GeoJSONSource | undefined;
+      const labelsSrc = map.getSource("focus-labels-src") as maplibregl.GeoJSONSource | undefined;
+      const centerSrc = map.getSource("focus-center-src") as maplibregl.GeoJSONSource | undefined;
+      if (!ringsSrc || !labelsSrc || !centerSrc) return;
+      if (!center) {
+        const empty = { type: "FeatureCollection" as const, features: [] };
+        ringsSrc.setData(empty); labelsSrc.setData(empty); centerSrc.setData(empty);
+        return;
+      }
+      const ringFeatures = kmRadii.map((km) => ({
+        type: "Feature" as const,
+        geometry: { type: "Polygon" as const, coordinates: [ringCoords(center.lat, center.lon, km)] },
+        properties: { km },
+      }));
+      const labelFeatures = kmRadii.map((km) => ({
+        type: "Feature" as const,
+        geometry: { type: "Point" as const, coordinates: [center.lon + (km / 111.32) / Math.cos((center.lat * Math.PI) / 180), center.lat] },
+        properties: { label: `${km} km` },
+      }));
+      ringsSrc.setData({ type: "FeatureCollection", features: ringFeatures });
+      labelsSrc.setData({ type: "FeatureCollection", features: labelFeatures });
+      centerSrc.setData({
+        type: "FeatureCollection",
+        features: [{ type: "Feature", geometry: { type: "Point", coordinates: [center.lon, center.lat] }, properties: {} }],
       });
     },
     getBbox() {

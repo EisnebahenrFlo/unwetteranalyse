@@ -6,7 +6,7 @@
 const DWD_OWS = "https://maps.dwd.de/geoserver/dwd/ows";
 const DWD_WMS = "https://maps.dwd.de/geoserver/dwd/wms";
 
-export type WmsLayerKey = "ry" | "wn" | "pi";
+export type WmsLayerKey = "ry" | "wn" | "pi" | "qy";
 
 interface WmsLayerDef {
   /** WMS-Layer-Name laut Capabilities. */
@@ -41,6 +41,16 @@ export const WMS_LAYERS: Record<WmsLayerKey, WmsLayerDef> = {
     label: "PI",
     blurb: "Mitteleuropa-Composite, ca. 15 min.",
     stepMinutes: 15,
+    maxFrames: 12,
+  },
+  qy: {
+    // DWD-Qualitätsprodukt (Radarkomposit-Qualitätsinformation).
+    // Layer-Name folgt der Konvention des DWD GeoServers; falls Capabilities
+    // keine Time-Dimension liefern, fällt der Layer sauber auf "missing" zurück.
+    name: "Radarniederschlag_QY",
+    label: "QY",
+    blurb: "Qualitätsfeld zum Radarkomposit. Markiert Störungen, Schatten und Unsicherheit.",
+    stepMinutes: 5,
     maxFrames: 12,
   },
 };
