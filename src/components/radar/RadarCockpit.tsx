@@ -161,27 +161,18 @@ export function RadarCockpit() {
     mapRef.current?.setCellTrack(track);
   }, [track]);
 
-  /* ---------- Stormtracking (multi-cell, persistente Tracks) ---------- */
+  /* ---------- Stormtracking (Snapshot vom globalen Background-Service) ---------- */
   const favorites = useSavedLocations();
   const [settings] = useSettings();
-  const stormEnabled = settings.storm.enabled && showLightning;
-  const env = useMemo(() => ({
-    cape: nowHour?.cape,
-    liftedIndex: nowHour?.liftedIndex,
-    validFor: nowHour?.time,
-  }), [nowHour?.cape, nowHour?.liftedIndex, nowHour?.time]);
+  const stormEnabled = settings.storm.enabled;
   const stormThresholds = useMemo(() => ({
     ...DEFAULT_STORM_THRESHOLDS,
     alertEtaMin: settings.storm.alertEtaMin,
     alertLevel: settings.storm.alertLevel,
   }), [settings.storm.alertEtaMin, settings.storm.alertLevel]);
   const storm = useStormTracking({
-    strikes: lightning.strikes,
-    favorites,
     activePoint: { lat: point.lat, lon: point.lon },
-    environment: env,
     thresholds: stormThresholds,
-    enabled: stormEnabled,
   });
 
   useEffect(() => {
