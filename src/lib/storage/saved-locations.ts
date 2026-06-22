@@ -1,26 +1,27 @@
 import type { GeoPoint, SavedLocation } from "../weather/types";
 
-const KEY = "meteoflo.saved-locations.v1";
-
-const DEFAULT_LOCATIONS: SavedLocation[] = [
-  { id: "default-berlin", name: "Berlin", lat: 52.52, lon: 13.405, country: "DE", admin: "Berlin", addedAt: new Date(0).toISOString() },
-  { id: "default-zurich", name: "Zürich", lat: 47.3769, lon: 8.5417, country: "CH", admin: "Zürich", addedAt: new Date(0).toISOString() },
-  { id: "default-vienna", name: "Wien", lat: 48.2082, lon: 16.3738, country: "AT", admin: "Wien", addedAt: new Date(0).toISOString() },
-  { id: "default-bolzano", name: "Bozen", lat: 46.4983, lon: 11.3548, country: "IT", admin: "Trentino-Südtirol", addedAt: new Date(0).toISOString() },
-];
+/**
+ * v2: ohne vorbelegte Default-Orte. Bestehender v1-Schlüssel wird beim
+ * ersten Lesen ignoriert, damit die alten Defaults nicht wieder auftauchen.
+ */
+const KEY = "meteoflo.saved-locations.v2";
 
 const isBrowser = () => typeof window !== "undefined";
 
+function locationId(lat: number, lon: number) {
+  return `loc-${lat.toFixed(4)}-${lon.toFixed(4)}`;
+}
+
 export function getSavedLocations(): SavedLocation[] {
-  if (!isBrowser()) return DEFAULT_LOCATIONS;
+  if (!isBrowser()) return [];
   try {
     const raw = window.localStorage.getItem(KEY);
-    if (!raw) return DEFAULT_LOCATIONS;
+    if (!raw) return [];
     const parsed = JSON.parse(raw) as SavedLocation[];
-    if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_LOCATIONS;
-    return parsed;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((l) => Number.isFinite(l?.lat) && Number.isFinite(l?.lon));
   } catch {
-    return DEFAULT_LOCATIONS;
+    return [];
   }
 }
 
@@ -32,7 +33,7 @@ export function setSavedLocations(locations: SavedLocation[]) {
 
 export function addSavedLocation(point: GeoPoint): SavedLocation {
   const current = getSavedLocations();
-  const id = `loc-${point.lat.toFixed(4)}-${point.lon.toFixed(4)}`;
+  const id = locationId(point.lat, point.lon);
   const existing = current.find((l) => l.id === id);
   if (existing) return existing;
   const next: SavedLocation = { ...point, id, addedAt: new Date().toISOString() };
@@ -72,6 +73,6 @@ export function reorderSavedLocations(orderedIds: string[]) {
 }
 
 export function isFavorite(point: { lat: number; lon: number }): boolean {
-  const id = `loc-${point.lat.toFixed(4)}-${point.lon.toFixed(4)}`;
-  return getSavedLocations().some((l) => l.id === id || (l.id.startsWith("default-") && Math.abs(l.lat - point.lat) < 0.01 && Math.abs(l.lon - point.lon) < 0.01));
+  const id = locationId(point.lat, point.lon);
+  return getSavedLocations().some((l) => l.id === id);
 }
