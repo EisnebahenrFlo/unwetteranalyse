@@ -40,7 +40,6 @@ interface Props {
   isActive: boolean;
   canMoveUp: boolean;
   canMoveDown: boolean;
-  canRemove: boolean;
   onPick: (l: SavedLocation) => void;
   onMove: (id: string, delta: number) => void;
   onRemove: (id: string) => void;
@@ -50,7 +49,7 @@ interface Props {
  * Eine Favoriten-Reihe: Ort + Region, kleines Wettericon, aktuelle Temperatur und Warnampel.
  * Ampel kommt aus `buildHazards().worstSevere` und ist damit fachlich an die App-Analyse gekoppelt.
  */
-export function FavoriteRow({ location, isActive, canMoveUp, canMoveDown, canRemove, onPick, onMove, onRemove }: Props) {
+export function FavoriteRow({ location, isActive, canMoveUp, canMoveDown, onPick, onMove, onRemove }: Props) {
   const fc = useQuery(forecastQuery(location));
   const temp = fc.data?.current?.temperatureC;
   const code = fc.data?.current?.weatherCode ?? fc.data?.hourly[0]?.weatherCode;
@@ -117,8 +116,7 @@ export function FavoriteRow({ location, isActive, canMoveUp, canMoveDown, canRem
         >
           <ArrowDown className="h-3 w-3" />
         </Button>
-        {canRemove && (
-          <Button
+        <Button
             size="icon"
             variant="ghost"
             className="h-6 w-6"
@@ -126,8 +124,7 @@ export function FavoriteRow({ location, isActive, canMoveUp, canMoveDown, canRem
             aria-label="Entfernen"
           >
             <X className="h-3 w-3" />
-          </Button>
-        )}
+        </Button>
       </div>
     </div>
   );
