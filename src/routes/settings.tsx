@@ -5,7 +5,9 @@ import { useSavedLocations } from "@/hooks/use-saved-locations";
 import { removeSavedLocation } from "@/lib/storage/saved-locations";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
-import type { ThemeMode, TempUnit, WindUnit, StormAlertLevel } from "@/lib/storage/settings";
+import type { ThemeMode, TempUnit, WindUnit, StormAlertLevel, HazardMinLevel } from "@/lib/storage/settings";
+import { HazardHistoryList } from "@/components/hazards/HazardHistoryList";
+import { clearHazardHistory } from "@/lib/weather/hazards/history";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -37,6 +39,19 @@ const ALERT_LEVELS: { value: StormAlertLevel; label: string }[] = [
   { value: "watch", label: "ab beobachten" },
   { value: "serious", label: "ab ernst" },
   { value: "severe", label: "nur schwer" },
+];
+
+const HAZARD_MIN_LEVELS: { value: HazardMinLevel; label: string }[] = [
+  { value: "watch", label: "ab beobachten" },
+  { value: "elevated", label: "ab erhöht" },
+  { value: "high", label: "ab hoch" },
+  { value: "extreme", label: "nur extrem" },
+];
+
+const HAZARD_RETENTION: { value: number; label: string }[] = [
+  { value: 7, label: "7 Tage" },
+  { value: 14, label: "14 Tage" },
+  { value: 30, label: "30 Tage" },
 ];
 
 function SettingsPage() {
@@ -126,6 +141,83 @@ function SettingsPage() {
           und die Severity mindestens dem gewählten Niveau entspricht. Cooldown 10 min pro Zelle und Favorit.
         </p>
       </DataCard>
+
+      <DataCard title="Hazard-Engine" subtitle="Hagel, Sturzflut und Blitz-Jump pro Storm-Zelle">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Group label="Status">
+            <Choice active={settings.hazards.enabled}
+              onClick={() => setSettings({ ...settings, hazards: { ...settings.hazards, enabled: !settings.hazards.enabled } })}>
+              {settings.hazards.enabled ? "Aktiv" : "Aus"}
+            </Choice>
+          </Group>
+          <Group label="Hazards">
+            <Choice active={settings.hazards.enableHail}
+              onClick={() => setSettings({ ...settings, hazards: { ...settings.hazards, enableHail: !settings.hazards.enableHail } })}>
+              Hagel
+            </Choice>
+            <Choice active={settings.hazards.enableFlood}
+              onClick={() => setSettings({ ...settings, hazards: { ...settings.hazards, enableFlood: !settings.hazards.enableFlood } })}>
+              Sturzflut
+            </Choice>
+            <Choice active={settings.hazards.enableLightning}
+              onClick={() => setSettings({ ...settings, hazards: { ...settings.hazards, enableLightning: !settings.hazards.enableLightning } })}>
+              Blitz-Jump
+            </Choice>
+          </Group>
+          <Group label="Mindeststufe für Alerts">
+            {HAZARD_MIN_LEVELS.map((o) => (
+              <Choice key={o.value} active={settings.hazards.minLevel === o.value}
+                onClick={() => setSettings({ ...settings, hazards: { ...settings.hazards, minLevel: o.value } })}>
+                {o.label}
+              </Choice>
+            ))}
+          </Group>
+          <Group label="ETA-Schwelle">
+            {ETA_OPTIONS.map((o) => (
+              <Choice key={o.value} active={settings.hazards.alertEtaMin === o.value}
+                onClick={() => setSettings({ ...settings, hazards: { ...settings.hazards, alertEtaMin: o.value } })}>
+                {o.label}
+              </Choice>
+            ))}
+          </Group>
+          <Group label="Verlauf">
+            {HAZARD_RETENTION.map((o) => (
+              <Choice key={o.value} active={settings.hazards.retentionDays === o.value}
+                onClick={() => setSettings({ ...settings, hazards: { ...settings.hazards, retentionDays: o.value } })}>
+                {o.label}
+              </Choice>
+            ))}
+            <Button size="sm" variant="ghost" onClick={() => clearHazardHistory()}>Verlauf leeren</Button>
+          </Group>
+        </div>
+        <p className="mt-3 text-[11px] text-muted-foreground">
+          Hagel-POH/MESHS aus CAPE, Lifted Index und Freezing Level (Open-Meteo) plus Reflektivitäts-Proxy aus Blitzdichte.
+          Sturzflut aus Open-Meteo-Niederschlag (1 h / 3 h / 6 h / 24 h) gegen KOSTRA-DWD-Schwellen.
+          Blitz-Jump nach Schultz (σ-Anstieg über 10-min-Baseline). Alles deterministisch, lokal berechnet.
+        </p>
+      </DataCard>
+
+      {saved.length > 0 && (
+        <DataCard title="Hazard-Verlauf" subtitle={`Letzte ${settings.hazards.retentionDays} Tage pro Favorit`}>
+          <div className="flex flex-col gap-4">
+            {saved.map((l) => (
+              <div key={l.id}>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <div className="truncate text-sm font-medium">{l.name}</div>
+                  <span className="font-mono text-[10px] text-muted-foreground">
+                    {l.lat.toFixed(2)}, {l.lon.toFixed(2)}
+                  </span>
+                </div>
+                <HazardHistoryList
+                  favoriteId={l.id}
+                  days={settings.hazards.retentionDays}
+                  emptyHint="Bisher keine Hazard-Events erfasst."
+                />
+              </div>
+            ))}
+          </div>
+        </DataCard>
+      )}
 
       <DataCard title="Datenquellen">
         <ul className="space-y-2 text-xs text-muted-foreground">
