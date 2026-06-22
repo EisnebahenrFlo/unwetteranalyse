@@ -1,183 +1,329 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import maplibregl, { Map as MlMap } from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import type { StormCell } from "@/lib/weather/storm/types";
-import { SEVERITY_COLOR, SEVERITY_LABEL } from "./severity-tokens";
+import { SEVERITY_COLOR } from "./severity-tokens";
 
 /**
- * Kompakte SVG-Visualisierung der Zugbahn einer Zelle:
- * vergangene Centroiden (durchgezogen) plus Forecast-Pfad (gestrichelt)
- * mit Pfeilspitze in Bewegungsrichtung.
+ * Echte Mini-Karte mit OSM-Basemap, Past-Track, Forecast-Cone, ETA-Markern
+ * und Auto-Fit auf alle Track-Punkte. Eigenständige Map-Instanz, damit der
+ * Drawer unabhängig vom Radar-Cockpit funktioniert.
  */
 export function StormTrackMini({ cell }: { cell: StormCell }) {
-  const { past, forecast, w, h, bbox, scaleKm, scalePx } = useMemo(() => normalize(cell), [cell]);
-
-  if (past.length + forecast.length < 2) {
-    return (
-      <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-4 text-center text-[11px] text-muted-foreground">
-        Noch keine Zugbahn — zu wenig Historie.
-      </div>
-    );
-  }
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<MlMap | null>(null);
+  const readyRef = useRef(false);
 
   const color = SEVERITY_COLOR[cell.severity.level];
-  const sevLabel = SEVERITY_LABEL[cell.severity.level];
-  const pastD = polyToPath(past);
-  const fcD = forecast.length >= 2 ? polyToPath(forecast) : "";
-  const fresh = past[past.length - 1] ?? forecast[0];
-  const tip = forecast[forecast.length - 1];
-  // Pfeilspitze in Bewegungsrichtung am Ende des Forecast.
-  const arrow = arrowHead(forecast);
-  // Norden-Pfeil: SVG-y wächst nach unten → North zeigt nach -y.
+  const speed = cell.motion ? Math.round(cell.motion.speedKmh) : 0;
+  const compass = cell.motion?.bearingCompass ?? "";
+
+  // Map einmalig erzeugen.
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+    const map = new maplibregl.Map({
+      container: containerRef.current,
+      style: {
+        version: 8,
+        glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+        sources: {
+          osm: {
+            type: "raster",
+            tiles: [
+              "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+              "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+              "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            ],
+            tileSize: 256,
+            maxzoom: 19,
+            attribution: "© OpenStreetMap",
+          },
+        },
+        layers: [
+          { id: "bg", type: "background", paint: { "background-color": "#e6ecf2" } },
+          { id: "osm", type: "raster", source: "osm", paint: { "raster-saturation": -0.4, "raster-brightness-max": 0.95 } },
+        ],
+      },
+      center: [cell.centroid.lon, cell.centroid.lat],
+      zoom: 8,
+      attributionControl: { compact: true },
+      interactive: true,
+      dragRotate: false,
+      pitchWithRotate: false,
+    });
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: false, showCompass: false }), "top-right");
+    mapRef.current = map;
+
+    map.on("load", () => {
+      readyRef.current = true;
+      const empty = { type: "FeatureCollection" as const, features: [] };
+      map.addSource("mini-cone", { type: "geojson", data: empty });
+      map.addLayer({
+        id: "mini-cone-fill",
+        type: "fill",
+        source: "mini-cone",
+        paint: { "fill-color": ["get", "color"], "fill-opacity": 0.15, "fill-outline-color": ["get", "color"] },
+      });
+      map.addSource("mini-past", { type: "geojson", data: empty });
+      map.addLayer({
+        id: "mini-past-line",
+        type: "line",
+        source: "mini-past",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": ["get", "color"], "line-width": 3, "line-opacity": 0.85 },
+      });
+      map.addSource("mini-past-pts", { type: "geojson", data: empty });
+      map.addLayer({
+        id: "mini-past-pts",
+        type: "circle",
+        source: "mini-past-pts",
+        paint: {
+          "circle-radius": 3,
+          "circle-color": ["get", "color"],
+          "circle-opacity": ["coalesce", ["get", "fade"], 0.6],
+          "circle-stroke-color": "#ffffff",
+          "circle-stroke-width": 1,
+        },
+      });
+      map.addSource("mini-fc", { type: "geojson", data: empty });
+      map.addLayer({
+        id: "mini-fc-line",
+        type: "line",
+        source: "mini-fc",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": ["get", "color"],
+          "line-width": 3,
+          "line-dasharray": [2, 1.4],
+          "line-opacity": 0.95,
+        },
+      });
+      map.addSource("mini-eta", { type: "geojson", data: empty });
+      map.addLayer({
+        id: "mini-eta-pts",
+        type: "circle",
+        source: "mini-eta",
+        paint: {
+          "circle-radius": 5,
+          "circle-color": "#ffffff",
+          "circle-stroke-color": ["get", "color"],
+          "circle-stroke-width": 2,
+        },
+      });
+      map.addLayer({
+        id: "mini-eta-labels",
+        type: "symbol",
+        source: "mini-eta",
+        layout: {
+          "text-field": ["get", "label"],
+          "text-size": 11,
+          "text-anchor": "left",
+          "text-offset": [0.7, 0],
+          "text-allow-overlap": true,
+          "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"],
+        },
+        paint: { "text-color": "#1f2937", "text-halo-color": "#ffffff", "text-halo-width": 1.4 },
+      });
+      map.addSource("mini-now", { type: "geojson", data: empty });
+      map.addLayer({
+        id: "mini-now-halo",
+        type: "circle",
+        source: "mini-now",
+        paint: {
+          "circle-radius": 12,
+          "circle-color": ["get", "color"],
+          "circle-opacity": 0.18,
+        },
+      });
+      map.addLayer({
+        id: "mini-now-dot",
+        type: "circle",
+        source: "mini-now",
+        paint: {
+          "circle-radius": 6,
+          "circle-color": ["get", "color"],
+          "circle-stroke-color": "#ffffff",
+          "circle-stroke-width": 2,
+        },
+      });
+      map.addLayer({
+        id: "mini-now-label",
+        type: "symbol",
+        source: "mini-now",
+        layout: {
+          "text-field": "Jetzt",
+          "text-size": 11,
+          "text-anchor": "left",
+          "text-offset": [0.8, 0],
+          "text-allow-overlap": true,
+          "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"],
+        },
+        paint: { "text-color": ["get", "color"], "text-halo-color": "#ffffff", "text-halo-width": 1.4 },
+      });
+      paint(map, cell);
+      fit(map, cell);
+    });
+
+    const ro = new ResizeObserver(() => map.resize());
+    ro.observe(containerRef.current);
+    return () => {
+      ro.disconnect();
+      map.remove();
+      mapRef.current = null;
+      readyRef.current = false;
+    };
+    // initial-only — Cell-Updates werden im zweiten Effect übernommen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Daten- und Bounds-Updates bei Zelländerung.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current) return;
+    paint(map, cell);
+    fit(map, cell);
+  }, [cell]);
+
+  const empty = cell.history.length < 1 && cell.forecast.length < 1;
 
   return (
-    <div className="rounded-md border border-border/60 bg-card p-2">
-      <svg viewBox={`0 0 ${w} ${h}`} className="h-28 w-full" role="img" aria-label={`Zugbahn ${sevLabel}`}>
-        <defs>
-          <pattern id={`stm-grid-${cell.id}`} width="24" height="24" patternUnits="userSpaceOnUse">
-            <path d="M 24 0 L 0 0 0 24" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.18" />
-          </pattern>
-          <radialGradient id={`stm-bg-${cell.id}`} cx="50%" cy="50%" r="70%">
-            <stop offset="0%" stopColor={color} stopOpacity="0.10" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
-          </radialGradient>
-        </defs>
-        <rect x={0} y={0} width={w} height={h} fill={`url(#stm-bg-${cell.id})`} />
-        <rect x={0} y={0} width={w} height={h} fill={`url(#stm-grid-${cell.id})`} className="text-muted-foreground" />
-
-        {/* Maßstabsbalken unten links */}
-        <g transform={`translate(8 ${h - 10})`} className="text-muted-foreground">
-          <line x1={0} y1={0} x2={scalePx} y2={0} stroke="currentColor" strokeWidth={1.2} />
-          <line x1={0} y1={-3} x2={0} y2={3} stroke="currentColor" strokeWidth={1.2} />
-          <line x1={scalePx} y1={-3} x2={scalePx} y2={3} stroke="currentColor" strokeWidth={1.2} />
-          <text x={scalePx + 4} y={3} fontSize={9} fill="currentColor">{scaleKm} km</text>
-        </g>
-
-        {/* Nord-Indikator oben rechts */}
-        <g transform={`translate(${w - 14} 14)`} className="text-muted-foreground">
-          <circle r={9} fill="hsl(var(--background))" stroke="currentColor" strokeWidth={0.8} opacity={0.9} />
-          <path d="M0 -6 L3 4 L0 1 L-3 4 Z" fill="currentColor" />
-          <text x={0} y={-9} fontSize={8} textAnchor="middle" fill="currentColor">N</text>
-        </g>
-
-        {pastD && (
-          <path d={pastD} fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" opacity={0.9} />
-        )}
-        {fcD && (
-          <path d={fcD} fill="none" stroke={color} strokeWidth={2.2} strokeDasharray="5 3" strokeLinecap="round" opacity={0.95} />
-        )}
-        {past.map((p, i) => (
-          <circle key={`p-${i}`} cx={p.x} cy={p.y} r={1.8} fill={color} opacity={0.35 + 0.55 * (i / Math.max(1, past.length - 1))} />
-        ))}
-        {arrow && (
-          <polygon points={arrow} fill={color} opacity={0.95} />
-        )}
-        {fresh && (
-          <>
-            <circle cx={fresh.x} cy={fresh.y} r={6.5} fill={color} opacity={0.18} />
-            <circle cx={fresh.x} cy={fresh.y} r={4} fill={color} stroke="#fff" strokeWidth={1.5} />
-            <text x={fresh.x + 6} y={fresh.y - 6} fontSize={9} fill={color} fontWeight={600}>Jetzt</text>
-          </>
-        )}
-        {tip && cell.forecast.length > 0 && (
-          <text x={tip.x + 6} y={tip.y + 10} fontSize={9} fill={color} fontWeight={600}>
-            +{cell.forecast[cell.forecast.length - 1].offsetMin} min
-          </text>
-        )}
-      </svg>
-      <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
+    <div className="overflow-hidden rounded-md border border-border/60 bg-card">
+      <div ref={containerRef} className="h-56 w-full" />
+      <div className="flex items-center justify-between border-t border-border/60 px-3 py-2 text-[11px]">
         <span className="font-medium" style={{ color }}>
-          {cell.motion ? `${Math.round(cell.motion.speedKmh)} km/h ${cell.motion.bearingCompass}` : "stationär"}
+          {cell.motion && speed >= 1 ? `${speed} km/h ${compass}` : "stationär"}
         </span>
-        <span>
-          Sicht {bbox.span.toFixed(0)} km · {cell.history.length} Track-Punkte
+        <span className="text-muted-foreground">
+          {cell.history.length} Track-Punkte
+          {cell.forecast.length > 0 && ` · Prognose bis +${cell.forecast[cell.forecast.length - 1].offsetMin} min`}
+          {empty && " · keine Historie"}
         </span>
       </div>
     </div>
   );
 }
 
-interface XY { x: number; y: number }
+type AnyFeature = {
+  type: "Feature";
+  geometry:
+    | { type: "Polygon"; coordinates: number[][][] }
+    | { type: "LineString"; coordinates: number[][] }
+    | { type: "Point"; coordinates: number[] };
+  properties: Record<string, unknown>;
+};
 
-function normalize(cell: StormCell) {
-  const pad = 8;
-  const w = 240;
-  const h = 112;
-  const pts = [
-    ...cell.history.map((p) => ({ lat: p.lat, lon: p.lon })),
-    ...cell.forecast.map((f) => ({ lat: f.lat, lon: f.lon })),
+const ETA_OFFSETS = [15, 30, 60];
+
+function paint(map: MlMap, cell: StormCell) {
+  const color = SEVERITY_COLOR[cell.severity.level];
+  const empty = { type: "FeatureCollection" as const, features: [] };
+
+  const cone: AnyFeature[] = cell.cone.length >= 4
+    ? [{ type: "Feature", geometry: { type: "Polygon", coordinates: [cell.cone] }, properties: { color } }]
+    : [];
+
+  const past: AnyFeature[] = cell.history.length >= 2
+    ? [{
+        type: "Feature",
+        geometry: { type: "LineString", coordinates: cell.history.map((h) => [h.lon, h.lat]) },
+        properties: { color },
+      }]
+    : [];
+
+  const pastPts: AnyFeature[] = cell.history.map((h, i) => ({
+    type: "Feature",
+    geometry: { type: "Point", coordinates: [h.lon, h.lat] },
+    properties: {
+      color,
+      fade: 0.3 + 0.6 * (i / Math.max(1, cell.history.length - 1)),
+    },
+  }));
+
+  const fc: AnyFeature[] = cell.forecast.length > 0
+    ? [{
+        type: "Feature",
+        geometry: {
+          type: "LineString",
+          coordinates: [
+            [cell.centroid.lon, cell.centroid.lat],
+            ...cell.forecast.map((f) => [f.lon, f.lat] as [number, number]),
+          ],
+        },
+        properties: { color },
+      }]
+    : [];
+
+  const etas: AnyFeature[] = [];
+  for (const off of ETA_OFFSETS) {
+    const fp = cell.forecast.find((f) => f.offsetMin === off);
+    if (!fp) continue;
+    etas.push({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [fp.lon, fp.lat] },
+      properties: { color, label: `+${off}` },
+    });
+  }
+
+  const now: AnyFeature[] = [{
+    type: "Feature",
+    geometry: { type: "Point", coordinates: [cell.centroid.lon, cell.centroid.lat] },
+    properties: { color },
+  }];
+
+  (map.getSource("mini-cone") as maplibregl.GeoJSONSource | undefined)?.setData(
+    cone.length ? { type: "FeatureCollection", features: cone as never[] } : empty,
+  );
+  (map.getSource("mini-past") as maplibregl.GeoJSONSource | undefined)?.setData(
+    past.length ? { type: "FeatureCollection", features: past as never[] } : empty,
+  );
+  (map.getSource("mini-past-pts") as maplibregl.GeoJSONSource | undefined)?.setData(
+    pastPts.length ? { type: "FeatureCollection", features: pastPts as never[] } : empty,
+  );
+  (map.getSource("mini-fc") as maplibregl.GeoJSONSource | undefined)?.setData(
+    fc.length ? { type: "FeatureCollection", features: fc as never[] } : empty,
+  );
+  (map.getSource("mini-eta") as maplibregl.GeoJSONSource | undefined)?.setData(
+    etas.length ? { type: "FeatureCollection", features: etas as never[] } : empty,
+  );
+  (map.getSource("mini-now") as maplibregl.GeoJSONSource | undefined)?.setData({
+    type: "FeatureCollection",
+    features: now as never[],
+  });
+}
+
+function fit(map: MlMap, cell: StormCell) {
+  const pts: [number, number][] = [
+    [cell.centroid.lon, cell.centroid.lat],
+    ...cell.history.map((h) => [h.lon, h.lat] as [number, number]),
+    ...cell.forecast.map((f) => [f.lon, f.lat] as [number, number]),
+    ...cell.cone.map((c) => [c[0], c[1]] as [number, number]),
   ];
-  if (pts.length === 0) return { past: [] as XY[], forecast: [] as XY[], w, h, bbox: { span: 0 }, scaleKm: 0, scalePx: 0 };
-  const lats = pts.map((p) => p.lat);
-  const lons = pts.map((p) => p.lon);
-  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
-  const minLon = Math.min(...lons), maxLon = Math.max(...lons);
-  const cosLat = Math.cos(((minLat + maxLat) / 2) * Math.PI / 180);
-  const dxKm = (maxLon - minLon) * 111.32 * cosLat;
-  const dyKm = (maxLat - minLat) * 111.32;
-  const span = Math.max(dxKm, dyKm, 5);
-
-  // Quadratisch normieren, Aspect erhalten.
-  const aspect = (w - 2 * pad) / (h - 2 * pad);
-  let spanX = span, spanY = span;
-  if (dxKm / Math.max(0.1, dyKm) > aspect) spanY = spanX / aspect;
-  else spanX = spanY * aspect;
-
-  const cx = (minLon + maxLon) / 2;
-  const cy = (minLat + maxLat) / 2;
-  const projX = (lon: number) => {
-    const km = (lon - cx) * 111.32 * cosLat;
-    return pad + ((km + spanX / 2) / spanX) * (w - 2 * pad);
-  };
-  const projY = (lat: number) => {
-    const km = (lat - cy) * 111.32;
-    return h - pad - ((km + spanY / 2) / spanY) * (h - 2 * pad);
-  };
-
-  const past = cell.history.map((p) => ({ x: projX(p.lon), y: projY(p.lat) }));
-  const forecast = [
-    { x: projX(cell.centroid.lon), y: projY(cell.centroid.lat) },
-    ...cell.forecast.map((f) => ({ x: projX(f.lon), y: projY(f.lat) })),
-  ];
-  // Maßstab: schöne Schrittweite, max ~ ein Drittel der Breite.
-  const pxPerKm = (w - 2 * pad) / spanX;
-  const targetKm = (w / 3) / pxPerKm;
-  const niceKm = niceStep(targetKm);
-  return {
-    past, forecast, w, h,
-    bbox: { span: Math.max(dxKm, dyKm) },
-    scaleKm: niceKm,
-    scalePx: niceKm * pxPerKm,
-  };
+  if (pts.length < 2) {
+    map.easeTo({ center: [cell.centroid.lon, cell.centroid.lat], zoom: 9, duration: 400 });
+    return;
+  }
+  let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+  for (const [lon, lat] of pts) {
+    if (lon < minLon) minLon = lon;
+    if (lon > maxLon) maxLon = lon;
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+  }
+  // Minimal-Spannweite, damit zu kleine Cluster nicht überzoomen.
+  const minSpanDeg = 0.15;
+  if (maxLon - minLon < minSpanDeg) { const c = (maxLon + minLon) / 2; minLon = c - minSpanDeg / 2; maxLon = c + minSpanDeg / 2; }
+  if (maxLat - minLat < minSpanDeg) { const c = (maxLat + minLat) / 2; minLat = c - minSpanDeg / 2; maxLat = c + minSpanDeg / 2; }
+  map.fitBounds([[minLon, minLat], [maxLon, maxLat]], {
+    padding: { top: 32, right: 32, bottom: 32, left: 32 },
+    duration: 400,
+    maxZoom: 11,
+  });
 }
 
-function polyToPath(pts: XY[]): string {
-  if (pts.length === 0) return "";
-  return pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
-}
-
-/** Pfeilspitze als Polygon-Punkte am Ende des Forecast-Pfads. */
-function arrowHead(pts: XY[]): string | null {
-  if (pts.length < 2) return null;
-  const tip = pts[pts.length - 1];
-  const prev = pts[pts.length - 2];
-  const dx = tip.x - prev.x;
-  const dy = tip.y - prev.y;
-  const len = Math.hypot(dx, dy);
-  if (len < 0.5) return null;
-  const ux = dx / len, uy = dy / len;
-  const px = -uy, py = ux;
-  const size = 7;
-  const back = 4;
-  const ax = tip.x - ux * back + px * (size / 2);
-  const ay = tip.y - uy * back + py * (size / 2);
-  const bx = tip.x - ux * back - px * (size / 2);
-  const by = tip.y - uy * back - py * (size / 2);
-  return `${tip.x.toFixed(1)},${tip.y.toFixed(1)} ${ax.toFixed(1)},${ay.toFixed(1)} ${bx.toFixed(1)},${by.toFixed(1)}`;
-}
-
-function niceStep(km: number): number {
-  if (km <= 1) return 1;
-  const pow = Math.pow(10, Math.floor(Math.log10(km)));
-  const norm = km / pow;
-  const step = norm < 1.5 ? 1 : norm < 3.5 ? 2 : norm < 7.5 ? 5 : 10;
-  return step * pow;
+// Memo-Hilfe ungenutzt, aber als Hook-Anker für künftige Erweiterungen.
+export function __useStormCellSummary(cell: StormCell) {
+  return useMemo(() => ({
+    color: SEVERITY_COLOR[cell.severity.level],
+    points: cell.history.length,
+  }), [cell]);
 }
