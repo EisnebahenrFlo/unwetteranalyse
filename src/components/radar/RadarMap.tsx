@@ -229,6 +229,30 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
           "fill-outline-color": ["get", "color"],
         },
       });
+      // Zugbahn vergangener Centroiden je Zelle.
+      map.addSource("storm-past-src", { type: "geojson", data: emptyFC });
+      map.addLayer({
+        id: "storm-past-line",
+        type: "line",
+        source: "storm-past-src",
+        paint: {
+          "line-color": ["get", "color"],
+          "line-width": 2,
+          "line-opacity": 0.7,
+        },
+      });
+      map.addSource("storm-past-pts-src", { type: "geojson", data: emptyFC });
+      map.addLayer({
+        id: "storm-past-pts",
+        type: "circle",
+        source: "storm-past-pts-src",
+        paint: {
+          "circle-radius": 2.5,
+          "circle-color": ["get", "color"],
+          "circle-opacity": ["coalesce", ["get", "fade"], 0.6],
+          "circle-stroke-width": 0,
+        },
+      });
       map.addSource("storm-poly-src", { type: "geojson", data: emptyFC });
       map.addLayer({
         id: "storm-poly-fill",
@@ -252,6 +276,37 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
           "line-width": 2,
           "line-dasharray": [2, 1.5],
           "line-opacity": 0.85,
+        },
+      });
+      // ETA-Marker (+15/+30/+60 min) entlang des Forecasts.
+      map.addSource("storm-eta-src", { type: "geojson", data: emptyFC });
+      map.addLayer({
+        id: "storm-eta-pts",
+        type: "circle",
+        source: "storm-eta-src",
+        paint: {
+          "circle-radius": 4,
+          "circle-color": "#ffffff",
+          "circle-stroke-color": ["get", "color"],
+          "circle-stroke-width": 2,
+        },
+      });
+      map.addLayer({
+        id: "storm-eta-labels",
+        type: "symbol",
+        source: "storm-eta-src",
+        layout: {
+          "text-field": ["get", "label"],
+          "text-size": 10,
+          "text-anchor": "left",
+          "text-offset": [0.6, 0],
+          "text-allow-overlap": true,
+          "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"],
+        },
+        paint: {
+          "text-color": "#1f2937",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 1.2,
         },
       });
       map.addSource("storm-centroid-src", { type: "geojson", data: emptyFC });
@@ -520,10 +575,14 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
       const polySrc = map.getSource("storm-poly-src") as maplibregl.GeoJSONSource | undefined;
       const fcSrc = map.getSource("storm-fc-line-src") as maplibregl.GeoJSONSource | undefined;
       const cenSrc = map.getSource("storm-centroid-src") as maplibregl.GeoJSONSource | undefined;
-      if (!coneSrc || !polySrc || !fcSrc || !cenSrc) return;
+      const pastSrc = map.getSource("storm-past-src") as maplibregl.GeoJSONSource | undefined;
+      const pastPtsSrc = map.getSource("storm-past-pts-src") as maplibregl.GeoJSONSource | undefined;
+      const etaSrc = map.getSource("storm-eta-src") as maplibregl.GeoJSONSource | undefined;
+      if (!coneSrc || !polySrc || !fcSrc || !cenSrc || !pastSrc || !pastPtsSrc || !etaSrc) return;
       const empty = { type: "FeatureCollection" as const, features: [] };
       if (cells.length === 0) {
         coneSrc.setData(empty); polySrc.setData(empty); fcSrc.setData(empty); cenSrc.setData(empty);
+        pastSrc.setData(empty); pastPtsSrc.setData(empty); etaSrc.setData(empty);
         return;
       }
       type AnyFeature = {
@@ -538,6 +597,10 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
       const polys: AnyFeature[] = [];
       const fcLines: AnyFeature[] = [];
       const centroids: AnyFeature[] = [];
+      const pastLines: AnyFeature[] = [];
+      const pastPts: AnyFeature[] = [];
+      const etaPts: AnyFeature[] = [];
+      const ETA_OFFSETS = [15, 30, 60];
 
       for (const cell of cells) {
         const color = SEVERITY_COLOR[cell.severity.level];
@@ -556,6 +619,24 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
             properties: { color, id: cell.id },
           });
         }
+        // Zugbahn: history (älteste → neueste) + aktueller Centroid.
+        if (cell.history.length >= 2) {
+          const coords: [number, number][] = cell.history.map((h) => [h.lon, h.lat]);
+          pastLines.push({
+            type: "Feature",
+            geometry: { type: "LineString", coordinates: coords },
+            properties: { color, id: cell.id },
+          });
+          const n = cell.history.length;
+          cell.history.forEach((h, i) => {
+            const fade = 0.25 + 0.55 * (i / Math.max(1, n - 1));
+            pastPts.push({
+              type: "Feature",
+              geometry: { type: "Point", coordinates: [h.lon, h.lat] },
+              properties: { color, fade },
+            });
+          });
+        }
         if (cell.forecast.length > 0) {
           fcLines.push({
             type: "Feature",
@@ -568,6 +649,15 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
             },
             properties: { color, id: cell.id },
           });
+          for (const off of ETA_OFFSETS) {
+            const fp = cell.forecast.find((f) => f.offsetMin === off);
+            if (!fp) continue;
+            etaPts.push({
+              type: "Feature",
+              geometry: { type: "Point", coordinates: [fp.lon, fp.lat] },
+              properties: { color, label: `+${off}` },
+            });
+          }
         }
         const motionTag = cell.motion && cell.motion.speedKmh > 1
           ? ` ${Math.round(cell.motion.speedKmh)}·${cell.motion.bearingCompass}`
@@ -583,6 +673,9 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
       polySrc.setData({ type: "FeatureCollection", features: polys as unknown as never[] });
       fcSrc.setData({ type: "FeatureCollection", features: fcLines as unknown as never[] });
       cenSrc.setData({ type: "FeatureCollection", features: centroids as unknown as never[] });
+      pastSrc.setData({ type: "FeatureCollection", features: pastLines as unknown as never[] });
+      pastPtsSrc.setData({ type: "FeatureCollection", features: pastPts as unknown as never[] });
+      etaSrc.setData({ type: "FeatureCollection", features: etaPts as unknown as never[] });
     },
     getBbox() {
       const map = mapRef.current;
@@ -604,7 +697,8 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
  */
 function firstOverlayLayer(map: MlMap): string | undefined {
   for (const id of [
-    "storm-cone", "storm-poly-fill", "storm-poly-line", "storm-fc-line", "storm-centroid", "storm-labels",
+    "storm-cone", "storm-past-line", "storm-past-pts", "storm-poly-fill", "storm-poly-line",
+    "storm-fc-line", "storm-eta-pts", "storm-eta-labels", "storm-centroid", "storm-labels",
     "track-past", "track-forecast", "track-points", "track-labels",
     "lightning-layer", "focus-rings-line", "focus-labels", "focus-center",
   ]) {

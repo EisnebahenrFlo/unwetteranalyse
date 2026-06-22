@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { X, Wind, Zap, Compass, Activity, Target, ShieldAlert } from "lucide-react";
+import { X, Wind, Zap, Compass, Activity, Target, ShieldAlert, Route as RouteIcon } from "lucide-react";
 import type { StormCell, StormAlert } from "@/lib/weather/storm/types";
 import type { HazardCellReport } from "@/lib/weather/hazards/types";
 import { HazardCellSection } from "@/components/hazards/HazardCellSection";
+import { StormTrackMini } from "./StormTrackMini";
 import { SEVERITY_LABEL, SEVERITY_TONE } from "./severity-tokens";
 import { cn } from "@/lib/utils";
 
@@ -27,8 +28,8 @@ export function StormCellDrawer({ cell, onClose, alerts, hazardReport = null }: 
 
   return (
     <Drawer open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DrawerContent className="max-h-[85vh]">
-        <DrawerHeader className="text-left">
+      <DrawerContent className="flex max-h-[88vh] flex-col">
+        <DrawerHeader className="shrink-0 text-left">
           <div className="flex items-start justify-between gap-2">
             <div>
               <DrawerTitle className="flex items-center gap-2 text-base">
@@ -47,7 +48,7 @@ export function StormCellDrawer({ cell, onClose, alerts, hazardReport = null }: 
           </div>
         </DrawerHeader>
 
-        <div className="grid gap-3 px-4 pb-6">
+        <div className="grid min-h-0 gap-3 overflow-y-auto px-4 pb-6">
           <div className="grid grid-cols-3 gap-2">
             <KpiBox icon={Zap} label="Blitze/min" value={cell.strikeRatePerMin.toFixed(1)} sub={`${cell.strikeCount} im Fenster`} />
             <KpiBox
@@ -63,6 +64,10 @@ export function StormCellDrawer({ cell, onClose, alerts, hazardReport = null }: 
               sub={cell.strikeRateTrend > 1.2 ? "verstärkt sich" : cell.strikeRateTrend < 0.8 ? "schwächt ab" : "stabil"}
             />
           </div>
+
+          <Section title="Zugbahn" icon={RouteIcon}>
+            <StormTrackMini cell={cell} />
+          </Section>
 
           <Section title="Severity-Begründung" icon={Activity}>
             <ul className="space-y-1 text-xs text-muted-foreground">

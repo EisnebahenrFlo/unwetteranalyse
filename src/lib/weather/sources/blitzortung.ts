@@ -120,7 +120,7 @@ export function useLightningStream(opts: { enabled: boolean; bbox?: [number, num
 }
 
 /** LZW-Decoder kompatibel zum Blitzortung-Stream. */
-function decodeLzw(input: string): string {
+export function decodeLzw(input: string): string {
   if (!input) return "";
   const dict: Record<number, string> = {};
   let currChar = input.charAt(0);

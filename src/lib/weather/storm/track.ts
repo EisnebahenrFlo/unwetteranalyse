@@ -210,3 +210,38 @@ export function resetStormTracking() {
   tracks.clear();
   nextId = 1;
 }
+
+/** Serialisierbarer Snapshot aller laufenden Tracks (für Persistenz). */
+export function exportTrackState(): InternalTrack[] {
+  return [...tracks.values()].map((t) => ({
+    id: t.id,
+    firstSeen: t.firstSeen,
+    lastSeen: t.lastSeen,
+    history: t.history.slice(),
+  }));
+}
+
+/**
+ * Lädt persistierte Tracks zurück in den Modul-Scope. Verworfen werden
+ * Einträge ohne brauchbare Historie der letzten 60 min, damit alte
+ * Zellen nach langer Pause nicht künstlich wiederbelebt werden.
+ */
+export function importTrackState(entries: InternalTrack[], now = Date.now()) {
+  const cutoff = now - 60 * 60_000;
+  for (const e of entries) {
+    if (!e || typeof e.id !== "string") continue;
+    const history = (e.history ?? []).filter((h) => h && h.time >= cutoff);
+    if (history.length === 0) continue;
+    tracks.set(e.id, {
+      id: e.id,
+      firstSeen: e.firstSeen ?? history[0].time,
+      lastSeen: e.lastSeen ?? history[history.length - 1].time,
+      history,
+    });
+    const num = e.id.match(/cell-(\d+)/);
+    if (num) {
+      const n = parseInt(num[1], 10);
+      if (Number.isFinite(n) && n >= nextId) nextId = n + 1;
+    }
+  }
+}
