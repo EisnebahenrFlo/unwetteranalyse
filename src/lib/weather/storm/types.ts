@@ -74,12 +74,14 @@ export interface StormAlert {
 }
 
 export interface StormEnvironment {
-  /** CAPE am aktiven Ort (J/kg), als regionale Proxy. */
+  /** CAPE (J/kg). Idealerweise am Zellenort, sonst regionale Proxy. */
   cape?: number;
-  /** Lifted Index am aktiven Ort (°C). */
+  /** Lifted Index (°C). Idealerweise am Zellenort, sonst regionale Proxy. */
   liftedIndex?: number;
   /** Modell-Stunde, auf die sich CAPE/LI beziehen. */
   validFor?: string;
+  /** Woher die Werte stammen: 'cell' = am Zellen-Centroid, 'region' = aktiver Ort/Proxy. */
+  source?: "cell" | "region";
 }
 
 export interface StormThresholds {

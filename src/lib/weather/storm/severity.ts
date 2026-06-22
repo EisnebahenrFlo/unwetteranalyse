@@ -45,14 +45,16 @@ export function scoreCell(input: {
   if (input.env.cape != null) {
     const cape = input.env.cape;
     score += clamp(cape / 80, 0, 20);
-    if (cape >= 1500) reasons.push(`CAPE ${Math.round(cape)} J/kg`);
-    else if (cape >= 500) reasons.push(`CAPE moderat (${Math.round(cape)})`);
+    const tag = input.env.source === "cell" ? "lokal" : "Region";
+    if (cape >= 1500) reasons.push(`CAPE ${Math.round(cape)} J/kg (${tag})`);
+    else if (cape >= 500) reasons.push(`CAPE moderat ${Math.round(cape)} (${tag})`);
   }
   if (input.env.liftedIndex != null) {
     const li = input.env.liftedIndex;
     if (li <= -2) {
       score += clamp(-li * 4, 0, 15);
-      reasons.push(`LI ${li.toFixed(1)}`);
+      const tag = input.env.source === "cell" ? "lokal" : "Region";
+      reasons.push(`LI ${li.toFixed(1)} (${tag})`);
     }
   }
 
