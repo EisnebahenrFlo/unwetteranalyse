@@ -47,8 +47,9 @@ export function LiveSignals({ point, bundle, bsCurrent, bsMeta }: Props) {
 
 /** Beobachtung hat Priorität, fehlt ein Feld wird Modell als Fallback genutzt.
  *  Damit verschwinden keine Werte, nur weil Bright Sky ein Feld leer lässt. */
-function mergeObservationWithModel(obs: CC | null | undefined, model: CC): CC {
+function mergeObservationWithModel(obs: CC | null | undefined, model: CC | undefined): CC | undefined {
   if (!obs) return model;
+  if (!model) return obs;
   const pick = <K extends keyof CC>(key: K): CC[K] => {
     const v = obs[key];
     if (v == null) return model[key];
