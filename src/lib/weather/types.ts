@@ -1,5 +1,5 @@
 /**
- * Gemeinsame Domain-Typen für MeteoFlo.
+ * Gemeinsame Domain-Typen für ForecastHub.
  * Werte stehen immer in SI-Einheiten (°C, m/s, mm, hPa, m), Umrechnung passiert nur im UI.
  */
 

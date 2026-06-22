@@ -19,7 +19,7 @@ import { DataMeta } from "@/components/common/DataMeta";
 export const Route = createFileRoute("/models")({
   head: () => ({
     meta: [
-      { title: "Modellvergleich — MeteoFlo" },
+      { title: "Modellvergleich — ForecastHub" },
       { name: "description", content: "ICON-D2, ICON-EU, ECMWF, GFS und AROME direkt nebeneinander." },
     ],
   }),

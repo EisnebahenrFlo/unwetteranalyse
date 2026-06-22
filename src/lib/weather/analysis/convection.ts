@@ -1,7 +1,7 @@
 import type { HourlyPoint, AlertSeverity } from "../types";
 
 /**
- * Konvektions- und Unwetter-Analyse für MeteoFlo.
+ * Konvektions- und Unwetter-Analyse für ForecastHub.
  * Alle Heuristiken sind bewusst nachvollziehbar gehalten und an DWD-
  * orientierten Schwellen + gängiger Gewitter-Diagnose ausgerichtet.
  */

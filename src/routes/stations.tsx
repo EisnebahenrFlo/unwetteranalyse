@@ -12,7 +12,7 @@ import { useLiveNow } from "@/hooks/use-live-now";
 export const Route = createFileRoute("/stations")({
   head: () => ({
     meta: [
-      { title: "Stationsdaten — MeteoFlo" },
+      { title: "Stationsdaten — ForecastHub" },
       { name: "description", content: "Aktuelle Beobachtungen von DWD-Stationen im Umkreis." },
     ],
   }),

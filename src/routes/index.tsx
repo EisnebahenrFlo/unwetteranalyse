@@ -20,7 +20,7 @@ import { DataFreshnessStrip } from "@/components/cockpit/DataFreshnessStrip";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Cockpit — MeteoFlo" },
+      { title: "Cockpit — ForecastHub" },
       { name: "description", content: "Internes Analyse-Cockpit: Lage, Gefahren, Kurzfrist, Live-Signale, Trend und Systemstatus." },
     ],
   }),

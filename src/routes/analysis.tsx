@@ -24,7 +24,7 @@ import { bandFromScore } from "@/lib/weather/scoring/labels";
 export const Route = createFileRoute("/analysis")({
   head: () => ({
     meta: [
-      { title: "Analyse — MeteoFlo" },
+      { title: "Analyse — ForecastHub" },
       { name: "description", content: "Nachvollziehbare Wetterbewertung in drei Ebenen: Nowcast, Tag, Parameter." },
     ],
   }),

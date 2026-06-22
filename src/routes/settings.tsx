@@ -12,7 +12,7 @@ import { clearHazardHistory } from "@/lib/weather/hazards/history";
 export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
-      { title: "Einstellungen — MeteoFlo" },
+      { title: "Einstellungen — ForecastHub" },
       { name: "description", content: "Einheiten, Theme und gespeicherte Orte." },
     ],
   }),
