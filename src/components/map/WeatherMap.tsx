@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl, { Map as MlMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useQuery } from "@tanstack/react-query";
-import { dwdRadarTileUrl, fetchDwdRadarFrames } from "@/lib/weather/sources/dwd-radar";
-import { Layers, Pause, Play } from "lucide-react";
+import { dwdRadarTileUrl } from "@/lib/weather/sources/dwd-radar";
+import { dwdRadarFramesQuery } from "@/lib/weather/queries";
+import { Layers, Pause, Play, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { GeoPoint } from "@/lib/weather/types";
 
@@ -18,12 +19,7 @@ export function WeatherMap({ center, layer }: Props) {
   const [frameIdx, setFrameIdx] = useState(0);
   const [playing, setPlaying] = useState(true);
 
-  const radarQ = useQuery({
-    queryKey: ["dwd-radar"],
-    queryFn: fetchDwdRadarFrames,
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
-  });
+  const radarQ = useQuery(dwdRadarFramesQuery);
 
   // init
   useEffect(() => {
@@ -107,10 +103,22 @@ export function WeatherMap({ center, layer }: Props) {
   }, [layer, frameIdx, frames]);
 
   const currentFrame = frames[frameIdx];
+  const radarUnavailable = layer === "radar" && !radarQ.isLoading && (radarQ.isError || frames.length === 0);
 
   return (
     <div className="relative h-[62vh] min-h-[420px] w-full overflow-hidden rounded-lg border border-border bg-muted md:h-[68vh]">
       <div ref={ref} className="h-full w-full" />
+      {radarUnavailable && (
+        <div className="absolute inset-x-3 top-3 grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 rounded-md border border-warn-minor/40 bg-background/95 px-3 py-2 text-[12px] text-foreground shadow-sm backdrop-blur">
+          <AlertCircle className="mt-0.5 h-4 w-4 text-warn-minor" />
+          <div className="min-w-0">
+            <div className="font-medium">Radar nicht verfügbar</div>
+            <div className="text-[11px] text-muted-foreground">
+              DWD WMS antwortet nicht oder liefert keine Frames. Karte bleibt sichtbar, Niederschlags-Overlay fehlt.
+            </div>
+          </div>
+        </div>
+      )}
       {layer === "radar" && currentFrame && (
         <div className="absolute bottom-3 left-3 right-3 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-border bg-background/90 px-3 py-2 backdrop-blur">
           <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setPlaying((p) => !p)}>
