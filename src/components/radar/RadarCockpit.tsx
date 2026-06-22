@@ -260,6 +260,12 @@ export function RadarCockpit() {
       </div>
 
       <aside className="flex flex-col gap-3">
+        <StormPanel
+          cells={storm.cells}
+          alerts={storm.alerts}
+          activeEta={storm.activeEta}
+          lightningOpen={lightning.status === "open"}
+        />
         <TriggerLightCard t={trig} />
         <BlitzRadarCard c={radarLight} />
         <ModelObsCard c={modelObs} />
