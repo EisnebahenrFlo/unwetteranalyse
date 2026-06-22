@@ -734,7 +734,7 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
 function firstOverlayLayer(map: MlMap): string | undefined {
   for (const id of [
     "storm-cone", "storm-past-line", "storm-past-pts", "storm-poly-fill", "storm-poly-line",
-    "storm-fc-line", "storm-eta-pts", "storm-eta-labels", "storm-centroid", "storm-labels",
+    "storm-fc-line", "storm-fc-arrow", "storm-eta-pts", "storm-eta-labels", "storm-centroid", "storm-labels",
     "track-past", "track-forecast", "track-points", "track-labels",
     "lightning-layer", "focus-rings-line", "focus-labels", "focus-center",
   ]) {
