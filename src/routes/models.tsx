@@ -1,16 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useActivePoint } from "@/components/layout/LocationSwitcher";
 import { modelComparisonQuery } from "@/lib/weather/queries";
-import { DataCard } from "@/components/common/DataCard";
-import { ModelCompareChart, type ModelMetric } from "@/components/models/ModelCompareChart";
-import { ModelSeverityGrid } from "@/components/models/ModelSeverityGrid";
-import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/ErrorState";
-import { InfoPopover } from "@/components/common/InfoPopover";
-import { WEATHER_MODELS } from "@/lib/weather/models";
+import { useLiveNow } from "@/hooks/use-live-now";
+import { buildConsensus, buildRanking, type ConsensusMetric } from "@/lib/weather/analysis/model-consensus";
+import { ModelSummaryCard } from "@/components/models/ModelSummaryCard";
+import { ConsensusPanel } from "@/components/models/ConsensusPanel";
+import { ParameterFilterStrip, PARAMETERS } from "@/components/models/ParameterFilterStrip";
+import { FocusedCompareChart } from "@/components/models/FocusedCompareChart";
+import { ModelRiskRanking } from "@/components/models/ModelRiskRanking";
+import { ModelTechDetails } from "@/components/models/ModelTechDetails";
+import { DataMeta } from "@/components/common/DataMeta";
 
 export const Route = createFileRoute("/models")({
   head: () => ({
@@ -22,79 +26,69 @@ export const Route = createFileRoute("/models")({
   component: ModelsPage,
 });
 
-const METRICS: Record<ModelMetric, { label: string; unit: string }> = {
-  temperatureC: { label: "Temperatur", unit: "°C" },
-  dewPointC: { label: "Taupunkt", unit: "°C" },
-  precipitationMm: { label: "Niederschlag", unit: "mm/h" },
-  precipitationProbability: { label: "Regenchance", unit: "%" },
-  windGustMs: { label: "Böen", unit: "m/s" },
-  cape: { label: "CAPE", unit: "J/kg" },
-  liftedIndex: { label: "Lifted Index", unit: "K" },
-};
-
 function ModelsPage() {
   const point = useActivePoint();
   const q = useQuery(modelComparisonQuery(point));
-  const [metric, setMetric] = useState<ModelMetric>("temperatureC");
+  const [metric, setMetric] = useState<ConsensusMetric>("temperatureC");
+  const now = useLiveNow();
+
+  const series = q.data ?? [];
+  const summary = useMemo(() => (series.length ? buildConsensus(series, now) : null), [series, now]);
+  const ranking = useMemo(() => (series.length ? buildRanking(series, now) : []), [series, now]);
+  const activeParam = PARAMETERS.find((p) => p.id === metric)!;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-        <div className="min-w-0">
-          <h1 className="truncate text-lg font-semibold tracking-tight">Modellvergleich</h1>
-          <p className="truncate text-xs text-muted-foreground">
-            72-Stunden-Horizont aus Open-Meteo. Modell-Spread zeigt Unsicherheit.
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-1">
-          {(Object.keys(METRICS) as ModelMetric[]).map((m) => (
-            <Button key={m} size="sm" variant={metric === m ? "default" : "outline"} onClick={() => setMetric(m)}>
-              {METRICS[m].label}
-            </Button>
-          ))}
-        </div>
+    <div className="flex flex-col gap-5">
+      <div className="min-w-0">
+        <h1 className="truncate text-lg font-semibold tracking-tight">Modelle · {point.name}</h1>
+        <p className="truncate text-xs text-muted-foreground">
+          Lage, Konsens und Modellvergleich für die nächsten 72 Stunden.
+        </p>
       </div>
 
-      <DataCard
-        title={`Modellvergleich · ${METRICS[metric].label}`}
-        action={<InfoPopover title="Modell-Spread">
-          Verschiedene Modelle liefern oft unterschiedliche Werte. Je weiter die Linien auseinander liegen, desto unsicherer ist die Prognose.
-        </InfoPopover>}
-        meta={q.data?.[0]?.meta}
-      >
-        {q.isLoading && <Skeleton className="h-72 w-full" />}
-        {q.error && <ErrorState message={q.error.message} onRetry={() => q.refetch()} />}
-        {q.data && <ModelCompareChart series={q.data} metric={metric} unitLabel={METRICS[metric].unit} />}
-      </DataCard>
+      {/* Block 1: Lagebox */}
+      {q.isLoading && <Skeleton className="h-44 w-full" />}
+      {q.error && <ErrorState message={q.error.message} onRetry={() => q.refetch()} />}
+      {summary && <ModelSummaryCard summary={summary} updatedAt={series[0]?.meta.updatedAt} />}
 
-      {q.data && <ModelSeverityGrid series={q.data} />}
+      {/* Block 2: Konsens */}
+      {summary && <ConsensusPanel summary={summary} />}
 
-      <DataCard title="Verfügbare Modelle">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                <th className="py-1.5 pr-3">Modell</th>
-                <th className="py-1.5 pr-3">Anbieter</th>
-                <th className="py-1.5 pr-3">Auflösung</th>
-                <th className="py-1.5 pr-3">Region</th>
-                <th className="py-1.5 pr-3">Horizont</th>
-              </tr>
-            </thead>
-            <tbody>
-              {WEATHER_MODELS.map((m) => (
-                <tr key={m.id} className="border-t border-border/50">
-                  <td className="py-1.5 pr-3 font-medium">{m.label}</td>
-                  <td className="py-1.5 pr-3 text-muted-foreground">{m.provider}</td>
-                  <td className="py-1.5 pr-3 font-mono" style={{ fontFamily: "var(--font-mono)" }}>{m.resolutionKm} km</td>
-                  <td className="py-1.5 pr-3 text-muted-foreground">{m.region}</td>
-                  <td className="py-1.5 pr-3 font-mono" style={{ fontFamily: "var(--font-mono)" }}>{m.horizonHours} h</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Block 3: Parameter-Filter (sticky) */}
+      {series.length > 0 && <ParameterFilterStrip active={metric} onChange={setMetric} />}
+
+      {/* Block 4: Fokussierter Modellvergleich */}
+      <Card className="flex flex-col gap-3 p-5">
+        <div className="flex items-baseline justify-between gap-3">
+        <div className="min-w-0">
+            <h2 className="truncate text-sm font-semibold tracking-tight">Vergleich der Kernmodelle</h2>
+            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{activeParam.label} · {activeParam.unit}</p>
         </div>
-      </DataCard>
+      </div>
+        {q.isLoading && <Skeleton className="h-64 w-full" />}
+        {series.length > 0 && <FocusedCompareChart series={series} metric={metric} unitLabel={activeParam.unit} />}
+      </Card>
+
+      {/* Block 5: Gewitter-Ranking */}
+      {ranking.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-sm font-semibold tracking-tight">Gewitter & Unwetter nach Modell</h2>
+            <span className="text-[11px] text-muted-foreground">24 h · sortiert nach Score</span>
+          </div>
+          <ModelRiskRanking rows={ranking} />
+        </section>
+      )}
+
+      {/* Block 7: Technische Details */}
+      <ModelTechDetails />
+
+      {/* Block 8: Meta */}
+      {series[0]?.meta && (
+        <Card className="p-4">
+          <DataMeta meta={series[0].meta} />
+        </Card>
+      )}
     </div>
   );
 }
