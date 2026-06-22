@@ -4,6 +4,8 @@ import type { SavedLocation } from "@/lib/weather/types";
 import { stepStormTracking } from "./track";
 import { computeStormAlerts } from "./alerts";
 import { distanceKm } from "./geo";
+import { scoreCell } from "./severity";
+import { gridKey, loadCellEnvironments, type CellEnvSample } from "./environment";
 import {
   DEFAULT_STORM_THRESHOLDS,
   type StormAlert,
@@ -43,10 +45,56 @@ export function useStormTracking(opts: {
     return () => window.clearInterval(id);
   }, [enabled]);
 
+  // Per-Cell CAPE/LI Cache. Wird asynchron befüllt und beim nächsten Render
+  // angewendet — keine blockierende Abhängigkeit für die Detection.
+  const [cellEnv, setCellEnv] = useState<Map<string, CellEnvSample>>(new Map());
+
   return useMemo(() => {
     if (!enabled) return { cells: [], alerts: [], activeEta: null, lastRun: Date.now() };
     const now = Date.now();
-    const cells = stepStormTracking(strikes, environment, now, thresholds);
+    const regionalEnv: StormEnvironment = { ...environment, source: "region" };
+    const baseCells = stepStormTracking(strikes, regionalEnv, now, thresholds);
+
+    // Severity pro Zelle mit lokaler Umgebung neu bewerten, wenn vorhanden.
+    const cells: StormCell[] = baseCells.map((cell) => {
+      const sample = cellEnv.get(gridKey(cell.centroid.lat, cell.centroid.lon));
+      if (!sample || (sample.cape == null && sample.liftedIndex == null)) return cell;
+      const env: StormEnvironment = {
+        cape: sample.cape ?? environment.cape,
+        liftedIndex: sample.liftedIndex ?? environment.liftedIndex,
+        validFor: sample.validFor ?? environment.validFor,
+        source: "cell",
+      };
+      const severity = scoreCell({
+        strikeRatePerMin: cell.strikeRatePerMin,
+        strikeRateTrend: cell.strikeRateTrend,
+        radiusKm: cell.radiusKm,
+        strikeCount: cell.strikeCount,
+        env,
+      });
+      return { ...cell, severity };
+    });
+    cells.sort((a, b) => b.severity.score - a.severity.score || b.strikeCount - a.strikeCount);
+
+    // Async Fetch der lokalen Umgebung pro Centroid anstoßen. Ergebnis fließt
+    // beim nächsten Tick in die Severity ein.
+    if (cells.length) {
+      const points = cells.map((c) => ({ lat: c.centroid.lat, lon: c.centroid.lon }));
+      loadCellEnvironments(points).then((map) => {
+        // Nur State-Update, wenn sich tatsächlich etwas geändert hat.
+        setCellEnv((prev) => {
+          let changed = prev.size !== map.size;
+          if (!changed) {
+            for (const [k, v] of map) {
+              const old = prev.get(k);
+              if (!old || old.fetchedAt !== v.fetchedAt) { changed = true; break; }
+            }
+          }
+          return changed ? map : prev;
+        });
+      }).catch(() => { /* gehandhabt im Modul */ });
+    }
+
     const alerts = computeStormAlerts(cells, favorites, now, thresholds);
 
     // ETA zur aktiven Position: nächste Zelle, deren Forecast den Ort streift.
@@ -77,5 +125,5 @@ export function useStormTracking(opts: {
     return { cells, alerts, activeEta, lastRun: now };
     // tick triggert Re-Run alle 15 s.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [strikes, favorites, activePoint.lat, activePoint.lon, environment.cape, environment.liftedIndex, enabled, tick]);
+  }, [strikes, favorites, activePoint.lat, activePoint.lon, environment.cape, environment.liftedIndex, enabled, tick, cellEnv]);
 }
