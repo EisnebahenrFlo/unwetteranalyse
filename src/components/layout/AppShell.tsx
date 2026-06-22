@@ -35,10 +35,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto grid max-w-[1440px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 md:gap-3 md:px-6 md:py-2.5">
           <Link to="/" search={keepSearch} className="flex shrink-0 items-center gap-2">
             <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground">
-              <MeteoconIcon name="partly-cloudy-day" label="MeteoFlo" className="h-7 w-7" />
+              <MeteoconIcon name="partly-cloudy-day" label="ForecastHub" className="h-7 w-7" />
             </div>
             <div className="hidden md:block">
-              <div className="text-sm font-semibold tracking-tight">MeteoFlo</div>
+              <div className="text-sm font-semibold tracking-tight">ForecastHub</div>
               <div className="text-[10px] text-muted-foreground">Privates Wetterwerkzeug</div>
             </div>
           </Link>
