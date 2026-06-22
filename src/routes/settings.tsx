@@ -5,7 +5,7 @@ import { useSavedLocations } from "@/hooks/use-saved-locations";
 import { removeSavedLocation } from "@/lib/storage/saved-locations";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
-import type { ThemeMode, TempUnit, WindUnit } from "@/lib/storage/settings";
+import type { ThemeMode, TempUnit, WindUnit, StormAlertLevel } from "@/lib/storage/settings";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -25,6 +25,18 @@ const WIND_UNITS: { value: WindUnit; label: string }[] = [
 ];
 const THEMES: { value: ThemeMode; label: string }[] = [
   { value: "light", label: "Hell" }, { value: "dark", label: "Dunkel" }, { value: "system", label: "System" },
+];
+
+const ETA_OPTIONS: { value: number; label: string }[] = [
+  { value: 15, label: "15 min" },
+  { value: 30, label: "30 min" },
+  { value: 45, label: "45 min" },
+  { value: 60, label: "60 min" },
+];
+const ALERT_LEVELS: { value: StormAlertLevel; label: string }[] = [
+  { value: "watch", label: "ab beobachten" },
+  { value: "serious", label: "ab ernst" },
+  { value: "severe", label: "nur schwer" },
 ];
 
 function SettingsPage() {
