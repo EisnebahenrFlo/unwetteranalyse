@@ -216,6 +216,7 @@ export function RadarCockpit() {
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="flex min-w-0 flex-col gap-2">
+        {storm.alerts.length > 0 && <StormAlertBanner alerts={storm.alerts} />}
         <TopBar
           mode={mode}
           onModeChange={setMode}
