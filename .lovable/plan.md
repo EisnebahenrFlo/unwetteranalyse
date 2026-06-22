@@ -1,108 +1,104 @@
-## Ziel
 
-Die App bekommt eine saubere, mehrstufige Scoring-Architektur und eine neu gegliederte Analyse-Seite. Jeder Score ist nachvollziehbar: Rohdaten → abgeleitete Parameter → Teilrisiken (0–100) → Gesamtscore (gewichtet je Zeitfenster) → Vertrauen → verbales Label. Keine Blackbox.
+# Stormtracking Modul
 
-## 1. Neue Scoring-Architektur (`src/lib/weather/scoring/`)
+Ziel: ein echtes, meteorologisch belastbares Stormtracking, integriert in die bestehende Radar/Map Seite. Erkennen, Verfolgen, Vorhersagen, Warnen.
 
-Komplett neu, klar getrennt von der alten `convection.ts`/`hazards.ts`-Logik (die bleibt als Helfer bestehen, wird aber von der neuen Schicht orchestriert).
+## Datenquellen
 
-### Dateien
-- `scoring/labels.ts` — zentrale Schwellen + Labels (`ruhig` 0–14, `aufmerksam` 15–34, `markant` 35–59, `kritisch` 60–79, `hochkritisch` 80–100), App-weit verwendet.
-- `scoring/normalize.ts` — Normalisierung roher Werte auf 0–100 (CAPE, LI, K, TT, Niederschlag, Böen, Blitzaktivität, Radarintensität).
-- `scoring/subscores.ts` — fünf Teilscores 0–100, jeder mit `value`, `contributors[]`, `confidence`:
-  - `rainScore`
-  - `windScore`
-  - `thunderScore`
-  - `convectionScore` (CAPE, LI, K, TT, CIN)
-  - `dataConfidence`
-- `scoring/derived.ts` — abgeleitete Kennwerte: K-Index (`(T850-T500)+Td850-(T700-Td700)`), Total Totals (`T850+Td850-2·T500`), Schwüle, Spread, Low-Level-Shear. Für Open-Meteo nutzen wir die geopotenziellen Levels (`temperature_850hPa`, `dew_point_850hPa`, `temperature_700hPa`, `dew_point_700hPa`, `temperature_500hPa`) — diese Variablen werden zur API-Abfrage hinzugefügt.
-- `scoring/nowcast.ts` — Score für 0–2 h auf 10-min Raster. Gewichtung: Radar/Blitz/Niederschlag/Böen/Live-Signale hoch, Konvektion mittel. Nutzt `minutely_15` + interpolierte Stunden + (falls verfügbar) Blitz-Live-Buffer aus `useLightningStream`.
-- `scoring/today.ts` — Score für 0–24 h auf Stundenbasis. Gewichtung: CAPE, LI, Gewitterwahrscheinlichkeit, Niederschlag, Böen, K/TT.
-- `scoring/explain.ts` — strukturierte Erklärung: pro Score Liste der Beitragenden mit Wert + Punktbeitrag, plus Confidence-Faktoren.
+- **DWD Radar RV/WN** (bereits via `dwd-radar.ts` / `dwd-wms.ts`): Reflektivität als Grundlage für Zellenerkennung.
+- **Blitzortung** (`blitzortung.ts`): Live Strikes für Strike Rate und Schwere pro Zelle.
+- **Open Meteo Konvektion** (`open-meteo.ts`): CAPE, Lifted Index, Shear, Updraft Helicity für Umgebungs Severity.
+- **DWD CAP Warnungen**: Polygone zur Korrelation mit getrackten Zellen.
 
-### Datenmodelle
-```ts
-type Band = "ruhig" | "aufmerksam" | "markant" | "kritisch" | "hochkritisch";
+Fokus: Europa. Radar bleibt DACH zentriert, Blitze und Modelle europaweit.
 
-interface Subscore {
-  value: number;            // 0–100
-  band: Band;
-  contributors: { label: string; raw: string; points: number }[];
-  confidence: number;       // 0–100
-}
+## Modul Architektur
 
-interface CompositeScore {
-  total: number;            // 0–100
-  band: Band;
-  peakAt?: string;          // ISO
-  subs: { rain: Subscore; wind: Subscore; thunder: Subscore; convection: Subscore };
-  data: Subscore;           // Datenvertrauen
-  reasons: string[];        // kurze Klartextzeilen
-}
+```text
+src/lib/weather/storm/
+  types.ts              StormCell, StormTrack, StormForecast, StormAlert
+  detect.ts             Zellenerkennung aus Radar Composite (Schwellwert + Cluster)
+  identify.ts           Zell IDs, Polygon, Centroid, Fläche, Max dBZ, Top
+  track.ts              Matching zwischen Frames, Speed/Heading, Historie
+  forecast.ts           Lineare + gewichtete Extrapolation 0..60 min, Cone of Uncertainty
+  severity.ts           Score aus dBZ, Strike Rate, CAPE, LI, Shear, Hagel Proxy (VIL Surrogate)
+  alerts.ts             ETA pro Favorit, Schwellwert Logik, Dedup, Cooldown
+  queries.ts            TanStack Query Hooks: useStormCells, useStormTracks, useStormAlerts
 ```
 
-### Confidence-Berechnung
-Basiert auf: Datenabdeckung (welche Felder vorhanden), Aktualität (Alter der Beobachtung), Konsistenz Modell↔Beobachtung (Live vs. interpolierte Stunde), Radar-Frame-Frische (aus `dwd-wms`), Blitz-Stream-Status, Plausibilität (z. B. CAPE>2000 ohne Niederschlagssignal → Abzug).
+Logik strikt getrennt von UI. Alle Funktionen pure und typisiert.
 
-## 2. Neue Analyse-Seite (`src/routes/analysis.tsx`)
+## Algorithmus Kurzfassung
 
-Drei Tabs bleiben (`Nowcast 0–2 h`, `Heute 0–24 h`, `Parameter`), Inhalte neu:
+1. **Detect**: Radar Frame in Grid lesen, Schwellwert (z.B. ≥ 35 dBZ Kern, ≥ 25 dBZ Hülle), Connected Components Clustering.
+2. **Identify**: Pro Cluster Polygon vereinfachen, Centroid, Fläche km², Max/Mean dBZ, Höhe falls verfügbar.
+3. **Track**: Frame N gegen N-1 matchen via Nearest Centroid + Größen/Intensitäts Ähnlichkeit, Hungarian light. Persistente ID, History Ring Buffer (letzte 60 min).
+4. **Forecast**: Speed/Heading aus letzten 3..6 Frames, gewichtete Mittelung, Cone wächst mit Tracking Unsicherheit. Pfad in 5 min Schritten bis +60 min.
+5. **Severity**: Score 0..100 aus Reflektivität, Strike Rate Trend, CAPE/LI am Zellenort, DLS/SRH, Hagel Proxy. Stufen ruhig, beobachten, ernst, schwer.
+6. **Alerts pro Favorit**: Für jeden Favoriten und jede Zelle ETA bis Cone den Favoriten schneidet. Wenn ETA ≤ konfigurierbare Schwelle und Severity ≥ Schwelle, Alert erzeugen. Dedup über Zell ID + Favorit, Cooldown 10 min.
 
-### Tab „Nowcast 0–2 h"
-Reihenfolge:
-1. **Hauptblock** `NowcastHeadline` — großer Score, Band-Label, Peak-Zeitpunkt (+min), Confidence-Balken, eine Klartextzeile.
-2. **Teilrisiken** `SubscoreBars` — vier horizontale Balken (Regen, Wind, Gewitter, Konvektion) mit Wert + Top-3-Beitragenden als kleinen Text.
-3. **Zeitachse** `NowcastTable` — pro 10-min Schritt: Zeit, Wetter-Icon, Gewittersignal (⚡/–), Regen (mm/h + Balken), Wind (km/h + Bö), Score-Pille, Confidence-Punkt, Radar/Blitz-Bestätigung.
-4. **Erklärung** `ScoreExplainPanel` — ausklappbar, listet alle Beiträge mit Punkten.
-5. **Datenstatus** `DataStatusStrip` — Quellen + Frische (Open-Meteo, Bright Sky, DWD Radar, Blitz).
+## UI Integration in `src/routes/map.tsx`
 
-### Tab „Heute 0–24 h"
-1. `TodayHeadline` — Tagesscore + Band + Peak-Fenster (Stundenbereich, nicht Punkt).
-2. `SubscoreBars` für die Tageslogik (andere Gewichtung).
-3. `SevereTimeline` (vorhanden, leicht erweitert um Band-Farben).
-4. `ScoreExplainPanel`.
-5. `DataStatusStrip`.
+Layer und Panels, keine neue Route.
 
-### Tab „Parameter"
-Karten-Grid, jeweils mit Rohwert + abgeleitetem Wert + Interpretationstext:
-- Temperatur / Taupunkt / Spread / Schwüle
-- Wind / Böen / Low-Level-Shear
-- Niederschlag / Wahrscheinlichkeit
-- Druck / Druck-Tendenz
-- CAPE / Lifted Index / CIN
-- K-Index (mit Schwellen ≥20 möglich, ≥30 wahrscheinlich, ≥40 sehr wahrscheinlich)
-- Total Totals (≥44 möglich, ≥50 wahrscheinlich, ≥55 schwer)
-- Gewitterwahrscheinlichkeit (Modell + heuristisch nebeneinander)
+- **Layer Toggle** auf der Karte: Zellen Polygone, Centroid + ID, Bewegungs Vektor, Forecast Pfad, Cone, Strikes, CAP Polygone. Default an: Polygone, Vektor, Cone.
+- **StormCellList** Panel rechts (Desktop) bzw. Bottom Sheet (Mobile): sortierbar nach Severity, ETA zum aktiven Ort, Distanz. Tap öffnet `StormCellDrawer`.
+- **StormCellDrawer**: Steckbrief der Zelle. Max dBZ, Fläche, Speed/Heading, Lebensdauer, Strike Rate Trend Sparkline, CAPE/LI am Zellort, Severity Begründung, Forecast Tabelle (+15/+30/+45/+60 min), betroffene Favoriten mit ETA.
+- **StormAlertBanner**: oben auf der Karte und im Cockpit, wenn Alerts für Favoriten aktiv sind. Klar, sachlich, mit ETA und Severity.
+- **DataFreshness**: Radar Alter, Blitz Alter, Modell Run sichtbar.
 
-## 3. Datenquellen-Erweiterung
+Komponenten:
+```text
+src/components/storm/
+  StormLayer.tsx          Render auf bestehender Map (Polygone, Vektor, Cone, Strikes)
+  StormCellList.tsx       Liste + Filter (nur schwere, nur relevante)
+  StormCellDrawer.tsx     Detail Drawer
+  StormAlertBanner.tsx    Aktive Favoriten Alerts
+  StormLegend.tsx         Farben Severity, Pfeil = Bewegung, Cone = Unsicherheit
+```
 
-- `sources/open-meteo.ts` — `HOURLY_VARS` um `temperature_850hPa`, `temperature_700hPa`, `temperature_500hPa`, `dew_point_850hPa`, `dew_point_700hPa` ergänzen.
-- `types.ts` — `HourlyPoint` um diese Felder erweitern.
-- `mappers/open-meteo.ts` — neue Felder mappen.
-- Blitz-Daten: bestehender `useLightningStream` wird optional in `nowcast.ts` injiziert (über Hook-Wrapper-Komponente).
+## Favoriten Alerts
 
-## 4. App-weite Vereinheitlichung
+- Quelle Favoriten: `use-saved-locations`.
+- Persistenz Alert State: `localStorage` Key `storm-alerts-v1` für Cooldown und gesehene Alerts.
+- Anzeige: Banner auf Map und Cockpit, plus Warnampel pro Favorit im `LocationSwitcher` zeigt Storm Severity zusätzlich zur bestehenden Hazard Ampel.
+- Konfiguration in `settings.tsx`: ETA Schwelle (Minuten), Severity Schwelle, an/aus.
 
-- `severeScore` in `convection.ts` bleibt für Rückwärtskompatibilität (Dashboard, Karte), bekommt aber intern eine Brücke auf das neue Banding (`labels.ts`).
-- `WarnBadge` bekommt eine Variante `band` zusätzlich zu `severity`, damit die neuen 5-stufigen Labels überall konsistent angezeigt werden können.
-- Bestehende Cockpit-Komponenten auf der Startseite werden nicht angefasst, nur Analyse + Scoring.
+Hinweis: keine Push Notifications in dieser Stufe, nur In App. Push wäre ein separater Schritt (Service Worker + Permission), bewusst nicht im Scope.
 
-## 5. Was bewusst NICHT geändert wird
+## Performance
 
-- Radar-Cockpit (`/map`), Stationen, Modelle, Settings, Lernen.
-- Dashboard-Layout (`/`) — nur falls `severeScore` sich verhält, sonst Brücke.
-- Bright-Sky / DWD-Quellen bleiben unverändert (Beobachtungen werden bereits über `live.ts` ins Nowcast eingespeist).
+- Detection nur bei neuem Radar Frame, Ergebnis cachen (Query Key inkl. Frame Timestamp).
+- Tracking inkrementell, nicht jeden Frame von Null.
+- Polygone vereinfachen (Douglas Peucker) vor dem Rendern.
+- Web Worker für Detection/Tracking, damit UI flüssig bleibt (`storm.worker.ts`).
 
-## Reihenfolge der Umsetzung
+## States
 
-1. Typen + Open-Meteo-Felder erweitern.
-2. `scoring/`-Modul komplett anlegen (labels, normalize, derived, subscores, nowcast, today, explain).
-3. Analyse-Komponenten neu: `NowcastHeadline`, `TodayHeadline`, `SubscoreBars`, `NowcastTable` (ersetzt `NowcastDecisionCard`-Inhalt), `ScoreExplainPanel`, `DataStatusStrip`, `ParamCardPro`.
-4. `analysis.tsx` neu zusammenbauen.
-5. `severeScore`-Brücke prüfen, damit das Dashboard stabil bleibt.
+Loading, Empty (keine Zellen erkannt), Error (Radar Quelle aus), Stale (Daten älter als 15 min) sauber abbilden. Bei Quellenproblem klare Meldung statt leerer Karte.
 
-## Aufwand / Risiken
+## Settings
 
-- 850/700/500 hPa-Levels von Open-Meteo sind nicht für jedes Modell verfügbar — wir fallen sauber auf `K = null`/`TT = null` zurück und ziehen das Datenvertrauen entsprechend.
-- Blitz-Live ist nur im Browser verfügbar (WebSocket) — auf SSR/Initial-Render rechnet der Nowcast ohne Blitz, was korrekt im Confidence-Score abgebildet wird.
-- Keine Migrationen, keine Auth-Änderungen.
+Neue Sektion „Stormtracking“ in `settings.tsx`:
+- Layer Defaults
+- Alert Schwellen (ETA min, Severity Stufe)
+- Quellen an/aus (Blitz, CAP)
+
+## Umsetzungsschritte
+
+1. Typen + leere Module unter `src/lib/weather/storm/` anlegen.
+2. `detect.ts` und `identify.ts` mit echtem Clustering auf RV Composite.
+3. `track.ts` + Ring Buffer + Persistenz im Memory Store.
+4. `forecast.ts` inkl. Cone.
+5. `severity.ts` mit Open Meteo Konvektionsdaten am Zellort.
+6. `alerts.ts` + Favoriten Verknüpfung.
+7. Worker auslagern.
+8. UI Komponenten + Integration in `routes/map.tsx`.
+9. Settings ergänzen.
+10. Warnampel im `LocationSwitcher` um Storm Severity erweitern.
+
+## Bewusst nicht im Scope
+
+- Push Notifications (separater Schritt).
+- Eigene historische Storm DB (alles in Memory + LocalStorage Light).
+- ML basierte Nowcasts. Erst solide deterministische Basis, ML später optional.
