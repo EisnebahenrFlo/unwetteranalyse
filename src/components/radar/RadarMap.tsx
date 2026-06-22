@@ -579,10 +579,10 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         });
       }
 
-      coneSrc.setData({ type: "FeatureCollection", features: cones } as GeoJSON.FeatureCollection);
-      polySrc.setData({ type: "FeatureCollection", features: polys } as GeoJSON.FeatureCollection);
-      fcSrc.setData({ type: "FeatureCollection", features: fcLines } as GeoJSON.FeatureCollection);
-      cenSrc.setData({ type: "FeatureCollection", features: centroids } as GeoJSON.FeatureCollection);
+      coneSrc.setData({ type: "FeatureCollection", features: cones as unknown as never[] });
+      polySrc.setData({ type: "FeatureCollection", features: polys as unknown as never[] });
+      fcSrc.setData({ type: "FeatureCollection", features: fcLines as unknown as never[] });
+      cenSrc.setData({ type: "FeatureCollection", features: centroids as unknown as never[] });
     },
     getBbox() {
       const map = mapRef.current;
