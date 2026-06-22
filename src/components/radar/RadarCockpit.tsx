@@ -18,6 +18,12 @@ import {
   TriggerLightCard, BlitzRadarCard, ModelObsCard, CellTrackCard,
   SourceConfidenceGrid, type SourceConfidence,
 } from "./CockpitDiagnostics";
+import { useStormTracking } from "@/lib/weather/storm/use-storm-tracking";
+import { StormPanel } from "@/components/storm/StormPanel";
+import { StormAlertBanner } from "@/components/storm/StormAlertBanner";
+import { useSavedLocations } from "@/hooks/use-saved-locations";
+import { useSettings } from "@/hooks/use-settings";
+import { DEFAULT_STORM_THRESHOLDS } from "@/lib/weather/storm/types";
 
 type Mode = "focus" | "europe" | "ground";
 
