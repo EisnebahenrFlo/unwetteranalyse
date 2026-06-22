@@ -4,6 +4,8 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import type { LightningStrike } from "@/lib/weather/sources/blitzortung";
 import { classifyAge } from "@/lib/weather/sources/blitzortung";
 import type { CellTrack } from "@/lib/weather/analysis/cockpit-diagnostics";
+import type { StormCell } from "@/lib/weather/storm/types";
+import { SEVERITY_COLOR } from "@/components/storm/severity-tokens";
 
 /** 64-Punkt-Approximation eines Kreises in Lon/Lat um (lat, lon) mit Radius in km. */
 function ringCoords(lat: number, lon: number, km: number, steps = 64): [number, number][] {
@@ -32,6 +34,7 @@ export interface RadarMapHandle {
   ) => void;
   setLightning: (strikes: LightningStrike[]) => void;
   setCellTrack: (track: CellTrack | null) => void;
+  setStormCells: (cells: StormCell[]) => void;
   getBbox: () => [number, number, number, number] | null;
   flyTo: (lon: number, lat: number, zoom?: number) => void;
   setFocusRings: (center: { lat: number; lon: number } | null, kmRadii?: number[]) => void;
@@ -211,6 +214,74 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
           "text-color": "#7f1d1d",
           "text-halo-color": "#ffffff",
           "text-halo-width": 1.2,
+        },
+      });
+
+      /* ----------- Storm-Cells: Cone, Polygon, Forecast-Pfade ----------- */
+      map.addSource("storm-cone-src", { type: "geojson", data: emptyFC });
+      map.addLayer({
+        id: "storm-cone",
+        type: "fill",
+        source: "storm-cone-src",
+        paint: {
+          "fill-color": ["get", "color"],
+          "fill-opacity": 0.14,
+          "fill-outline-color": ["get", "color"],
+        },
+      });
+      map.addSource("storm-poly-src", { type: "geojson", data: emptyFC });
+      map.addLayer({
+        id: "storm-poly-fill",
+        type: "fill",
+        source: "storm-poly-src",
+        paint: { "fill-color": ["get", "color"], "fill-opacity": 0.25 },
+      });
+      map.addLayer({
+        id: "storm-poly-line",
+        type: "line",
+        source: "storm-poly-src",
+        paint: { "line-color": ["get", "color"], "line-width": 1.5, "line-opacity": 0.9 },
+      });
+      map.addSource("storm-fc-line-src", { type: "geojson", data: emptyFC });
+      map.addLayer({
+        id: "storm-fc-line",
+        type: "line",
+        source: "storm-fc-line-src",
+        paint: {
+          "line-color": ["get", "color"],
+          "line-width": 2,
+          "line-dasharray": [2, 1.5],
+          "line-opacity": 0.85,
+        },
+      });
+      map.addSource("storm-centroid-src", { type: "geojson", data: emptyFC });
+      map.addLayer({
+        id: "storm-centroid",
+        type: "circle",
+        source: "storm-centroid-src",
+        paint: {
+          "circle-radius": 6,
+          "circle-color": ["get", "color"],
+          "circle-stroke-color": "#ffffff",
+          "circle-stroke-width": 2,
+        },
+      });
+      map.addLayer({
+        id: "storm-labels",
+        type: "symbol",
+        source: "storm-centroid-src",
+        layout: {
+          "text-field": ["get", "label"],
+          "text-size": 10,
+          "text-anchor": "left",
+          "text-offset": [0.7, 0],
+          "text-allow-overlap": true,
+          "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"],
+        },
+        paint: {
+          "text-color": "#1f2937",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 1.4,
         },
       });
     });
@@ -442,6 +513,77 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         features: [{ type: "Feature", geometry: { type: "Point", coordinates: [center.lon, center.lat] }, properties: {} }],
       });
     },
+    setStormCells(cells) {
+      const map = mapRef.current;
+      if (!map || !readyRef.current) return;
+      const coneSrc = map.getSource("storm-cone-src") as maplibregl.GeoJSONSource | undefined;
+      const polySrc = map.getSource("storm-poly-src") as maplibregl.GeoJSONSource | undefined;
+      const fcSrc = map.getSource("storm-fc-line-src") as maplibregl.GeoJSONSource | undefined;
+      const cenSrc = map.getSource("storm-centroid-src") as maplibregl.GeoJSONSource | undefined;
+      if (!coneSrc || !polySrc || !fcSrc || !cenSrc) return;
+      const empty = { type: "FeatureCollection" as const, features: [] };
+      if (cells.length === 0) {
+        coneSrc.setData(empty); polySrc.setData(empty); fcSrc.setData(empty); cenSrc.setData(empty);
+        return;
+      }
+      type AnyFeature = {
+        type: "Feature";
+        geometry:
+          | { type: "Polygon"; coordinates: number[][][] }
+          | { type: "LineString"; coordinates: number[][] }
+          | { type: "Point"; coordinates: number[] };
+        properties: Record<string, unknown>;
+      };
+      const cones: AnyFeature[] = [];
+      const polys: AnyFeature[] = [];
+      const fcLines: AnyFeature[] = [];
+      const centroids: AnyFeature[] = [];
+
+      for (const cell of cells) {
+        const color = SEVERITY_COLOR[cell.severity.level];
+        if (cell.cone.length >= 4) {
+          cones.push({
+            type: "Feature",
+            geometry: { type: "Polygon", coordinates: [cell.cone] },
+            properties: { color, id: cell.id },
+          });
+        }
+        if (cell.polygon.length >= 3) {
+          const ring = [...cell.polygon, cell.polygon[0]];
+          polys.push({
+            type: "Feature",
+            geometry: { type: "Polygon", coordinates: [ring] },
+            properties: { color, id: cell.id },
+          });
+        }
+        if (cell.forecast.length > 0) {
+          fcLines.push({
+            type: "Feature",
+            geometry: {
+              type: "LineString",
+              coordinates: [
+                [cell.centroid.lon, cell.centroid.lat],
+                ...cell.forecast.map((f) => [f.lon, f.lat] as [number, number]),
+              ],
+            },
+            properties: { color, id: cell.id },
+          });
+        }
+        const motionTag = cell.motion && cell.motion.speedKmh > 1
+          ? ` ${Math.round(cell.motion.speedKmh)}·${cell.motion.bearingCompass}`
+          : "";
+        centroids.push({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [cell.centroid.lon, cell.centroid.lat] },
+          properties: { color, id: cell.id, label: `${cell.id}${motionTag}` },
+        });
+      }
+
+      coneSrc.setData({ type: "FeatureCollection", features: cones as unknown as never[] });
+      polySrc.setData({ type: "FeatureCollection", features: polys as unknown as never[] });
+      fcSrc.setData({ type: "FeatureCollection", features: fcLines as unknown as never[] });
+      cenSrc.setData({ type: "FeatureCollection", features: centroids as unknown as never[] });
+    },
     getBbox() {
       const map = mapRef.current;
       if (!map) return null;
@@ -461,7 +603,11 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
  * konsistent darunter einsortiert werden. Verhindert, dass neue Frames Blitze überdecken.
  */
 function firstOverlayLayer(map: MlMap): string | undefined {
-  for (const id of ["track-past", "track-forecast", "track-points", "track-labels", "lightning-layer", "focus-rings-line", "focus-labels", "focus-center"]) {
+  for (const id of [
+    "storm-cone", "storm-poly-fill", "storm-poly-line", "storm-fc-line", "storm-centroid", "storm-labels",
+    "track-past", "track-forecast", "track-points", "track-labels",
+    "lightning-layer", "focus-rings-line", "focus-labels", "focus-center",
+  ]) {
     if (map.getLayer(id)) return id;
   }
   return undefined;

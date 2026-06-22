@@ -18,6 +18,12 @@ import {
   TriggerLightCard, BlitzRadarCard, ModelObsCard, CellTrackCard,
   SourceConfidenceGrid, type SourceConfidence,
 } from "./CockpitDiagnostics";
+import { useStormTracking } from "@/lib/weather/storm/use-storm-tracking";
+import { StormPanel } from "@/components/storm/StormPanel";
+import { StormAlertBanner } from "@/components/storm/StormAlertBanner";
+import { useSavedLocations } from "@/hooks/use-saved-locations";
+import { useSettings } from "@/hooks/use-settings";
+import { DEFAULT_STORM_THRESHOLDS } from "@/lib/weather/storm/types";
 
 type Mode = "focus" | "europe" | "ground";
 
@@ -152,6 +158,33 @@ export function RadarCockpit() {
     mapRef.current?.setCellTrack(track);
   }, [track]);
 
+  /* ---------- Stormtracking (multi-cell, persistente Tracks) ---------- */
+  const favorites = useSavedLocations();
+  const [settings] = useSettings();
+  const stormEnabled = settings.storm.enabled && showLightning;
+  const env = useMemo(() => ({
+    cape: nowHour?.cape,
+    liftedIndex: nowHour?.liftedIndex,
+    validFor: nowHour?.time,
+  }), [nowHour?.cape, nowHour?.liftedIndex, nowHour?.time]);
+  const stormThresholds = useMemo(() => ({
+    ...DEFAULT_STORM_THRESHOLDS,
+    alertEtaMin: settings.storm.alertEtaMin,
+    alertLevel: settings.storm.alertLevel,
+  }), [settings.storm.alertEtaMin, settings.storm.alertLevel]);
+  const storm = useStormTracking({
+    strikes: lightning.strikes,
+    favorites,
+    activePoint: { lat: point.lat, lon: point.lon },
+    environment: env,
+    thresholds: stormThresholds,
+    enabled: stormEnabled,
+  });
+
+  useEffect(() => {
+    mapRef.current?.setStormCells(settings.storm.showLayer ? storm.cells : []);
+  }, [storm.cells, settings.storm.showLayer]);
+
   const sourceConfidence: SourceConfidence[] = [
     {
       key: "ry", label: "Radar RY",
@@ -183,6 +216,7 @@ export function RadarCockpit() {
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="flex min-w-0 flex-col gap-2">
+        {storm.alerts.length > 0 && <StormAlertBanner alerts={storm.alerts} />}
         <TopBar
           mode={mode}
           onModeChange={setMode}
@@ -226,6 +260,12 @@ export function RadarCockpit() {
       </div>
 
       <aside className="flex flex-col gap-3">
+        <StormPanel
+          cells={storm.cells}
+          alerts={storm.alerts}
+          activeEta={storm.activeEta}
+          lightningOpen={lightning.status === "open"}
+        />
         <TriggerLightCard t={trig} />
         <BlitzRadarCard c={radarLight} />
         <ModelObsCard c={modelObs} />

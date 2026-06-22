@@ -1,12 +1,19 @@
 export type WindUnit = "ms" | "kmh" | "bft";
 export type TempUnit = "C" | "F";
 export type ThemeMode = "light" | "dark" | "system";
+export type StormAlertLevel = "watch" | "serious" | "severe";
 
 export interface Settings {
   windUnit: WindUnit;
   tempUnit: TempUnit;
   theme: ThemeMode;
   defaultMapLayers: string[];
+  storm: {
+    enabled: boolean;
+    alertEtaMin: number;
+    alertLevel: StormAlertLevel;
+    showLayer: boolean;
+  };
 }
 
 const KEY = "meteoflo.settings.v1";
@@ -16,6 +23,12 @@ export const DEFAULT_SETTINGS: Settings = {
   tempUnit: "C",
   theme: "light",
   defaultMapLayers: ["radar"],
+  storm: {
+    enabled: true,
+    alertEtaMin: 45,
+    alertLevel: "serious",
+    showLayer: true,
+  },
 };
 
 export function getSettings(): Settings {
@@ -23,7 +36,12 @@ export function getSettings(): Settings {
   try {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<Settings>) };
+    const parsed = JSON.parse(raw) as Partial<Settings>;
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+      storm: { ...DEFAULT_SETTINGS.storm, ...(parsed.storm ?? {}) },
+    };
   } catch {
     return DEFAULT_SETTINGS;
   }
