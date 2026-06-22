@@ -1,18 +1,21 @@
 import { useMemo } from "react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { X, Wind, Zap, Compass, Activity, Target } from "lucide-react";
+import { X, Wind, Zap, Compass, Activity, Target, ShieldAlert } from "lucide-react";
 import type { StormCell, StormAlert } from "@/lib/weather/storm/types";
+import type { HazardCellReport } from "@/lib/weather/hazards/types";
+import { HazardCellSection } from "@/components/hazards/HazardCellSection";
 import { SEVERITY_LABEL, SEVERITY_TONE } from "./severity-tokens";
 import { cn } from "@/lib/utils";
 
 interface Props {
   cell: StormCell | null;
   alerts: StormAlert[];
+  hazardReport?: HazardCellReport | null;
   onClose: () => void;
 }
 
-export function StormCellDrawer({ cell, onClose, alerts }: Props) {
+export function StormCellDrawer({ cell, onClose, alerts, hazardReport = null }: Props) {
   const open = !!cell;
 
   const lifespanMin = useMemo(() => {
@@ -71,6 +74,12 @@ export function StormCellDrawer({ cell, onClose, alerts }: Props) {
               ))}
             </ul>
           </Section>
+
+          {hazardReport && (
+            <Section title="Hazards" icon={ShieldAlert}>
+              <HazardCellSection report={hazardReport} />
+            </Section>
+          )}
 
           {cell.forecast.length > 0 && (
             <Section title="Forecast" icon={Compass}>
