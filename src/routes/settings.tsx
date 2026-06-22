@@ -94,6 +94,39 @@ function SettingsPage() {
         <p className="mt-2 text-[11px] text-muted-foreground">Standard-Orte (Berlin, Wien, Zürich, Bozen) lassen sich nicht löschen, neue über den Ortswechsler oben hinzufügen.</p>
       </DataCard>
 
+      <DataCard title="Stormtracking" subtitle="Detection aus Blitz-Clustern, Forecast +60 min">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Group label="Status">
+            <Choice active={settings.storm.enabled} onClick={() => setSettings({ ...settings, storm: { ...settings.storm, enabled: !settings.storm.enabled } })}>
+              {settings.storm.enabled ? "Aktiv" : "Aus"}
+            </Choice>
+            <Choice active={settings.storm.showLayer} onClick={() => setSettings({ ...settings, storm: { ...settings.storm, showLayer: !settings.storm.showLayer } })}>
+              Karten-Layer
+            </Choice>
+          </Group>
+          <Group label="Alert ETA-Schwelle">
+            {ETA_OPTIONS.map((o) => (
+              <Choice key={o.value} active={settings.storm.alertEtaMin === o.value}
+                onClick={() => setSettings({ ...settings, storm: { ...settings.storm, alertEtaMin: o.value } })}>
+                {o.label}
+              </Choice>
+            ))}
+          </Group>
+          <Group label="Alert-Severity">
+            {ALERT_LEVELS.map((o) => (
+              <Choice key={o.value} active={settings.storm.alertLevel === o.value}
+                onClick={() => setSettings({ ...settings, storm: { ...settings.storm, alertLevel: o.value } })}>
+                {o.label}
+              </Choice>
+            ))}
+          </Group>
+        </div>
+        <p className="mt-3 text-[11px] text-muted-foreground">
+          Alerts werden ausgelöst, wenn der Forecast-Cone einen Favoriten innerhalb der ETA-Schwelle streift
+          und die Severity mindestens dem gewählten Niveau entspricht. Cooldown 10 min pro Zelle und Favorit.
+        </p>
+      </DataCard>
+
       <DataCard title="Datenquellen">
         <ul className="space-y-2 text-xs text-muted-foreground">
           <li><strong className="text-foreground">Open-Meteo</strong> · Forecast, Modellvergleich, abgeleitete Werte. Kostenlos, ohne Key, freie nicht-kommerzielle Nutzung.</li>
