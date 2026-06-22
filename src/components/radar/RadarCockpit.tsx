@@ -21,6 +21,9 @@ import {
 import { useStormTracking } from "@/lib/weather/storm/use-storm-tracking";
 import { StormPanel } from "@/components/storm/StormPanel";
 import { StormAlertBanner } from "@/components/storm/StormAlertBanner";
+import { useHazards } from "@/lib/weather/hazards/use-hazards";
+import { HazardAlertBanner } from "@/components/hazards/HazardAlertBanner";
+import { DEFAULT_HAZARD_THRESHOLDS, type HazardLevel } from "@/lib/weather/hazards/types";
 import { useSavedLocations } from "@/hooks/use-saved-locations";
 import { useSettings } from "@/hooks/use-settings";
 import { DEFAULT_STORM_THRESHOLDS } from "@/lib/weather/storm/types";
@@ -185,6 +188,28 @@ export function RadarCockpit() {
     mapRef.current?.setStormCells(settings.storm.showLayer ? storm.cells : []);
   }, [storm.cells, settings.storm.showLayer]);
 
+  /* ---------- Hazard-Engine (Hagel, Sturzflut, Blitz-Jump) ---------- */
+  const hazardThresholds = useMemo(() => ({
+    ...DEFAULT_HAZARD_THRESHOLDS,
+    minLevel: settings.hazards.minLevel as HazardLevel,
+    alertEtaMin: settings.hazards.alertEtaMin,
+    cooldownMin: settings.hazards.cooldownMin,
+    hitKm: settings.hazards.hitKm,
+    enableHail: settings.hazards.enableHail,
+    enableFlood: settings.hazards.enableFlood,
+    enableLightning: settings.hazards.enableLightning,
+  }), [
+    settings.hazards.minLevel, settings.hazards.alertEtaMin, settings.hazards.cooldownMin,
+    settings.hazards.hitKm, settings.hazards.enableHail, settings.hazards.enableFlood,
+    settings.hazards.enableLightning,
+  ]);
+  const hazards = useHazards({
+    cells: storm.cells,
+    favorites,
+    thresholds: hazardThresholds,
+    enabled: stormEnabled && settings.hazards.enabled,
+  });
+
   const sourceConfidence: SourceConfidence[] = [
     {
       key: "ry", label: "Radar RY",
@@ -217,6 +242,7 @@ export function RadarCockpit() {
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="flex min-w-0 flex-col gap-2">
         {storm.alerts.length > 0 && <StormAlertBanner alerts={storm.alerts} />}
+        {hazards.alerts.length > 0 && <HazardAlertBanner alerts={hazards.alerts} />}
         <TopBar
           mode={mode}
           onModeChange={setMode}
@@ -265,6 +291,7 @@ export function RadarCockpit() {
           alerts={storm.alerts}
           activeEta={storm.activeEta}
           lightningOpen={lightning.status === "open"}
+          hazardReports={hazards.reports}
         />
         <TriggerLightCard t={trig} />
         <BlitzRadarCard c={radarLight} />
