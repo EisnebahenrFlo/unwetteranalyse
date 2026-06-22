@@ -6,29 +6,60 @@ import type { CurrentConditions, StationObservation, WeatherAlert, AlertSeverity
 const KMH_TO_MS = 1 / 3.6;
 const toMs = (kmh?: number) => (kmh == null ? undefined : kmh * KMH_TO_MS);
 
+/** Bright Sky /current_weather liefert rollierende Fenster mit Suffix
+ *  `_10`, `_30`, `_60`. Wir bevorzugen das 10-Minuten-Fenster und fallen
+ *  bei Lücken auf 30 bzw. 60 zurück, statt stumm `undefined` zu zeigen. */
+function pickRolling<T>(w: Record<string, unknown>, key: string): T | undefined {
+  for (const suffix of ["_10", "_30", "_60", ""]) {
+    const v = w[`${key}${suffix}`];
+    if (v != null) return v as T;
+  }
+  return undefined;
+}
+
+/** Bright Sky `icon` (z. B. "partly-cloudy-day", "thunderstorm") grob in einen
+ *  WMO-Code übersetzen, damit Symbol und Label konsistent zur Modellanzeige sind. */
+function iconToWmoCode(icon?: string): number | undefined {
+  switch (icon) {
+    case "clear-day":
+    case "clear-night": return 0;
+    case "partly-cloudy-day":
+    case "partly-cloudy-night": return 2;
+    case "cloudy": return 3;
+    case "fog": return 45;
+    case "wind": return 3;
+    case "rain": return 63;
+    case "sleet": return 67;
+    case "snow": return 73;
+    case "hail": return 96;
+    case "thunderstorm": return 95;
+    default: return undefined;
+  }
+}
+
 export function mapBrightSkyCurrent(raw: {
-  weather?: {
-    timestamp: string;
-    temperature?: number; dew_point?: number; relative_humidity?: number;
-    wind_speed?: number; wind_gust_speed?: number; wind_direction?: number;
-    precipitation_10?: number; pressure_msl?: number; cloud_cover?: number;
-    condition?: string; icon?: string;
-  };
+  weather?: Record<string, unknown> & { timestamp: string; icon?: string; condition?: string };
   sources?: Array<{ distance?: number; station_name?: string }>;
 }): CurrentConditions | undefined {
   const w = raw.weather;
   if (!w) return undefined;
+  const temperature = w["temperature"] as number | undefined;
+  const windKmh = pickRolling<number>(w, "wind_speed");
+  const gustKmh = pickRolling<number>(w, "wind_gust_speed");
+  const windDir = pickRolling<number>(w, "wind_direction");
+  const precip = pickRolling<number>(w, "precipitation");
   return {
     observedAt: w.timestamp,
-    temperatureC: w.temperature ?? Number.NaN,
-    dewPointC: w.dew_point,
-    relativeHumidity: w.relative_humidity,
-    windSpeedMs: toMs(w.wind_speed) ?? Number.NaN,
-    windGustMs: toMs(w.wind_gust_speed),
-    windDirectionDeg: w.wind_direction,
-    precipitationMm: w.precipitation_10,
-    pressureHpa: w.pressure_msl,
-    cloudCover: w.cloud_cover,
+    temperatureC: temperature ?? Number.NaN,
+    dewPointC: w["dew_point"] as number | undefined,
+    relativeHumidity: w["relative_humidity"] as number | undefined,
+    windSpeedMs: toMs(windKmh) ?? Number.NaN,
+    windGustMs: toMs(gustKmh),
+    windDirectionDeg: windDir,
+    precipitationMm: precip,
+    pressureHpa: w["pressure_msl"] as number | undefined,
+    cloudCover: w["cloud_cover"] as number | undefined,
+    weatherCode: iconToWmoCode(w.icon),
   };
 }
 

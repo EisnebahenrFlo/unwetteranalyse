@@ -8,7 +8,7 @@ import { MeteoconIcon, isNightAt } from "@/components/weather/MeteoconIcon";
 
 export function CurrentConditions({ current, meta, fallbackLabel }: { current?: CC; meta: DataMeta; fallbackLabel?: string }) {
   const [settings] = useSettings();
-  if (!current) {
+  if (!current || !Number.isFinite(current.temperatureC)) {
     return (
       <DataCard title="Aktuelle Lage" meta={meta}>
         <div className="text-sm text-muted-foreground">{fallbackLabel ?? "Keine aktuellen Daten verfügbar."}</div>

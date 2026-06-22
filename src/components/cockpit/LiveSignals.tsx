@@ -15,13 +15,22 @@ interface Props {
 }
 
 /**
- * Live-Signale: Radar + Punkt-Beobachtungen + Wind/Böen + Druck-Tendenz.
- * Klar abgetrennt von Bewertung und Modelltrend.
+ * Live-Signale: Punkt-Beobachtungen + Wind/Böen + Druck-Tendenz + Radar.
+ * Mobile-first: Zahlen zuerst, Karte unten. Beobachtung wird mit Modell-
+ * werten zusammengeführt, sodass fehlende Felder (z. B. weatherCode,
+ * apparentTemperatureC) nicht zu Lücken in der UI führen.
  */
 export function LiveSignals({ point, bundle, bsCurrent, bsMeta }: Props) {
+  const merged = mergeObservationWithModel(bsCurrent, bundle.current);
+  const metaForDisplay = bsCurrent ? bsMeta : bundle.meta;
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
-      <div className="lg:col-span-8">
+      <div className="flex flex-col gap-3 lg:col-span-4 lg:order-2">
+        <CurrentConditions current={merged} meta={metaForDisplay} />
+        <PressureTendency bundle={bundle} />
+        <WindCard current={merged} hasObservation={!!bsCurrent} />
+      </div>
+      <div className="lg:col-span-8 lg:order-1">
         <DataCard
           title="DWD Radar"
           subtitle="Beobachtetes Niederschlagsechobild, animiert."
@@ -32,14 +41,35 @@ export function LiveSignals({ point, bundle, bsCurrent, bsMeta }: Props) {
           </div>
         </DataCard>
       </div>
-
-      <div className="flex flex-col gap-3 lg:col-span-4">
-        <CurrentConditions current={bsCurrent ?? bundle.current} meta={bsMeta} />
-        <PressureTendency bundle={bundle} />
-        <WindCard current={bsCurrent ?? bundle.current} />
-      </div>
     </div>
   );
+}
+
+/** Beobachtung hat Priorität, fehlt ein Feld wird Modell als Fallback genutzt.
+ *  Damit verschwinden keine Werte, nur weil Bright Sky ein Feld leer lässt. */
+function mergeObservationWithModel(obs: CC | null | undefined, model: CC | undefined): CC | undefined {
+  if (!obs) return model;
+  if (!model) return obs;
+  const pick = <K extends keyof CC>(key: K): CC[K] => {
+    const v = obs[key];
+    if (v == null) return model[key];
+    if (typeof v === "number" && Number.isNaN(v)) return model[key];
+    return v;
+  };
+  return {
+    observedAt: obs.observedAt,
+    temperatureC: pick("temperatureC") as number,
+    apparentTemperatureC: pick("apparentTemperatureC"),
+    dewPointC: pick("dewPointC"),
+    relativeHumidity: pick("relativeHumidity"),
+    windSpeedMs: pick("windSpeedMs") as number,
+    windGustMs: pick("windGustMs"),
+    windDirectionDeg: pick("windDirectionDeg"),
+    precipitationMm: pick("precipitationMm"),
+    pressureHpa: pick("pressureHpa"),
+    cloudCover: pick("cloudCover"),
+    weatherCode: pick("weatherCode"),
+  };
 }
 
 function PressureTendency({ bundle }: { bundle: ForecastBundle }) {
@@ -67,7 +97,7 @@ function PressureTendency({ bundle }: { bundle: ForecastBundle }) {
   );
 }
 
-function WindCard({ current }: { current?: CC }) {
+function WindCard({ current, hasObservation }: { current?: CC; hasObservation: boolean }) {
   const [settings] = useSettings();
   if (!current) {
     return (
@@ -75,10 +105,13 @@ function WindCard({ current }: { current?: CC }) {
     );
   }
   const dir = current.windDirectionDeg != null ? windDirectionLabel(current.windDirectionDeg) : null;
+  const subtitle = hasObservation
+    ? "Punktbeobachtung der nächsten DWD-Station."
+    : "Keine aktuelle DWD-Beobachtung — Modellwert (Open-Meteo).";
   return (
-    <DataCard title="Wind & Böen" subtitle="Punktbeobachtung der nächsten DWD-Station.">
+    <DataCard title="Wind & Böen" subtitle={subtitle}>
       <div className="grid grid-cols-2 gap-3">
-        <Cell label="Mittlerer Wind" value={formatWind(current.windSpeedMs, settings.windUnit)} hint={dir ? `aus ${dir}` : undefined} />
+        <Cell label="Mittlerer Wind" value={Number.isFinite(current.windSpeedMs) ? formatWind(current.windSpeedMs, settings.windUnit) : "—"} hint={dir ? `aus ${dir}` : undefined} />
         <Cell label="Spitzenböe" value={current.windGustMs != null ? formatWind(current.windGustMs, settings.windUnit) : "—"} hint="letzte Stunde" />
       </div>
     </DataCard>
