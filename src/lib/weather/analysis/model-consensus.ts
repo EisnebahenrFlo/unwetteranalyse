@@ -1,5 +1,5 @@
 import type { ModelSeries, HourlyPoint } from "../types";
-import { severeScore, thunderProbability, summarizeModelSevere } from "./convection";
+import { thunderProbability, summarizeModelSevere } from "./convection";
 import { liveHourly } from "../live";
 
 export type ConsensusMetric =
@@ -146,11 +146,6 @@ export function buildRanking(series: ModelSeries[], now: Date): ModelRankRow[] {
     if (sum.gustMaxMs >= 18) drivers.push("Böen");
     if (sum.precipMaxMm >= 15) drivers.push("Starkregen");
     if (sum.thunderProbMax >= 0.5) drivers.push("Gewitter");
-    // Stundenpeak finden für Verlauf
-    const peakHour = live.reduce<{ p: HourlyPoint | null; s: number }>((acc, h) => {
-      const sc = severeScore(h).value;
-      return sc > acc.s ? { p: h, s: sc } : acc;
-    }, { p: null, s: -1 });
     return {
       model: s.model,
       label: s.label,
@@ -164,9 +159,7 @@ export function buildRanking(series: ModelSeries[], now: Date): ModelRankRow[] {
       thunderProbMax: sum.thunderProbMax,
       drivers,
       hourly: live,
-      // marker silence
-      _peak: peakHour,
-    } as ModelRankRow;
+    };
   }).sort((a, b) => b.worstScore - a.worstScore);
 }
 
