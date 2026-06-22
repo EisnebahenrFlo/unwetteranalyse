@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { fetchOpenMeteoForecast, fetchOpenMeteoSingleModel } from "./sources/open-meteo";
 import { fetchBrightSkyCurrent, fetchBrightSkyAlerts, fetchBrightSkyStations } from "./sources/bright-sky";
+import { fetchDwdRadarFrames } from "./sources/dwd-radar";
 import { mapForecastBundle, mapModelSeries } from "./mappers/open-meteo";
 import { mapBrightSkyCurrent, mapBrightSkyStations, mapBrightSkyAlerts } from "./mappers/bright-sky";
 import { WEATHER_MODELS } from "./models";
@@ -68,6 +69,16 @@ export function brightSkyAlertsQuery(point: GeoPoint) {
     refetchInterval: 5 * 60 * 1000,
   });
 }
+
+/** DWD-Radar-Frames als globaler Status. Eine einzige Quelle für Karte und
+ *  Systemstatus, damit Frame-Stand und Sichtbarkeit konsistent sind. */
+export const dwdRadarFramesQuery = queryOptions({
+  queryKey: ["dwd-radar"] as const,
+  queryFn: fetchDwdRadarFrames,
+  staleTime: 5 * 60 * 1000,
+  refetchInterval: 5 * 60 * 1000,
+  retry: 1,
+});
 
 export function modelComparisonQuery(point: GeoPoint) {
   return queryOptions({
