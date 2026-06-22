@@ -526,10 +526,18 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         coneSrc.setData(empty); polySrc.setData(empty); fcSrc.setData(empty); cenSrc.setData(empty);
         return;
       }
-      const cones: GeoJSON.Feature[] = [];
-      const polys: GeoJSON.Feature[] = [];
-      const fcLines: GeoJSON.Feature[] = [];
-      const centroids: GeoJSON.Feature[] = [];
+      type AnyFeature = {
+        type: "Feature";
+        geometry:
+          | { type: "Polygon"; coordinates: number[][][] }
+          | { type: "LineString"; coordinates: number[][] }
+          | { type: "Point"; coordinates: number[] };
+        properties: Record<string, unknown>;
+      };
+      const cones: AnyFeature[] = [];
+      const polys: AnyFeature[] = [];
+      const fcLines: AnyFeature[] = [];
+      const centroids: AnyFeature[] = [];
 
       for (const cell of cells) {
         const color = SEVERITY_COLOR[cell.severity.level];
@@ -571,10 +579,10 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         });
       }
 
-      coneSrc.setData({ type: "FeatureCollection", features: cones });
-      polySrc.setData({ type: "FeatureCollection", features: polys });
-      fcSrc.setData({ type: "FeatureCollection", features: fcLines });
-      cenSrc.setData({ type: "FeatureCollection", features: centroids });
+      coneSrc.setData({ type: "FeatureCollection", features: cones } as GeoJSON.FeatureCollection);
+      polySrc.setData({ type: "FeatureCollection", features: polys } as GeoJSON.FeatureCollection);
+      fcSrc.setData({ type: "FeatureCollection", features: fcLines } as GeoJSON.FeatureCollection);
+      cenSrc.setData({ type: "FeatureCollection", features: centroids } as GeoJSON.FeatureCollection);
     },
     getBbox() {
       const map = mapRef.current;
