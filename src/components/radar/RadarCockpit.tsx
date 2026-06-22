@@ -71,14 +71,25 @@ export function RadarCockpit() {
     setScrub(0);
   }, [mode, point.lat, point.lon]);
 
-  // Tile-Update
+  // Frame-Stacks: alle relevanten Frames bleiben gemountet → kein Refetch beim Scrubben/Playback.
+  // Wechsel passieren über raster-opacity (Crossfade ~180 ms) statt Source/Layer-Recreate.
   useEffect(() => {
-    if (!activeFrame) {
-      mapRef.current?.setRasterTiles("radar", null);
+    const m = mapRef.current; if (!m) return;
+    if (mode === "europe") {
+      m.setFrameStack("radar-ry", [], null, MODE_DEFS[mode].opacity);
+      m.setFrameStack("radar-wn", [], null, MODE_DEFS[mode].opacity);
+      if (activeFrame) m.setRasterTiles("radar-pi", wmsTileUrl("pi", activeFrame), MODE_DEFS[mode].opacity);
+      else m.setRasterTiles("radar-pi", null);
       return;
     }
-    mapRef.current?.setRasterTiles("radar", wmsTileUrl(activeLayer, activeFrame), MODE_DEFS[mode].opacity);
-  }, [activeFrame, activeLayer, mode]);
+    m.setRasterTiles("radar-pi", null);
+    const ryEntries = ryFrames.map((t) => ({ time: t, url: wmsTileUrl("ry", t) }));
+    const wnEntries = (showWnNowcast ? wnFrames : []).map((t) => ({ time: t, url: wmsTileUrl("wn", t) }));
+    const activeRy = activeLayer === "ry" ? activeFrame : null;
+    const activeWn = activeLayer === "wn" ? activeFrame : null;
+    m.setFrameStack("radar-ry", ryEntries, activeRy, MODE_DEFS[mode].opacity);
+    m.setFrameStack("radar-wn", wnEntries, activeWn, MODE_DEFS[mode].opacity);
+  }, [mode, ryFrames, wnFrames, showWnNowcast, activeFrame, activeLayer]);
 
   // QY-Qualitätslayer als zusätzliches Overlay, an aktuellen Frame gekoppelt.
   useEffect(() => {
@@ -135,6 +146,11 @@ export function RadarCockpit() {
   const radarLight = blitzVsRadar({ strikes: lightning.strikes, ry: ryQ.data, nowHourPrecipMm: nowHour?.precipitationMm ?? null });
   const modelObs = modelVsObservation({ nowHour, lightning15min, ryFreshAndWet });
   const track = cellTracking({ strikes: lightning.strikes, focus: { lat: point.lat, lon: point.lon } });
+
+  // Stormtrack-Geometrie in die Karte schreiben.
+  useEffect(() => {
+    mapRef.current?.setCellTrack(track);
+  }, [track]);
 
   const sourceConfidence: SourceConfidence[] = [
     {
