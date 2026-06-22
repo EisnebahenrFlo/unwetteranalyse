@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Zap, Wind, Target, ChevronRight, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StormCell, StormAlert } from "@/lib/weather/storm/types";
+import type { HazardCellReport } from "@/lib/weather/hazards/types";
 import { SEVERITY_COLOR, SEVERITY_LABEL, SEVERITY_TONE } from "./severity-tokens";
 import { StormCellDrawer } from "./StormCellDrawer";
 
@@ -10,9 +11,10 @@ interface Props {
   alerts: StormAlert[];
   activeEta: { cell: StormCell; etaMin: number; distanceKm: number } | null;
   lightningOpen: boolean;
+  hazardReports?: HazardCellReport[];
 }
 
-export function StormPanel({ cells, alerts, activeEta, lightningOpen }: Props) {
+export function StormPanel({ cells, alerts, activeEta, lightningOpen, hazardReports = [] }: Props) {
   const [selected, setSelected] = useState<StormCell | null>(null);
 
   const grouped = useMemo(() => {
@@ -24,6 +26,12 @@ export function StormPanel({ cells, alerts, activeEta, lightningOpen }: Props) {
     }
     return byCell;
   }, [alerts]);
+
+  const hazardByCell = useMemo(() => {
+    const m = new Map<string, HazardCellReport>();
+    for (const r of hazardReports) m.set(r.cellId, r);
+    return m;
+  }, [hazardReports]);
 
   return (
     <section className="rounded-xl border border-border bg-card">
@@ -56,7 +64,12 @@ export function StormPanel({ cells, alerts, activeEta, lightningOpen }: Props) {
         </ul>
       )}
 
-      <StormCellDrawer cell={selected} onClose={() => setSelected(null)} alerts={selected ? (grouped.get(selected.id) ?? []) : []} />
+      <StormCellDrawer
+        cell={selected}
+        onClose={() => setSelected(null)}
+        alerts={selected ? (grouped.get(selected.id) ?? []) : []}
+        hazardReport={selected ? (hazardByCell.get(selected.id) ?? null) : null}
+      />
     </section>
   );
 }
