@@ -43,3 +43,35 @@ export function addSavedLocation(point: GeoPoint): SavedLocation {
 export function removeSavedLocation(id: string) {
   setSavedLocations(getSavedLocations().filter((l) => l.id !== id));
 }
+
+/** Verschiebt einen Favoriten um delta Positionen (negativ = nach oben). */
+export function moveSavedLocation(id: string, delta: number) {
+  const list = getSavedLocations();
+  const idx = list.findIndex((l) => l.id === id);
+  if (idx === -1) return;
+  const target = Math.max(0, Math.min(list.length - 1, idx + delta));
+  if (target === idx) return;
+  const next = list.slice();
+  const [item] = next.splice(idx, 1);
+  next.splice(target, 0, item);
+  setSavedLocations(next);
+}
+
+/** Reine ID-basierte Sortierung — für später möglich Drag-Drop. */
+export function reorderSavedLocations(orderedIds: string[]) {
+  const list = getSavedLocations();
+  const byId = new Map(list.map((l) => [l.id, l]));
+  const next: SavedLocation[] = [];
+  for (const id of orderedIds) {
+    const item = byId.get(id);
+    if (item) { next.push(item); byId.delete(id); }
+  }
+  // Übrige hinten anhängen (z. B. neu hinzugekommene).
+  for (const item of byId.values()) next.push(item);
+  setSavedLocations(next);
+}
+
+export function isFavorite(point: { lat: number; lon: number }): boolean {
+  const id = `loc-${point.lat.toFixed(4)}-${point.lon.toFixed(4)}`;
+  return getSavedLocations().some((l) => l.id === id || (l.id.startsWith("default-") && Math.abs(l.lat - point.lat) < 0.01 && Math.abs(l.lon - point.lon) < 0.01));
+}
