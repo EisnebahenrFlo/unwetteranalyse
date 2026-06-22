@@ -513,6 +513,69 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         features: [{ type: "Feature", geometry: { type: "Point", coordinates: [center.lon, center.lat] }, properties: {} }],
       });
     },
+    setStormCells(cells) {
+      const map = mapRef.current;
+      if (!map || !readyRef.current) return;
+      const coneSrc = map.getSource("storm-cone-src") as maplibregl.GeoJSONSource | undefined;
+      const polySrc = map.getSource("storm-poly-src") as maplibregl.GeoJSONSource | undefined;
+      const fcSrc = map.getSource("storm-fc-line-src") as maplibregl.GeoJSONSource | undefined;
+      const cenSrc = map.getSource("storm-centroid-src") as maplibregl.GeoJSONSource | undefined;
+      if (!coneSrc || !polySrc || !fcSrc || !cenSrc) return;
+      const empty = { type: "FeatureCollection" as const, features: [] };
+      if (cells.length === 0) {
+        coneSrc.setData(empty); polySrc.setData(empty); fcSrc.setData(empty); cenSrc.setData(empty);
+        return;
+      }
+      const cones: GeoJSON.Feature[] = [];
+      const polys: GeoJSON.Feature[] = [];
+      const fcLines: GeoJSON.Feature[] = [];
+      const centroids: GeoJSON.Feature[] = [];
+
+      for (const cell of cells) {
+        const color = SEVERITY_COLOR[cell.severity.level];
+        if (cell.cone.length >= 4) {
+          cones.push({
+            type: "Feature",
+            geometry: { type: "Polygon", coordinates: [cell.cone] },
+            properties: { color, id: cell.id },
+          });
+        }
+        if (cell.polygon.length >= 3) {
+          const ring = [...cell.polygon, cell.polygon[0]];
+          polys.push({
+            type: "Feature",
+            geometry: { type: "Polygon", coordinates: [ring] },
+            properties: { color, id: cell.id },
+          });
+        }
+        if (cell.forecast.length > 0) {
+          fcLines.push({
+            type: "Feature",
+            geometry: {
+              type: "LineString",
+              coordinates: [
+                [cell.centroid.lon, cell.centroid.lat],
+                ...cell.forecast.map((f) => [f.lon, f.lat] as [number, number]),
+              ],
+            },
+            properties: { color, id: cell.id },
+          });
+        }
+        const motionTag = cell.motion && cell.motion.speedKmh > 1
+          ? ` ${Math.round(cell.motion.speedKmh)}·${cell.motion.bearingCompass}`
+          : "";
+        centroids.push({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [cell.centroid.lon, cell.centroid.lat] },
+          properties: { color, id: cell.id, label: `${cell.id}${motionTag}` },
+        });
+      }
+
+      coneSrc.setData({ type: "FeatureCollection", features: cones });
+      polySrc.setData({ type: "FeatureCollection", features: polys });
+      fcSrc.setData({ type: "FeatureCollection", features: fcLines });
+      cenSrc.setData({ type: "FeatureCollection", features: centroids });
+    },
     getBbox() {
       const map = mapRef.current;
       if (!map) return null;
