@@ -2,6 +2,7 @@ import type { GeoPoint } from "../weather/types";
 
 const OPEN_METEO_GEOCODING = "https://geocoding-api.open-meteo.com/v1/search";
 const NOMINATIM_REVERSE = "https://nominatim.openstreetmap.org/reverse";
+const NOMINATIM_SEARCH = "https://nominatim.openstreetmap.org/search";
 
 /** DACH + Norditalien werden in der Trefferliste nach oben sortiert. */
 const DACH = new Set(["DE", "AT", "CH", "LI", "IT"]);
@@ -84,6 +85,14 @@ export async function searchLocations(query: string, language = "de"): Promise<G
     }];
   }
 
+  // Open-Meteo Geocoding kennt keine PLZ-Suche → über Nominatim auflösen,
+  // beschränkt auf DACH inkl. Liechtenstein.
+  if (cls.kind === "postal") {
+    const postal = await searchByPostalCode(query.trim(), language);
+    if (postal.length > 0) return postal;
+    // Fallback: trotzdem versuchen, falls Nutzer was wie „1010" tippt.
+  }
+
   const url = new URL(OPEN_METEO_GEOCODING);
   url.searchParams.set("name", query.trim());
   url.searchParams.set("language", language);
@@ -96,6 +105,41 @@ export async function searchLocations(query: string, language = "de"): Promise<G
   const postalHint = cls.kind === "postal" ? query.trim() : undefined;
   const mapped = (data.results ?? []).map((r) => toGeoPoint(r, postalHint));
   return rankResults(mapped);
+}
+
+interface NominatimSearchResult {
+  lat: string;
+  lon: string;
+  display_name?: string;
+  address?: NominatimReverse["address"];
+}
+
+async function searchByPostalCode(postal: string, language: string): Promise<GeoPoint[]> {
+  const url = new URL(NOMINATIM_SEARCH);
+  url.searchParams.set("postalcode", postal);
+  url.searchParams.set("countrycodes", "de,at,ch,li,it");
+  url.searchParams.set("format", "jsonv2");
+  url.searchParams.set("addressdetails", "1");
+  url.searchParams.set("limit", "10");
+  url.searchParams.set("accept-language", language);
+
+  const res = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+  if (!res.ok) return [];
+  const data = (await res.json()) as NominatimSearchResult[];
+  return data.map((r) => {
+    const a = r.address ?? {};
+    const name =
+      a.city ?? a.town ?? a.village ?? a.municipality ?? a.hamlet ?? a.suburb ??
+      r.display_name?.split(",")[0]?.trim() ?? postal;
+    return {
+      lat: Number(r.lat),
+      lon: Number(r.lon),
+      name,
+      country: a.country_code?.toUpperCase(),
+      admin: a.state ?? a.county,
+      postal,
+    };
+  });
 }
 
 interface NominatimReverse {

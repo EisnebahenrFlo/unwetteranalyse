@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Crosshair, Loader2, MapPin, Search, Star, X } from "lucide-react";
@@ -36,10 +36,25 @@ export function useActivePoint(): ActivePoint {
   return fallback;
 }
 
-/** Trigger-Button für Header. */
-function TriggerButton({ active }: { active: ActivePoint }) {
+/**
+ * Trigger-Button für Header.
+ * forwardRef + Props-Spread sind Pflicht, damit Radix `asChild`
+ * (Sheet- und Popover-Trigger) Klick-Handler und Refs an den nativen
+ * Button durchreichen kann. Ohne das öffnet sich das Panel nicht.
+ */
+const TriggerButton = forwardRef<
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement> & { active: ActivePoint }
+>(function TriggerButton({ active, className, ...props }, ref) {
   return (
-    <button className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-left transition-colors hover:bg-accent">
+    <button
+      ref={ref}
+      {...props}
+      className={cn(
+        "grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-left transition-colors hover:bg-accent",
+        className,
+      )}
+    >
       <MapPin className="h-4 w-4 shrink-0 text-primary" />
       <div className="min-w-0">
         <div className="truncate text-sm font-medium text-foreground">{active.name}</div>
@@ -49,7 +64,7 @@ function TriggerButton({ active }: { active: ActivePoint }) {
       </div>
     </button>
   );
-}
+});
 
 /**
  * Ortswechsel & Favoritenverwaltung in einem Panel.
