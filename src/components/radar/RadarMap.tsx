@@ -3,6 +3,7 @@ import maplibregl, { Map as MlMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { LightningStrike } from "@/lib/weather/sources/blitzortung";
 import { classifyAge } from "@/lib/weather/sources/blitzortung";
+import type { CellTrack } from "@/lib/weather/analysis/cockpit-diagnostics";
 
 /** 64-Punkt-Approximation eines Kreises in Lon/Lat um (lat, lon) mit Radius in km. */
 function ringCoords(lat: number, lon: number, km: number, steps = 64): [number, number][] {
@@ -18,7 +19,19 @@ function ringCoords(lat: number, lon: number, km: number, steps = 64): [number, 
 
 export interface RadarMapHandle {
   setRasterTiles: (id: string, tileUrl: string | null, opacity?: number) => void;
+  /**
+   * Verwaltet einen vorgeladenen Frame-Stack für flüssige Animation.
+   * Alle Frames bleiben als Layer gemountet, nur die Opazität wird gewechselt
+   * → kein Tile-Refetch beim Scrubben/Playback und weicher Crossfade.
+   */
+  setFrameStack: (
+    stackKey: string,
+    frames: { time: string; url: string }[],
+    activeTime: string | null,
+    opacity: number,
+  ) => void;
   setLightning: (strikes: LightningStrike[]) => void;
+  setCellTrack: (track: CellTrack | null) => void;
   getBbox: () => [number, number, number, number] | null;
   flyTo: (lon: number, lat: number, zoom?: number) => void;
   setFocusRings: (center: { lat: number; lon: number } | null, kmRadii?: number[]) => void;
@@ -43,6 +56,8 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
   const readyRef = useRef(false);
+  /** Aktive Frame-Stacks: key → Liste der gemounteten (sourceId, layerId, time, url). */
+  const stacksRef = useRef<Map<string, { sourceId: string; layerId: string; time: string; url: string }[]>>(new Map());
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -142,6 +157,62 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
           "circle-stroke-width": 2,
         },
       });
+
+      /* ----------- Stormtrack-Layer ----------- */
+      const emptyFC = { type: "FeatureCollection" as const, features: [] };
+      map.addSource("track-past-src", { type: "geojson", data: emptyFC });
+      map.addLayer({
+        id: "track-past",
+        type: "line",
+        source: "track-past-src",
+        paint: {
+          "line-color": "#ef4444",
+          "line-width": 3,
+          "line-opacity": 0.85,
+        },
+      });
+      map.addSource("track-forecast-src", { type: "geojson", data: emptyFC });
+      map.addLayer({
+        id: "track-forecast",
+        type: "line",
+        source: "track-forecast-src",
+        paint: {
+          "line-color": "#ef4444",
+          "line-width": 2.5,
+          "line-dasharray": [1.5, 1.5],
+          "line-opacity": 0.9,
+        },
+      });
+      map.addSource("track-points-src", { type: "geojson", data: emptyFC });
+      map.addLayer({
+        id: "track-points",
+        type: "circle",
+        source: "track-points-src",
+        paint: {
+          "circle-radius": ["match", ["get", "kind"], "fresh", 6, "forecast", 5, 4],
+          "circle-color": ["match", ["get", "kind"], "fresh", "#ef4444", "forecast", "#fff", "#fca5a5"],
+          "circle-stroke-color": "#ef4444",
+          "circle-stroke-width": 2,
+        },
+      });
+      map.addLayer({
+        id: "track-labels",
+        type: "symbol",
+        source: "track-points-src",
+        layout: {
+          "text-field": ["coalesce", ["get", "label"], ""],
+          "text-size": 10,
+          "text-anchor": "left",
+          "text-offset": [0.6, 0],
+          "text-allow-overlap": true,
+          "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"],
+        },
+        paint: {
+          "text-color": "#7f1d1d",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 1.2,
+        },
+      });
     });
 
     map.on("movestart", () => onInteractionChange?.(true));
@@ -156,6 +227,7 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
       map.remove();
       mapRef.current = null;
       readyRef.current = false;
+      stacksRef.current.clear();
     };
     // initial-only
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -171,10 +243,80 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         if (map.getLayer(layerId)) map.removeLayer(layerId);
         if (map.getSource(sourceId)) map.removeSource(sourceId);
         if (!tileUrl) return;
-        map.addSource(sourceId, { type: "raster", tiles: [tileUrl], tileSize: 256, attribution: "© Deutscher Wetterdienst" });
+        // tileSize 512 halbiert die Anzahl der Requests gegenüber 256 bei gleichem Viewport.
+        map.addSource(sourceId, { type: "raster", tiles: [tileUrl], tileSize: 512, attribution: "© Deutscher Wetterdienst" });
         // Unter Lightning einfügen, damit Blitze sichtbar bleiben.
-        const before = map.getLayer("lightning-layer") ? "lightning-layer" : undefined;
-        map.addLayer({ id: layerId, type: "raster", source: sourceId, paint: { "raster-opacity": opacity } }, before);
+        const before = firstOverlayLayer(map);
+        map.addLayer(
+          {
+            id: layerId,
+            type: "raster",
+            source: sourceId,
+            paint: { "raster-opacity": opacity, "raster-fade-duration": 120 },
+          },
+          before,
+        );
+      };
+      if (readyRef.current) apply();
+      else map.once("load", apply);
+    },
+    setFrameStack(stackKey, frames, activeTime, opacity) {
+      const map = mapRef.current;
+      if (!map) return;
+      const apply = () => {
+        const before = firstOverlayLayer(map);
+        const existing = stacksRef.current.get(stackKey) ?? [];
+        const incomingTimes = new Set(frames.map((f) => f.time));
+        // Entferne Frames, die nicht mehr im neuen Set sind.
+        for (const e of existing) {
+          if (!incomingTimes.has(e.time)) {
+            if (map.getLayer(e.layerId)) map.removeLayer(e.layerId);
+            if (map.getSource(e.sourceId)) map.removeSource(e.sourceId);
+          }
+        }
+        const keep = new Map(existing.filter((e) => incomingTimes.has(e.time)).map((e) => [e.time, e]));
+        const next: { sourceId: string; layerId: string; time: string; url: string }[] = [];
+        for (const f of frames) {
+          let entry = keep.get(f.time);
+          // Falls URL sich änderte (z. B. anderer Layerschlüssel im selben Stack), neu anlegen.
+          if (entry && entry.url !== f.url) {
+            if (map.getLayer(entry.layerId)) map.removeLayer(entry.layerId);
+            if (map.getSource(entry.sourceId)) map.removeSource(entry.sourceId);
+            entry = undefined;
+          }
+          if (!entry) {
+            const safe = f.time.replace(/[^0-9]/g, "");
+            const sourceId = `${stackKey}-src-${safe}`;
+            const layerId = `${stackKey}-lyr-${safe}`;
+            map.addSource(sourceId, {
+              type: "raster",
+              tiles: [f.url],
+              tileSize: 512,
+              attribution: "© Deutscher Wetterdienst",
+            });
+            map.addLayer(
+              {
+                id: layerId,
+                type: "raster",
+                source: sourceId,
+                paint: {
+                  "raster-opacity": 0,
+                  "raster-opacity-transition": { duration: 180, delay: 0 },
+                  "raster-fade-duration": 120,
+                },
+              },
+              before,
+            );
+            entry = { sourceId, layerId, time: f.time, url: f.url };
+          }
+          next.push(entry);
+        }
+        // Opazitäten setzen — nur aktiver Frame sichtbar, andere bleiben im Cache.
+        for (const e of next) {
+          const isActive = e.time === activeTime;
+          map.setPaintProperty(e.layerId, "raster-opacity", isActive ? opacity : 0);
+        }
+        stacksRef.current.set(stackKey, next);
       };
       if (readyRef.current) apply();
       else map.once("load", apply);
@@ -193,6 +335,78 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
           properties: { age: classifyAge(s.time, now), time: s.time },
         })),
       });
+    },
+    setCellTrack(track) {
+      const map = mapRef.current;
+      if (!map || !readyRef.current) return;
+      const pastSrc = map.getSource("track-past-src") as maplibregl.GeoJSONSource | undefined;
+      const fcSrc = map.getSource("track-forecast-src") as maplibregl.GeoJSONSource | undefined;
+      const ptsSrc = map.getSource("track-points-src") as maplibregl.GeoJSONSource | undefined;
+      if (!pastSrc || !fcSrc || !ptsSrc) return;
+      const empty = { type: "FeatureCollection" as const, features: [] };
+      if (!track || !track.freshCentroid) {
+        pastSrc.setData(empty); fcSrc.setData(empty); ptsSrc.setData(empty);
+        return;
+      }
+      const features: GeoJSON.Feature[] = [
+        {
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [track.freshCentroid.lon, track.freshCentroid.lat] },
+          properties: {
+            kind: "fresh",
+            label: track.speedKmh != null && track.bearingCompass
+              ? `${Math.round(track.speedKmh)} km/h ${track.bearingCompass}`
+              : "Zelle",
+          },
+        },
+      ];
+      if (track.olderCentroid && track.hasTrack) {
+        pastSrc.setData({
+          type: "FeatureCollection",
+          features: [{
+            type: "Feature",
+            geometry: {
+              type: "LineString",
+              coordinates: [
+                [track.olderCentroid.lon, track.olderCentroid.lat],
+                [track.freshCentroid.lon, track.freshCentroid.lat],
+              ],
+            },
+            properties: {},
+          }],
+        });
+        features.push({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [track.olderCentroid.lon, track.olderCentroid.lat] },
+          properties: { kind: "older" },
+        });
+      } else {
+        pastSrc.setData(empty);
+      }
+      if (track.forecastPosition) {
+        fcSrc.setData({
+          type: "FeatureCollection",
+          features: [{
+            type: "Feature",
+            geometry: {
+              type: "LineString",
+              coordinates: [
+                [track.freshCentroid.lon, track.freshCentroid.lat],
+                [track.forecastPosition.lon, track.forecastPosition.lat],
+              ],
+            },
+            properties: {},
+          }],
+        });
+        features.push({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [track.forecastPosition.lon, track.forecastPosition.lat] },
+          properties: { kind: "forecast", label: `+${track.forecastPosition.offsetMinutes} min` },
+        });
+      } else {
+        fcSrc.setData(empty);
+      }
+      ptsSrc.setData({ type: "FeatureCollection", features });
     },
     setFocusRings(center, kmRadii = [10, 25, 50, 100]) {
       const map = mapRef.current;
@@ -236,3 +450,14 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
 
   return <div ref={containerRef} className="h-full w-full" />;
 });
+
+/**
+ * Liefert die ID der ersten "Overlay"-Schicht (Lightning/Track/Ringe), damit Raster
+ * konsistent darunter einsortiert werden. Verhindert, dass neue Frames Blitze überdecken.
+ */
+function firstOverlayLayer(map: MlMap): string | undefined {
+  for (const id of ["track-past", "track-forecast", "track-points", "track-labels", "lightning-layer", "focus-rings-line", "focus-labels", "focus-center"]) {
+    if (map.getLayer(id)) return id;
+  }
+  return undefined;
+}
