@@ -185,6 +185,14 @@ export interface CellTrack {
   approachingFocus: boolean | null;
   etaMinutes: number | null;
   detail: string;
+  /** Schwerpunkt der frischen Aktivität (0..10 min), falls vorhanden. */
+  freshCentroid: { lat: number; lon: number } | null;
+  /** Schwerpunkt der älteren Aktivität (10..30 min), falls vorhanden. */
+  olderCentroid: { lat: number; lon: number } | null;
+  /** Extrapolierte Position in +30 min entlang Bearing+Speed. */
+  forecastPosition: { lat: number; lon: number; offsetMinutes: number } | null;
+  /** Anzahl der frischen Treffer hinter dem Tracking. */
+  sampleCount: number;
 }
 
 export function cellTracking(input: {
@@ -197,13 +205,19 @@ export function cellTracking(input: {
     const age = now - s.time;
     return age > 10 * 60_000 && age <= 30 * 60_000;
   });
-  if (fresh.length < 3 || older.length < 3) {
+  const cFreshEarly = centroid(fresh);
+  // Schwelle bewusst weicher: bereits 2 frische + 2 ältere genügen für eine sinnvolle Vektor-Schätzung.
+  if (fresh.length < 2 || older.length < 2) {
     return {
       hasTrack: false,
       bearingDeg: null, bearingCompass: null,
-      speedKmh: null, distanceKm: distanceKm(centroid(fresh), input.focus),
+      speedKmh: null, distanceKm: distanceKm(cFreshEarly, input.focus),
       approachingFocus: null, etaMinutes: null,
       detail: fresh.length === 0 ? "Keine frische Blitzaktivität — kein Tracking möglich." : "Zu wenige Blitze für Tracking.",
+      freshCentroid: cFreshEarly,
+      olderCentroid: centroid(older),
+      forecastPosition: null,
+      sampleCount: fresh.length,
     };
   }
   const cFresh = centroid(fresh)!;
@@ -218,6 +232,10 @@ export function cellTracking(input: {
   const approachingFocus = dAngle <= 45;
   const etaMinutes = approachingFocus && speedKmh > 1 ? Math.round((distanceKm_ / speedKmh) * 60) : null;
 
+  // Extrapolation: +30 min entlang Bearing & Speed.
+  const forecastPosition =
+    speedKmh > 1 ? projectPoint(cFresh, bearingDeg, (speedKmh / 60) * 30) : null;
+
   return {
     hasTrack: true,
     bearingDeg,
@@ -229,6 +247,12 @@ export function cellTracking(input: {
     detail: approachingFocus
       ? `Zelle zieht auf Fokus zu, ETA ${etaMinutes ?? "—"} min.`
       : "Zelle bewegt sich nicht klar auf den Fokus zu.",
+    freshCentroid: cFresh,
+    olderCentroid: cOlder,
+    forecastPosition: forecastPosition
+      ? { ...forecastPosition, offsetMinutes: 30 }
+      : null,
+    sampleCount: fresh.length,
   };
 }
 
@@ -266,4 +290,25 @@ function haversineKm(a: { lat: number; lon: number }, b: { lat: number; lon: num
 
 function distanceKm(a: { lat: number; lon: number } | null, b: { lat: number; lon: number }) {
   return a ? haversineKm(a, b) : null;
+}
+
+/** Projiziert einen Punkt um distanceKm in Richtung bearingDeg (großkreis-näherung). */
+function projectPoint(
+  start: { lat: number; lon: number },
+  bearingDeg: number,
+  distanceKm: number,
+): { lat: number; lon: number } {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const toDeg = (r: number) => (r * 180) / Math.PI;
+  const δ = distanceKm / R;
+  const θ = toRad(bearingDeg);
+  const φ1 = toRad(start.lat);
+  const λ1 = toRad(start.lon);
+  const φ2 = Math.asin(Math.sin(φ1) * Math.cos(δ) + Math.cos(φ1) * Math.sin(δ) * Math.cos(θ));
+  const λ2 = λ1 + Math.atan2(
+    Math.sin(θ) * Math.sin(δ) * Math.cos(φ1),
+    Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2),
+  );
+  return { lat: toDeg(φ2), lon: ((toDeg(λ2) + 540) % 360) - 180 };
 }
