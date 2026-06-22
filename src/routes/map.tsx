@@ -4,7 +4,7 @@ import { RadarCockpit } from "@/components/radar/RadarCockpit";
 export const Route = createFileRoute("/map")({
   head: () => ({
     meta: [
-      { title: "Radar-Cockpit — MeteoFlo" },
+      { title: "Radar-Cockpit — ForecastHub" },
       { name: "description", content: "DWD RY/WN/PI, Blitzortung live, Datenvertrauen und Kurzfrist-Nowcast in einer Karte." },
     ],
   }),

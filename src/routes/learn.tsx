@@ -6,7 +6,7 @@ import { ALL_RULES, severityWeight } from "@/lib/weather/thresholds/dwd";
 export const Route = createFileRoute("/learn")({
   head: () => ({
     meta: [
-      { title: "Lernmodus — MeteoFlo" },
+      { title: "Lernmodus — ForecastHub" },
       { name: "description", content: "Begriffe, Schwellen und Konzepte verständlich erklärt." },
     ],
   }),
@@ -30,7 +30,7 @@ const CONCEPTS = [
   },
   {
     title: "Warum DWD-Schwellen?",
-    text: "Der DWD nutzt klare Stufen (markant, Unwetter, schweres Unwetter, extrem). MeteoFlo orientiert sich daran, damit Einordnungen vergleichbar bleiben.",
+    text: "Der DWD nutzt klare Stufen (markant, Unwetter, schweres Unwetter, extrem). ForecastHub orientiert sich daran, damit Einordnungen vergleichbar bleiben.",
   },
   {
     title: "Wie verlässlich ist ein Wert?",

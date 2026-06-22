@@ -16,7 +16,7 @@ import { liveHourly } from "@/lib/weather/live";
 export const Route = createFileRoute("/alerts")({
   head: () => ({
     meta: [
-      { title: "Warnlagen — MeteoFlo" },
+      { title: "Warnlagen — ForecastHub" },
       { name: "description", content: "Offizielle DWD-Warnungen und eigene Schwellen-Auswertung nach DWD-Logik." },
     ],
   }),
