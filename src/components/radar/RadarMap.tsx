@@ -247,10 +247,11 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         type: "circle",
         source: "storm-past-pts-src",
         paint: {
-          "circle-radius": 2.5,
+          "circle-radius": 3,
           "circle-color": ["get", "color"],
           "circle-opacity": ["coalesce", ["get", "fade"], 0.6],
-          "circle-stroke-width": 0,
+          "circle-stroke-width": 1,
+          "circle-stroke-color": "#ffffff",
         },
       });
       map.addSource("storm-poly-src", { type: "geojson", data: emptyFC });
@@ -273,9 +274,33 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         source: "storm-fc-line-src",
         paint: {
           "line-color": ["get", "color"],
-          "line-width": 2,
-          "line-dasharray": [2, 1.5],
-          "line-opacity": 0.85,
+          "line-width": 3.2,
+          "line-dasharray": [2, 1.4],
+          "line-opacity": 0.95,
+        },
+        layout: { "line-cap": "round", "line-join": "round" },
+      });
+      // Pfeilspitze am Ende der Prognose (Bewegungsrichtung).
+      map.addSource("storm-fc-arrow-src", { type: "geojson", data: emptyFC });
+      map.addLayer({
+        id: "storm-fc-arrow",
+        type: "symbol",
+        source: "storm-fc-arrow-src",
+        layout: {
+          "text-field": "▲",
+          "text-size": 16,
+          "text-rotation-alignment": "map",
+          "text-pitch-alignment": "map",
+          "text-rotate": ["coalesce", ["get", "bearing"], 0],
+          "text-allow-overlap": true,
+          "text-ignore-placement": true,
+          "text-anchor": "center",
+          "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"],
+        },
+        paint: {
+          "text-color": ["get", "color"],
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 1.6,
         },
       });
       // ETA-Marker (+15/+30/+60 min) entlang des Forecasts.
