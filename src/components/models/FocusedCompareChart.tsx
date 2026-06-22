@@ -73,7 +73,6 @@ export function FocusedCompareChart({ series, metric, unitLabel }: Props) {
               labelFormatter={(v) => new Date(v as string).toLocaleString("de-DE", { weekday: "short", hour: "2-digit", minute: "2-digit" })}
               contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid var(--border)", background: "var(--popover)" }}
               itemSorter={(item) => -(item.value as number)}
-              filter={(it) => !String(it.dataKey).startsWith("_")}
             />
             {/* Konsens-Korridor (min..max) */}
             <Area
