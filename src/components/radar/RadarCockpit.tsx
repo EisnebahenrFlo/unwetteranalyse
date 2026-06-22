@@ -111,19 +111,19 @@ export function RadarCockpit() {
     mapRef.current?.setLightning(showLightning ? lightning.strikes : []);
   }, [lightning.strikes, showLightning]);
 
-  // Playback
+  // Playback — Frames sind vorgeladen, daher Schritte über reine Opacity-Toggles. ~350 ms wirkt flüssig.
   useEffect(() => {
     if (!playing) return;
     const id = window.setInterval(() => {
       setScrub((s) => {
-        const minStep = -(ryFrames.length - 1);
-        const maxStep = wnFrames.length;
+        const minStep = -(Math.max(0, ryFrames.length - 1));
+        const maxStep = showWnNowcast ? wnFrames.length : 0;
         const next = s + 1;
         return next > maxStep ? minStep : next;
       });
-    }, 700);
+    }, 350);
     return () => window.clearInterval(id);
-  }, [playing, ryFrames.length, wnFrames.length]);
+  }, [playing, ryFrames.length, wnFrames.length, showWnNowcast]);
 
   const minScrub = -(Math.max(0, ryFrames.length - 1));
   const maxScrub = wnFrames.length;
