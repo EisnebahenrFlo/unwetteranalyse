@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Area, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
 import type { ModelSeries } from "@/lib/weather/types";
 import { useLiveNow } from "@/hooks/use-live-now";
-import { liveHourly } from "@/lib/weather/live";
 import { buildCorridor, CORE_MODEL_IDS, type ConsensusMetric } from "@/lib/weather/analysis/model-consensus";
 import { cn } from "@/lib/utils";
 
@@ -162,6 +161,3 @@ export function FocusedCompareChart({ series, metric, unitLabel }: Props) {
     </div>
   );
 }
-
-// kept for tree-shake: unused liveHourly import removed below
-void liveHourly;
