@@ -603,7 +603,11 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
  * konsistent darunter einsortiert werden. Verhindert, dass neue Frames Blitze überdecken.
  */
 function firstOverlayLayer(map: MlMap): string | undefined {
-  for (const id of ["track-past", "track-forecast", "track-points", "track-labels", "lightning-layer", "focus-rings-line", "focus-labels", "focus-center"]) {
+  for (const id of [
+    "storm-cone", "storm-poly-fill", "storm-poly-line", "storm-fc-line", "storm-centroid", "storm-labels",
+    "track-past", "track-forecast", "track-points", "track-labels",
+    "lightning-layer", "focus-rings-line", "focus-labels", "focus-center",
+  ]) {
     if (map.getLayer(id)) return id;
   }
   return undefined;
