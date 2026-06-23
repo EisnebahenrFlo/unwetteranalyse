@@ -18,6 +18,14 @@ export const SEVERITY_LABEL: Record<StormSeverity, string> = {
   severe: "schwer",
 };
 
+/** Kompakte Großbuchstaben-Labels für Karten-Marker. */
+export const SEVERITY_BADGE: Record<StormSeverity, string> = {
+  calm: "RUHIG",
+  watch: "BEOBACHTEN",
+  serious: "MARKANT",
+  severe: "UNWETTER",
+};
+
 export const SEVERITY_TONE: Record<StormSeverity, string> = {
   calm: "bg-slate-500/15 text-slate-700 dark:text-slate-300",
   watch: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
