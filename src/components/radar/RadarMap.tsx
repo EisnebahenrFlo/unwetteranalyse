@@ -5,7 +5,13 @@ import type { LightningStrike } from "@/lib/weather/sources/blitzortung";
 import { classifyAge } from "@/lib/weather/sources/blitzortung";
 import type { CellTrack } from "@/lib/weather/analysis/cockpit-diagnostics";
 import type { StormCell } from "@/lib/weather/storm/types";
-import { SEVERITY_COLOR } from "@/components/storm/severity-tokens";
+import { SEVERITY_COLOR, SEVERITY_BADGE } from "@/components/storm/severity-tokens";
+import {
+  estimateEchoTopKm,
+  estimateReflectivityDbz,
+  etaToNearestTarget,
+  type NamedTarget,
+} from "@/lib/weather/storm/estimate";
 
 /** 64-Punkt-Approximation eines Kreises in Lon/Lat um (lat, lon) mit Radius in km. */
 function ringCoords(lat: number, lon: number, km: number, steps = 64): [number, number][] {
@@ -35,6 +41,7 @@ export interface RadarMapHandle {
   setLightning: (strikes: LightningStrike[]) => void;
   setCellTrack: (track: CellTrack | null) => void;
   setStormCells: (cells: StormCell[]) => void;
+  setNamedTargets: (targets: NamedTarget[]) => void;
   getBbox: () => [number, number, number, number] | null;
   flyTo: (lon: number, lat: number, zoom?: number) => void;
   setFocusRings: (center: { lat: number; lon: number } | null, kmRadii?: number[]) => void;
@@ -61,6 +68,9 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
   const readyRef = useRef(false);
   /** Aktive Frame-Stacks: key → Liste der gemounteten (sourceId, layerId, time, url). */
   const stacksRef = useRef<Map<string, { sourceId: string; layerId: string; time: string; url: string }[]>>(new Map());
+  /** Letzte bekannte Zellen + Ziele, damit Label-Refreshes ohne neuen setStormCells funktionieren. */
+  const cellsRef = useRef<StormCell[]>([]);
+  const targetsRef = useRef<NamedTarget[]>([]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
