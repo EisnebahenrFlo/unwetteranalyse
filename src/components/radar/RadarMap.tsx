@@ -235,11 +235,23 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         source: "storm-cone-src",
         paint: {
           "fill-color": ["get", "color"],
-          "fill-opacity": 0.14,
+          "fill-opacity": 0.10,
           "fill-outline-color": ["get", "color"],
         },
       });
       // Zugbahn vergangener Centroiden je Zelle.
+      map.addSource("storm-past-halo-src", { type: "geojson", data: emptyFC });
+      map.addLayer({
+        id: "storm-past-halo",
+        type: "line",
+        source: "storm-past-halo-src",
+        paint: {
+          "line-color": "#ffffff",
+          "line-width": 3.2,
+          "line-opacity": 0.55,
+        },
+        layout: { "line-cap": "round", "line-join": "round" },
+      });
       map.addSource("storm-past-src", { type: "geojson", data: emptyFC });
       map.addLayer({
         id: "storm-past-line",
@@ -248,8 +260,9 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         paint: {
           "line-color": ["get", "color"],
           "line-width": 2,
-          "line-opacity": 0.7,
+          "line-opacity": 0.55,
         },
+        layout: { "line-cap": "round", "line-join": "round" },
       });
       map.addSource("storm-past-pts-src", { type: "geojson", data: emptyFC });
       map.addLayer({
@@ -257,7 +270,7 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         type: "circle",
         source: "storm-past-pts-src",
         paint: {
-          "circle-radius": 3,
+          "circle-radius": 2.5,
           "circle-color": ["get", "color"],
           "circle-opacity": ["coalesce", ["get", "fade"], 0.6],
           "circle-stroke-width": 1,
@@ -284,9 +297,9 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         source: "storm-fc-line-src",
         paint: {
           "line-color": ["get", "color"],
-          "line-width": 3.2,
+          "line-width": 3,
           "line-dasharray": [2, 1.4],
-          "line-opacity": 0.95,
+          "line-opacity": 0.92,
         },
         layout: { "line-cap": "round", "line-join": "round" },
       });
@@ -298,7 +311,7 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         source: "storm-fc-arrow-src",
         layout: {
           "text-field": "▲",
-          "text-size": 16,
+          "text-size": ["interpolate", ["linear"], ["zoom"], 5, 12, 8, 16, 12, 22],
           "text-rotation-alignment": "map",
           "text-pitch-alignment": "map",
           "text-rotate": ["coalesce", ["get", "bearing"], 0],
@@ -310,7 +323,7 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         paint: {
           "text-color": ["get", "color"],
           "text-halo-color": "#ffffff",
-          "text-halo-width": 1.6,
+          "text-halo-width": 1.8,
         },
       });
       // ETA-Marker (+15/+30/+60 min) entlang des Forecasts.
@@ -332,16 +345,16 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         source: "storm-eta-src",
         layout: {
           "text-field": ["get", "label"],
-          "text-size": 10,
+          "text-size": 11,
           "text-anchor": "left",
           "text-offset": [0.6, 0],
           "text-allow-overlap": true,
           "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"],
         },
         paint: {
-          "text-color": "#1f2937",
+          "text-color": "#0f172a",
           "text-halo-color": "#ffffff",
-          "text-halo-width": 1.2,
+          "text-halo-width": 1.6,
         },
       });
       map.addSource("storm-centroid-src", { type: "geojson", data: emptyFC });
@@ -362,16 +375,20 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         source: "storm-centroid-src",
         layout: {
           "text-field": ["get", "label"],
-          "text-size": 10,
-          "text-anchor": "left",
-          "text-offset": [0.7, 0],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 5, 9, 7, 10, 10, 13],
+          "text-anchor": "top-left",
+          "text-offset": [0.8, 0.4],
+          "text-justify": "left",
+          "text-line-height": 1.2,
           "text-allow-overlap": true,
+          "text-ignore-placement": false,
+          "symbol-sort-key": ["coalesce", ["get", "rank"], 0],
           "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"],
         },
         paint: {
-          "text-color": "#1f2937",
+          "text-color": ["coalesce", ["get", "textColor"], "#0f172a"],
           "text-halo-color": "#ffffff",
-          "text-halo-width": 1.4,
+          "text-halo-width": 1.8,
         },
       });
     });
