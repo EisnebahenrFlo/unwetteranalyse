@@ -179,6 +179,17 @@ export function RadarCockpit() {
     mapRef.current?.setStormCells(settings.storm.showLayer ? storm.cells : []);
   }, [storm.cells, settings.storm.showLayer]);
 
+  // Benannte Ziele (aktiver Ort + Favoriten) für ETA-Berechnung in den Zell-Labels.
+  useEffect(() => {
+    const targets = [
+      { name: point.name, lat: point.lat, lon: point.lon },
+      ...favorites
+        .filter((f) => f.lat !== point.lat || f.lon !== point.lon)
+        .map((f) => ({ name: f.name, lat: f.lat, lon: f.lon })),
+    ];
+    mapRef.current?.setNamedTargets(targets);
+  }, [point.lat, point.lon, point.name, favorites]);
+
   /* ---------- Hazard-Engine (Hagel, Sturzflut, Blitz-Jump) ---------- */
   const hazardThresholds = useMemo(() => ({
     ...DEFAULT_HAZARD_THRESHOLDS,
