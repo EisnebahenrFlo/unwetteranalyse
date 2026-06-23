@@ -26,7 +26,7 @@ export function LiveSignals({ point, bundle, bsCurrent, bsMeta }: Props) {
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
       <div className="flex flex-col gap-3 lg:col-span-4 lg:order-2">
-        <CurrentConditions current={merged} meta={metaForDisplay} />
+        <CurrentConditions current={merged} meta={metaForDisplay} hourly={bundle.hourly} />
         <PressureTendency bundle={bundle} />
         <WindCard current={merged} hasObservation={!!bsCurrent} />
       </div>
