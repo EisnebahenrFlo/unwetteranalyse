@@ -207,11 +207,6 @@ export function RadarCockpit() {
       detail: ryQ.data?.latest ? `${Math.round((ryQ.data.lagMs ?? 0) / 60000)} min alt${ryQ.data.gaps > 0 ? ` · ${ryQ.data.gaps} Lücken` : ""}` : "keine Frames",
     },
     {
-      key: "qy", label: "Qualität QY",
-      state: !showQy ? "missing" : qyQ.data?.latest ? "good" : "limited",
-      detail: !showQy ? "Layer aus" : qyQ.data?.latest ? "Qualitätsfeld vorhanden" : "kein Frame geladen",
-    },
-    {
       key: "wn", label: "Nowcast WN",
       state: wnQ.data?.latest ? "good" : showWnNowcast ? "limited" : "missing",
       detail: wnQ.data?.latest ? `${wnQ.data.frames.length} Frames` : showWnNowcast ? "lädt" : "Layer aus",
