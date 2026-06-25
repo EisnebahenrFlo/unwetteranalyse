@@ -104,14 +104,24 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
       // Fokusringe
       map.addSource("focus-rings-src", { type: "geojson", data: emptyFC });
       map.addLayer({
+        id: "focus-rings-casing",
+        type: "line",
+        source: "focus-rings-src",
+        paint: {
+          "line-color": "#ffffff",
+          "line-width": 4,
+          "line-opacity": 0.85,
+        },
+      });
+      map.addLayer({
         id: "focus-rings-line",
         type: "line",
         source: "focus-rings-src",
         paint: {
-          "line-color": "#0ea5e9",
-          "line-width": 1.2,
-          "line-dasharray": [2, 2],
-          "line-opacity": 0.75,
+          "line-color": "#e11d48",
+          "line-width": 2,
+          "line-dasharray": [3, 2],
+          "line-opacity": 0.95,
         },
       });
       map.addSource("focus-labels-src", { type: "geojson", data: emptyFC });
@@ -121,12 +131,16 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         source: "focus-labels-src",
         layout: {
           "text-field": ["get", "label"],
-          "text-size": 10,
+          "text-size": 12,
           "text-anchor": "left",
           "text-offset": [0.4, 0],
           "text-allow-overlap": true,
         },
-        paint: { "text-color": "#0c4a6e", "text-halo-color": "#ffffff", "text-halo-width": 1.2 },
+        paint: {
+          "text-color": "#0b1220",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 2,
+        },
       });
       map.addSource("focus-center-src", { type: "geojson", data: emptyFC });
       map.addLayer({
@@ -675,6 +689,7 @@ function firstOverlayLayer(map: MlMap): string | undefined {
     "storm-labels",
     "hail-core-halo",
     "hail-core-dot",
+    "focus-rings-casing",
     "focus-rings-line",
     "focus-labels",
     "focus-center",
