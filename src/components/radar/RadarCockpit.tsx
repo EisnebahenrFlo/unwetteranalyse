@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Pause, Play, SkipBack, SkipForward, Zap, Radar, Globe2, MapPin, Activity, ShieldAlert, Target } from "lucide-react";
+import { Pause, Play, SkipBack, SkipForward, Zap, Radar, Globe2, MapPin, Activity, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useActivePoint } from "@/components/layout/LocationSwitcher";
@@ -44,7 +44,6 @@ export function RadarCockpit() {
   const [mode, setMode] = useState<Mode>("focus");
   const [showLightning, setShowLightning] = useState(true);
   const [showWnNowcast, setShowWnNowcast] = useState(false);
-  const [showQy, setShowQy] = useState(false);
   const [showRings, setShowRings] = useState(true);
   const [scrub, setScrub] = useState<number>(0); // negative = RY past, positive = WN future, in step-units
   const [playing, setPlaying] = useState(false);
@@ -53,7 +52,6 @@ export function RadarCockpit() {
   const ryQ = useQuery({ queryKey: ["wms", "ry"], queryFn: () => fetchWmsTimeline("ry"), refetchInterval: 5 * 60_000, staleTime: 4 * 60_000 });
   const wnQ = useQuery({ queryKey: ["wms", "wn"], queryFn: () => fetchWmsTimeline("wn"), refetchInterval: 5 * 60_000, staleTime: 4 * 60_000, enabled: showWnNowcast || scrub > 0 });
   const piQ = useQuery({ queryKey: ["wms", "pi"], queryFn: () => fetchWmsTimeline("pi"), refetchInterval: 10 * 60_000, staleTime: 9 * 60_000, enabled: mode === "europe" });
-  const qyQ = useQuery({ queryKey: ["wms", "qy"], queryFn: () => fetchWmsTimeline("qy"), refetchInterval: 5 * 60_000, staleTime: 4 * 60_000, enabled: showQy });
   const forecastQ = useQuery(forecastQuery(point));
 
   const lightning = useLightningStream({ enabled: showLightning, bbox: bbox ?? undefined });
@@ -99,16 +97,6 @@ export function RadarCockpit() {
     m.setFrameStack("radar-ry", ryEntries, activeRy, MODE_DEFS[mode].opacity);
     m.setFrameStack("radar-wn", wnEntries, activeWn, MODE_DEFS[mode].opacity);
   }, [mode, ryFrames, wnFrames, showWnNowcast, activeFrame, activeLayer]);
-
-  // QY-Qualitätslayer als zusätzliches Overlay, an aktuellen Frame gekoppelt.
-  useEffect(() => {
-    if (!showQy) {
-      mapRef.current?.setRasterTiles("qy", null);
-      return;
-    }
-    const qyFrame = qyQ.data?.latest ?? activeFrame ?? null;
-    mapRef.current?.setRasterTiles("qy", qyFrame ? wmsTileUrl("qy", qyFrame) : null, 0.55);
-  }, [showQy, qyQ.data?.latest, activeFrame]);
 
   // Fokusringe an aktuellen Ort koppeln.
   useEffect(() => {
@@ -219,11 +207,6 @@ export function RadarCockpit() {
       detail: ryQ.data?.latest ? `${Math.round((ryQ.data.lagMs ?? 0) / 60000)} min alt${ryQ.data.gaps > 0 ? ` · ${ryQ.data.gaps} Lücken` : ""}` : "keine Frames",
     },
     {
-      key: "qy", label: "Qualität QY",
-      state: !showQy ? "missing" : qyQ.data?.latest ? "good" : "limited",
-      detail: !showQy ? "Layer aus" : qyQ.data?.latest ? "Qualitätsfeld vorhanden" : "kein Frame geladen",
-    },
-    {
       key: "wn", label: "Nowcast WN",
       state: wnQ.data?.latest ? "good" : showWnNowcast ? "limited" : "missing",
       detail: wnQ.data?.latest ? `${wnQ.data.frames.length} Frames` : showWnNowcast ? "lädt" : "Layer aus",
@@ -251,7 +234,6 @@ export function RadarCockpit() {
           ry={ryQ.data ? assessTimeline("RY", ryQ.data, WMS_LAYERS.ry.stepMinutes) : { label: "RY", confidence: "missing", detail: "lädt…" }}
           wn={wnQ.data ? assessTimeline("WN", wnQ.data, WMS_LAYERS.wn.stepMinutes) : null}
           pi={piQ.data ? assessTimeline("PI", piQ.data, WMS_LAYERS.pi.stepMinutes) : null}
-          qy={showQy ? (qyQ.data ? assessTimeline("QY", qyQ.data, WMS_LAYERS.qy.stepMinutes) : { label: "QY", confidence: "missing", detail: "lädt…" }) : null}
         />
         <div className="relative h-[60vh] min-h-[440px] w-full overflow-hidden rounded-xl border border-border bg-muted md:h-[68vh]">
           <RadarMap
@@ -260,7 +242,7 @@ export function RadarCockpit() {
             initialZoom={MODE_DEFS[mode].zoom}
             onBboxChange={setBbox}
           />
-          <Legend layer={activeLayer} showLightning={showLightning} showQy={showQy} />
+          <Legend layer={activeLayer} showLightning={showLightning} />
           <FrameBadge frame={activeFrame} scrub={scrub} />
         </div>
         <TimeScrubber
@@ -279,8 +261,6 @@ export function RadarCockpit() {
           onToggleLightning={() => setShowLightning((v) => !v)}
           showWn={showWnNowcast}
           onToggleWn={() => { setShowWnNowcast((v) => { if (v) setScrub(0); return !v; }); }}
-          showQy={showQy}
-          onToggleQy={() => setShowQy((v) => !v)}
           showRings={showRings}
           onToggleRings={() => setShowRings((v) => !v)}
           lightningStatus={lightning.status}
@@ -308,14 +288,13 @@ export function RadarCockpit() {
 /* ------------------------------ Topbar ------------------------------ */
 
 function TopBar({
-  mode, onModeChange, ry, wn, pi, qy,
+  mode, onModeChange, ry, wn, pi,
 }: {
   mode: Mode;
   onModeChange: (m: Mode) => void;
   ry: ReturnType<typeof assessTimeline>;
   wn: ReturnType<typeof assessTimeline> | null;
   pi: ReturnType<typeof assessTimeline> | null;
-  qy: ReturnType<typeof assessTimeline> | null;
 }) {
   return (
     <div className="grid grid-cols-1 items-center gap-2 rounded-xl border border-border bg-card p-2 md:grid-cols-[auto_1fr_auto]">
@@ -344,7 +323,6 @@ function TopBar({
         <HealthPill h={ry} />
         {wn && <HealthPill h={wn} />}
         {pi && <HealthPill h={pi} />}
-        {qy && <HealthPill h={qy} />}
       </div>
     </div>
   );
@@ -384,7 +362,7 @@ function FrameBadge({ frame, scrub }: { frame: string | null; scrub: number }) {
   );
 }
 
-function Legend({ layer, showLightning, showQy }: { layer: WmsLayerKey; showLightning: boolean; showQy: boolean }) {
+function Legend({ layer, showLightning }: { layer: WmsLayerKey; showLightning: boolean }) {
   return (
     <div className="pointer-events-none absolute bottom-3 right-3 rounded-md border border-border bg-background/90 px-2.5 py-1.5 text-[10px] backdrop-blur">
       <div className="mb-1 font-semibold uppercase tracking-wide text-muted-foreground">{WMS_LAYERS[layer].label} · Niederschlag</div>
@@ -393,12 +371,6 @@ function Legend({ layer, showLightning, showQy }: { layer: WmsLayerKey; showLigh
           <span key={c} className="h-2.5 w-5 rounded-sm" style={{ backgroundColor: c }} />
         ))}
       </div>
-      {showQy && (
-        <div className="mt-1.5 flex items-center gap-2 text-muted-foreground">
-          <ShieldAlert className="h-3 w-3" />
-          <span>QY: gelb = mindere Qualität, rot = stark gestört</span>
-        </div>
-      )}
       {showLightning && (
         <div className="mt-1.5 flex items-center gap-2 text-muted-foreground">
           <Zap className="h-3 w-3" />
@@ -463,11 +435,10 @@ function TimeScrubber({
 /* ------------------------------ Layer Toolbar ------------------------------ */
 
 function LayerToolbar({
-  showLightning, onToggleLightning, showWn, onToggleWn, showQy, onToggleQy, showRings, onToggleRings, lightningStatus,
+  showLightning, onToggleLightning, showWn, onToggleWn, showRings, onToggleRings, lightningStatus,
 }: {
   showLightning: boolean; onToggleLightning: () => void;
   showWn: boolean; onToggleWn: () => void;
-  showQy: boolean; onToggleQy: () => void;
   showRings: boolean; onToggleRings: () => void;
   lightningStatus: string;
 }) {
@@ -475,7 +446,6 @@ function LayerToolbar({
     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-2">
       <LayerChip active={true} label="RY" hint="Beobachtung 5 min" />
       <LayerChip active={showWn} onClick={onToggleWn} label="WN" hint="Nowcast +2 h" />
-      <LayerChip active={showQy} onClick={onToggleQy} label="QY" hint="Radar-Qualität" icon={<ShieldAlert className="h-3 w-3" />} />
       <LayerChip
         active={showLightning}
         onClick={onToggleLightning}
