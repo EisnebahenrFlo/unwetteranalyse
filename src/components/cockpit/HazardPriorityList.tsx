@@ -3,6 +3,7 @@ import { ChevronDown, Check } from "@/components/icons";
 import { MeteoconIcon } from "@/components/weather/MeteoconIcon";
 import { Card } from "@/components/ui/card";
 import { WarnBadge } from "@/components/common/WarnBadge";
+import { SeverityRail, hazardKindToLevel } from "@/components/common/SeverityRail";
 import {
   buildHazards,
   formatHazardWindow,
@@ -112,9 +113,14 @@ export function HazardPriorityList({
 
 function HazardRow({ h }: { h: Hazard }) {
   const [open, setOpen] = useState(false);
+  const level = hazardKindToLevel(h.kind);
   return (
-    <div className="grid grid-cols-[6px_auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/40">
-      <div className={cn("h-10 w-1 rounded-full", KIND_BAR[h.kind])} />
+    <div className="grid grid-cols-[10px_auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/40">
+      {level ? (
+        <SeverityRail level={level} orientation="vertical" showLabel={false} className="h-10 gap-0" />
+      ) : (
+        <div className={cn("h-10 w-1 rounded-full", KIND_BAR[h.kind])} />
+      )}
       <div className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-md", KIND_DOT[h.kind])}>
         <MeteoconIcon name={METEOCON_BY_CAT[h.category]} className="h-7 w-7" />
       </div>

@@ -23,6 +23,7 @@ import type { HazardCellReport } from "@/lib/weather/hazards/types";
 import { HazardCellSection } from "@/components/hazards/HazardCellSection";
 import { StormTrackMini } from "./StormTrackMini";
 import { SEVERITY_LABEL, SEVERITY_TONE } from "./severity-tokens";
+import { SeverityRail, stormSeverityToLevel } from "@/components/common/SeverityRail";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -41,6 +42,7 @@ export function StormCellDrawer({ cell, onClose, alerts, hazardReport = null }: 
   }, [cell]);
 
   if (!cell) return null;
+  const stufe = stormSeverityToLevel(cell.severity.level);
 
   return (
     <Drawer
@@ -51,8 +53,18 @@ export function StormCellDrawer({ cell, onClose, alerts, hazardReport = null }: 
     >
       <DrawerContent className="flex max-h-[88vh] flex-col">
         <DrawerHeader className="shrink-0 text-left">
-          <div className="flex items-start justify-between gap-2">
-            <div>
+          <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3">
+            {stufe ? (
+              <SeverityRail
+                level={stufe}
+                orientation="vertical"
+                label={`S${stufe}`}
+                className="mt-1 h-14"
+              />
+            ) : (
+              <div className="w-2" />
+            )}
+            <div className="min-w-0">
               <DrawerTitle className="flex items-center gap-2 text-base">
                 <span className="font-mono text-sm text-muted-foreground">{cell.id}</span>
                 <span
