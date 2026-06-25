@@ -295,7 +295,6 @@ function TopBar({
   ry: ReturnType<typeof assessTimeline>;
   wn: ReturnType<typeof assessTimeline> | null;
   pi: ReturnType<typeof assessTimeline> | null;
-  qy: ReturnType<typeof assessTimeline> | null;
 }) {
   return (
     <div className="grid grid-cols-1 items-center gap-2 rounded-xl border border-border bg-card p-2 md:grid-cols-[auto_1fr_auto]">
@@ -324,7 +323,6 @@ function TopBar({
         <HealthPill h={ry} />
         {wn && <HealthPill h={wn} />}
         {pi && <HealthPill h={pi} />}
-        {qy && <HealthPill h={qy} />}
       </div>
     </div>
   );
@@ -364,7 +362,7 @@ function FrameBadge({ frame, scrub }: { frame: string | null; scrub: number }) {
   );
 }
 
-function Legend({ layer, showLightning, showQy }: { layer: WmsLayerKey; showLightning: boolean; showQy: boolean }) {
+function Legend({ layer, showLightning }: { layer: WmsLayerKey; showLightning: boolean }) {
   return (
     <div className="pointer-events-none absolute bottom-3 right-3 rounded-md border border-border bg-background/90 px-2.5 py-1.5 text-[10px] backdrop-blur">
       <div className="mb-1 font-semibold uppercase tracking-wide text-muted-foreground">{WMS_LAYERS[layer].label} · Niederschlag</div>
@@ -373,12 +371,6 @@ function Legend({ layer, showLightning, showQy }: { layer: WmsLayerKey; showLigh
           <span key={c} className="h-2.5 w-5 rounded-sm" style={{ backgroundColor: c }} />
         ))}
       </div>
-      {showQy && (
-        <div className="mt-1.5 flex items-center gap-2 text-muted-foreground">
-          <ShieldAlert className="h-3 w-3" />
-          <span>QY: gelb = mindere Qualität, rot = stark gestört</span>
-        </div>
-      )}
       {showLightning && (
         <div className="mt-1.5 flex items-center gap-2 text-muted-foreground">
           <Zap className="h-3 w-3" />
@@ -443,11 +435,10 @@ function TimeScrubber({
 /* ------------------------------ Layer Toolbar ------------------------------ */
 
 function LayerToolbar({
-  showLightning, onToggleLightning, showWn, onToggleWn, showQy, onToggleQy, showRings, onToggleRings, lightningStatus,
+  showLightning, onToggleLightning, showWn, onToggleWn, showRings, onToggleRings, lightningStatus,
 }: {
   showLightning: boolean; onToggleLightning: () => void;
   showWn: boolean; onToggleWn: () => void;
-  showQy: boolean; onToggleQy: () => void;
   showRings: boolean; onToggleRings: () => void;
   lightningStatus: string;
 }) {
@@ -455,7 +446,6 @@ function LayerToolbar({
     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-2">
       <LayerChip active={true} label="RY" hint="Beobachtung 5 min" />
       <LayerChip active={showWn} onClick={onToggleWn} label="WN" hint="Nowcast +2 h" />
-      <LayerChip active={showQy} onClick={onToggleQy} label="QY" hint="Radar-Qualität" icon={<ShieldAlert className="h-3 w-3" />} />
       <LayerChip
         active={showLightning}
         onClick={onToggleLightning}
