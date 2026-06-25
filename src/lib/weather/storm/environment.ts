@@ -16,6 +16,8 @@ const MAX_BATCH = 25;
 export interface CellEnvSample {
   cape: number | null;
   liftedIndex: number | null;
+  /** Spitzenböe 10 m (m/s, umgerechnet aus Open-Meteo km/h). */
+  windGustMs: number | null;
   validFor: string | null;
   fetchedAt: number;
 }
@@ -57,7 +59,9 @@ async function fetchBatch(keys: string[]) {
   const url = new URL(FORECAST_URL);
   url.searchParams.set("latitude", points.map((p) => p.lat.toFixed(2)).join(","));
   url.searchParams.set("longitude", points.map((p) => p.lon.toFixed(2)).join(","));
-  url.searchParams.set("hourly", "cape,lifted_index");
+  // Open-Meteo Default-Einheiten: wind_gusts_10m kommt in km/h zurück.
+  // Wir rechnen unten auf m/s um, weil DWD-Bft-Schwellen in m/s arbeiten.
+  url.searchParams.set("hourly", "cape,lifted_index,wind_gusts_10m");
   url.searchParams.set("forecast_days", "1");
   url.searchParams.set("past_days", "0");
   url.searchParams.set("timezone", "UTC");
@@ -74,10 +78,12 @@ async function fetchBatch(keys: string[]) {
     const idx = pickCurrentHour(hourly, now);
     const cape = idx >= 0 ? (hourly.cape?.[idx] ?? null) : null;
     const li = idx >= 0 ? (hourly.lifted_index?.[idx] ?? null) : null;
+    const gustKmh = idx >= 0 ? (hourly.wind_gusts_10m?.[idx] ?? null) : null;
     const validFor = idx >= 0 ? (hourly.time?.[idx] ?? null) : null;
     cache.set(key, {
       cape: typeof cape === "number" ? cape : null,
       liftedIndex: typeof li === "number" ? li : null,
+      windGustMs: typeof gustKmh === "number" ? gustKmh / 3.6 : null,
       validFor,
       fetchedAt: now,
     });
@@ -111,7 +117,13 @@ export async function loadCellEnvironments(
         const now2 = Date.now();
         slice.forEach((k) => {
           if (!cache.has(k)) {
-            cache.set(k, { cape: null, liftedIndex: null, validFor: null, fetchedAt: now2 });
+            cache.set(k, {
+              cape: null,
+              liftedIndex: null,
+              windGustMs: null,
+              validFor: null,
+              fetchedAt: now2,
+            });
           }
         });
       })
