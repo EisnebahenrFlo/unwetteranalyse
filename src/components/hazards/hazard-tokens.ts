@@ -1,12 +1,11 @@
 import type { HazardKind, HazardLevel } from "@/lib/weather/hazards/types";
 
-/** Ruhige Farbskala, rot/violett nur ab "high"/"extreme". */
 export const HAZARD_COLOR: Record<HazardLevel, string> = {
-  none: "#64748b", // slate-500
-  watch: "#f59e0b", // amber-500
-  elevated: "#f97316", // orange-500
-  high: "#dc2626", // red-600
-  extreme: "#7c2d12", // red-900
+  none: "#64748b",
+  watch: "#f59e0b",
+  elevated: "#f97316",
+  high: "#dc2626",
+  extreme: "#7c2d12",
 };
 
 export const HAZARD_LEVEL_LABEL: Record<HazardLevel, string> = {
@@ -28,5 +27,4 @@ export const HAZARD_LEVEL_TONE: Record<HazardLevel, string> = {
 export const HAZARD_KIND_LABEL: Record<HazardKind, string> = {
   hail: "Hagel",
   flood: "Sturzflut",
-  lightning: "Blitz",
 };

@@ -19,11 +19,6 @@ export interface HazardResult {
   lastRun: number;
 }
 
-/**
- * Hazard-Pipeline: pro Tick (15 s) Reports neu berechnen und Alerts ableiten.
- * Async-Fetches (CAPE/LI, Niederschlag/Freezing Level) laufen parallel,
- * Ergebnisse fließen beim nächsten Render in die Reports ein.
- */
 export function useHazards(opts: {
   cells: StormCell[];
   favorites: SavedLocation[];
@@ -36,7 +31,6 @@ export function useHazards(opts: {
   const [env, setEnv] = useState<Map<string, CellEnvSample>>(new Map());
   const [precip, setPrecip] = useState<Map<string, CellPrecipSample>>(new Map());
 
-  // Async-Fetcher anstoßen, sobald sich Centroide ändern (rounded grid).
   useEffect(() => {
     if (!enabled || cells.length === 0) return;
     const points = cells.map((c) => ({ lat: c.centroid.lat, lon: c.centroid.lon }));
@@ -54,7 +48,6 @@ export function useHazards(opts: {
     return () => {
       cancelled = true;
     };
-    // Key auf gerundete Centroide reduzieren, damit kleine Bewegungen nichts auslösen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     enabled,
@@ -65,7 +58,6 @@ export function useHazards(opts: {
     if (!enabled) return { reports: [], alerts: [], lastRun: Date.now() };
     const reports = buildHazardReports(cells, env, precip);
     const alerts = computeHazardAlerts(cells, reports, favorites, Date.now(), thresholds);
-    // History-Transitions persistieren (Side-Effect, idempotent).
     if (alerts.length > 0) recordHazardTransitions(alerts);
     return { reports, alerts, lastRun: Date.now() };
   }, [
@@ -79,6 +71,5 @@ export function useHazards(opts: {
     thresholds.hitKm,
     thresholds.enableHail,
     thresholds.enableFlood,
-    thresholds.enableLightning,
   ]);
 }

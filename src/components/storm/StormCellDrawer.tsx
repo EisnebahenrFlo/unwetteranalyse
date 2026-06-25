@@ -81,9 +81,9 @@ export function StormCellDrawer({ cell, onClose, alerts, hazardReport = null }: 
           <div className="grid grid-cols-3 gap-2">
             <KpiBox
               icon={Zap}
-              label="Blitze/min"
-              value={cell.strikeRatePerMin.toFixed(1)}
-              sub={`${cell.strikeCount} im Fenster`}
+              label="Top-dBZ"
+              value={Math.round(cell.topDbz).toString()}
+              sub={`Fläche ${Math.round(cell.areaKm2)} km²`}
             />
             <KpiBox
               icon={Wind}
@@ -94,16 +94,27 @@ export function StormCellDrawer({ cell, onClose, alerts, hazardReport = null }: 
             <KpiBox
               icon={Compass}
               label="Trend"
-              value={`×${cell.strikeRateTrend.toFixed(1)}`}
+              value={cell.dbzTrend >= 0 ? `+${cell.dbzTrend.toFixed(0)} dBZ` : `${cell.dbzTrend.toFixed(0)} dBZ`}
               sub={
-                cell.strikeRateTrend > 1.2
+                cell.dbzTrend >= 3
                   ? "verstärkt sich"
-                  : cell.strikeRateTrend < 0.8
+                  : cell.dbzTrend <= -3
                     ? "schwächt ab"
                     : "stabil"
               }
             />
           </div>
+
+          {cell.hailCoreAreaKm2 >= 1 && (
+            <div className="rounded-lg border border-red-500/40 bg-red-500/5 px-3 py-2 text-xs">
+              <span className="font-semibold text-red-700 dark:text-red-300">
+                Hagelkern erkannt
+              </span>{" "}
+              <span className="text-muted-foreground">
+                {cell.hailCoreAreaKm2.toFixed(0)} km² mit ≥57 dBZ
+              </span>
+            </div>
+          )}
 
           <Section title="Zugbahn" icon={RouteIcon}>
             <StormTrackMini cell={cell} />
@@ -174,8 +185,9 @@ export function StormCellDrawer({ cell, onClose, alerts, hazardReport = null }: 
           )}
 
           <p className="text-[10px] text-muted-foreground">
-            Detection aus Blitz-Clustern (DBSCAN). Severity nutzt CAPE/LI am aktiven Ort als
-            regionale Proxy. Forecast linear extrapoliert mit Cone-Aufweitung √t.
+            Detection direkt aus DWD-RY-Reflektivität (Connected-Component-Labeling). Tracking per
+            Centroid-Matching zwischen Frames. Severity nutzt CAPE/LI am Zellort, Forecast linear
+            extrapoliert mit Cone-Aufweitung √t.
           </p>
         </div>
       </DrawerContent>

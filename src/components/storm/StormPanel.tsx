@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Zap, Wind, Target, ChevronRight, Activity } from "@/components/icons";
+import { Zap, Target, ChevronRight, Activity } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import type { StormCell, StormAlert } from "@/lib/weather/storm/types";
 import type { HazardCellReport } from "@/lib/weather/hazards/types";
@@ -10,11 +10,11 @@ interface Props {
   cells: StormCell[];
   alerts: StormAlert[];
   activeEta: { cell: StormCell; etaMin: number; distanceKm: number } | null;
-  lightningOpen: boolean;
+  snapshotOk: boolean;
   hazardReports?: HazardCellReport[];
 }
 
-export function StormPanel({ cells, alerts, activeEta, lightningOpen, hazardReports = [] }: Props) {
+export function StormPanel({ cells, alerts, activeEta, snapshotOk, hazardReports = [] }: Props) {
   const [selected, setSelected] = useState<StormCell | null>(null);
 
   const grouped = useMemo(() => {
@@ -48,7 +48,7 @@ export function StormPanel({ cells, alerts, activeEta, lightningOpen, hazardRepo
       {activeEta && <ActiveEtaRow eta={activeEta} onOpen={() => setSelected(activeEta.cell)} />}
 
       {cells.length === 0 ? (
-        <EmptyState lightningOpen={lightningOpen} />
+        <EmptyState snapshotOk={snapshotOk} />
       ) : (
         <ul className="divide-y divide-border/50">
           {cells.map((cell) => (
@@ -130,7 +130,7 @@ function CellRow({
             </span>
           </div>
           <div className="truncate text-[11px] text-muted-foreground">
-            {cell.strikeRatePerMin.toFixed(1)} Blitze/min · {cell.strikeCount} im Fenster
+            {Math.round(cell.topDbz)} dBZ · {Math.round(cell.areaKm2)} km²
             {cell.motion && cell.motion.speedKmh > 1 && (
               <>
                 {" "}
@@ -154,26 +154,23 @@ function CellRow({
   );
 }
 
-function EmptyState({ lightningOpen }: { lightningOpen: boolean }) {
+function EmptyState({ snapshotOk }: { snapshotOk: boolean }) {
   return (
     <div className="px-3 py-6 text-center text-xs text-muted-foreground">
       <Activity className="mx-auto mb-2 h-5 w-5 opacity-50" />
-      {lightningOpen ? (
+      {snapshotOk ? (
         <>
           Keine konvektiven Zellen erkannt.
           <br />
-          Sobald Blitze clustern, erscheinen Tracks hier.
+          Bei aufkommendem Niederschlag erscheinen Tracks hier.
         </>
       ) : (
         <>
-          Blitz-Stream ist aus oder verbindet noch.
+          Radar-Snapshot lädt oder ist nicht erreichbar.
           <br />
-          Layer „Blitze“ aktivieren.
+          Aktualisiert sich automatisch.
         </>
       )}
     </div>
   );
 }
-
-// Convenience re-export
-export { Wind };

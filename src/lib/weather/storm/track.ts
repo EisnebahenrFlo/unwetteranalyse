@@ -1,8 +1,7 @@
-import type { LightningStrike } from "@/lib/weather/sources/blitzortung";
-import { dbscanStrikes } from "./detect";
+import type { RadarCell } from "@/lib/weather/radar/snapshot";
 import { buildForecast } from "./forecast";
 import { scoreCell } from "./severity";
-import { bearingCompass, bearingDeg, centroidOf, convexHull, distanceKm, radiusKm } from "./geo";
+import { bearingCompass, bearingDeg, distanceKm } from "./geo";
 import {
   DEFAULT_STORM_THRESHOLDS,
   type StormCell,
@@ -14,8 +13,7 @@ import {
 
 /**
  * Persistenter Zustand pro Track. Lebt im Modul-Scope (Memory),
- * damit IDs/Historie zwischen Frames erhalten bleiben. Beim Tab-Reload
- * starten wir bewusst leer — die Detection läuft binnen Sekunden wieder an.
+ * damit IDs/Historie zwischen Frames erhalten bleiben.
  */
 interface InternalTrack {
   id: string;
@@ -35,9 +33,9 @@ function freshId() {
 
 /**
  * Bewegung aus den letzten Centroiden schätzen.
- * Speed = mittlere Distanz/Zeit zwischen aufeinanderfolgenden Punkten,
- * Bearing = vom ältesten brauchbaren Punkt zum jüngsten.
- * Confidence: 1 bei wenig Streuung der Inkremental-Bearings, sinkt bei Zickzack.
+ * Speed = Distanz / Zeit über die letzten Punkte, Bearing vom ältesten
+ * brauchbaren Punkt zum jüngsten. Confidence aus Streuung der Inkremental-
+ * Bearings.
  */
 function estimateMotion(history: StormCentroidPoint[]): StormMotion | null {
   if (history.length < 2) return null;
@@ -45,13 +43,12 @@ function estimateMotion(history: StormCentroidPoint[]): StormMotion | null {
   const newest = recent[recent.length - 1];
   const oldest = recent[0];
   const dtMin = (newest.time - oldest.time) / 60_000;
-  if (dtMin < 2) return null;
+  if (dtMin < 4) return null;
   const dist = distanceKm(oldest, newest);
   const speedKmh = (dist / dtMin) * 60;
-  if (speedKmh < 1) return { speedKmh: 0, bearingDeg: 0, bearingCompass: "·", confidence: 0.3 };
+  if (speedKmh < 2) return { speedKmh: 0, bearingDeg: 0, bearingCompass: "·", confidence: 0.3 };
   const bDeg = bearingDeg(oldest, newest);
 
-  // Confidence aus Konsistenz der Inkremental-Bearings.
   let consistency = 1;
   if (recent.length >= 3) {
     const diffs: number[] = [];
@@ -73,23 +70,12 @@ function estimateMotion(history: StormCentroidPoint[]): StormMotion | null {
   };
 }
 
-function computeRates(strikes: LightningStrike[], now: number) {
-  const last5 = strikes.filter((s) => now - s.time <= 5 * 60_000).length;
-  const prev5 = strikes.filter(
-    (s) => now - s.time > 5 * 60_000 && now - s.time <= 10 * 60_000,
-  ).length;
-  const rate = last5 / 5;
-  const trend = prev5 === 0 ? (last5 > 0 ? 2 : 0) : last5 / prev5;
-  return { rate, trend };
-}
-
 /**
- * Greedy-Matching: jeder neue Cluster bekommt den nächsten Track unter matchKm.
- * Einfach, robust, ohne Hungarian-Overhead. Bei zwei sehr nahen Clustern liefert
- * Greedy in der Praxis identische Ergebnisse zu optimalem Matching.
+ * Greedy-Matching: jede neue Zelle bekommt den nächsten Track unter matchKm.
+ * Einfach, robust, ohne Hungarian-Overhead.
  */
 function matchTracks(
-  candidates: { centroid: { lat: number; lon: number } }[],
+  candidates: RadarCell[],
   thresholds: StormThresholds,
   now: number,
 ): (string | null)[] {
@@ -116,41 +102,48 @@ function matchTracks(
   return out;
 }
 
+function computeTrends(history: StormCentroidPoint[]): { dbzTrend: number; areaTrend: number } {
+  if (history.length < 2) return { dbzTrend: 0, areaTrend: 1 };
+  const newest = history[history.length - 1];
+  // Vergleichspunkt: ~10–15 min zurück.
+  let ref = history[0];
+  for (let i = history.length - 2; i >= 0; i--) {
+    if (newest.time - history[i].time >= 10 * 60_000) {
+      ref = history[i];
+      break;
+    }
+  }
+  const dbzTrend = newest.topDbz - ref.topDbz;
+  const areaTrend = ref.areaKm2 > 0 ? newest.areaKm2 / ref.areaKm2 : 1;
+  return { dbzTrend, areaTrend };
+}
+
 /**
- * Ein Detection-/Tracking-Schritt. Strikes sind die letzten ~60 min,
- * intern wird das Detection-Fenster auf windowMin geclippt.
+ * Ein Tracking-Schritt. Nimmt die Radar-Zellen des aktuellen Frames und
+ * aktualisiert/erzeugt Tracks.
  */
 export function stepStormTracking(
-  strikes: LightningStrike[],
+  radarCells: RadarCell[],
   env: StormEnvironment,
   now = Date.now(),
   thresholds: StormThresholds = DEFAULT_STORM_THRESHOLDS,
 ): StormCell[] {
-  const windowMs = thresholds.windowMin * 60_000;
-  const recent = strikes.filter((s) => now - s.time <= windowMs);
-
-  const raw = dbscanStrikes(recent, thresholds.eps, thresholds.minPts);
-  const candidates = raw.map((c) => {
-    const centroid = centroidOf(c.strikes);
-    return { centroid, strikes: c.strikes };
-  });
-
-  const matched = matchTracks(candidates, thresholds, now);
+  const matched = matchTracks(radarCells, thresholds, now);
   const seen = new Set<string>();
   const cells: StormCell[] = [];
 
-  candidates.forEach((c, i) => {
+  radarCells.forEach((rc, i) => {
     const id = matched[i] ?? freshId();
     seen.add(id);
     const existing = tracks.get(id);
     const point: StormCentroidPoint = {
       time: now,
-      lat: c.centroid.lat,
-      lon: c.centroid.lon,
-      strikes: c.strikes.length,
+      lat: rc.centroid.lat,
+      lon: rc.centroid.lon,
+      topDbz: rc.topDbz,
+      areaKm2: rc.areaKm2,
     };
     const history = existing ? [...existing.history, point] : [point];
-    // Historie auf 60 min trimmen.
     const trimmed = history.filter((h) => now - h.time <= 60 * 60_000);
     const track: InternalTrack = {
       id,
@@ -161,14 +154,14 @@ export function stepStormTracking(
     tracks.set(id, track);
 
     const motion = estimateMotion(trimmed);
-    const { forecast, cone } = buildForecast(c.centroid, motion, trimmed);
-    const rd = radiusKm(c.centroid, c.strikes);
-    const { rate, trend } = computeRates(c.strikes, now);
+    const { forecast, cone } = buildForecast(rc.centroid, motion, trimmed);
+    const { dbzTrend, areaTrend } = computeTrends(trimmed);
     const severity = scoreCell({
-      strikeRatePerMin: rate,
-      strikeRateTrend: trend,
-      radiusKm: rd,
-      strikeCount: c.strikes.length,
+      topDbz: rc.topDbz,
+      hailCoreAreaKm2: rc.hailCoreAreaKm2,
+      areaKm2: rc.areaKm2,
+      dbzTrend,
+      areaTrend,
       env,
     });
 
@@ -176,12 +169,15 @@ export function stepStormTracking(
       id,
       firstSeen: track.firstSeen,
       lastSeen: track.lastSeen,
-      centroid: c.centroid,
-      polygon: convexHull(c.strikes),
-      radiusKm: rd,
-      strikeCount: c.strikes.length,
-      strikeRatePerMin: rate,
-      strikeRateTrend: trend,
+      centroid: rc.centroid,
+      polygon: rc.polygon,
+      radiusKm: rc.radiusKm,
+      areaKm2: rc.areaKm2,
+      topDbz: rc.topDbz,
+      hailCorePixels: rc.hailCorePixels,
+      hailCoreAreaKm2: rc.hailCoreAreaKm2,
+      dbzTrend,
+      areaTrend,
       history: trimmed,
       motion,
       forecast,
@@ -195,8 +191,7 @@ export function stepStormTracking(
     if (!seen.has(id) && now - t.lastSeen > thresholds.ttlMin * 60_000) tracks.delete(id);
   }
 
-  // Sortierung: Severity desc, dann Strike-Count.
-  cells.sort((a, b) => b.severity.score - a.severity.score || b.strikeCount - a.strikeCount);
+  cells.sort((a, b) => b.severity.score - a.severity.score || b.areaKm2 - a.areaKm2);
   return cells;
 }
 
@@ -206,7 +201,6 @@ export function resetStormTracking() {
   nextId = 1;
 }
 
-/** Serialisierbarer Snapshot aller laufenden Tracks (für Persistenz). */
 export function exportTrackState(): InternalTrack[] {
   return [...tracks.values()].map((t) => ({
     id: t.id,
@@ -216,11 +210,6 @@ export function exportTrackState(): InternalTrack[] {
   }));
 }
 
-/**
- * Lädt persistierte Tracks zurück in den Modul-Scope. Verworfen werden
- * Einträge ohne brauchbare Historie der letzten 60 min, damit alte
- * Zellen nach langer Pause nicht künstlich wiederbelebt werden.
- */
 export function importTrackState(entries: InternalTrack[], now = Date.now()) {
   const cutoff = now - 60 * 60_000;
   for (const e of entries) {

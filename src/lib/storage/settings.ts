@@ -14,6 +14,7 @@ export interface Settings {
     alertEtaMin: number;
     alertLevel: StormAlertLevel;
     showLayer: boolean;
+    showHailCores: boolean;
   };
   hazards: {
     enabled: boolean;
@@ -23,12 +24,11 @@ export interface Settings {
     hitKm: number;
     enableHail: boolean;
     enableFlood: boolean;
-    enableLightning: boolean;
     retentionDays: number;
   };
 }
 
-const KEY = "meteoflo.settings.v1";
+const KEY = "meteoflo.settings.v2";
 
 export const DEFAULT_SETTINGS: Settings = {
   windUnit: "kmh",
@@ -40,6 +40,7 @@ export const DEFAULT_SETTINGS: Settings = {
     alertEtaMin: 45,
     alertLevel: "serious",
     showLayer: true,
+    showHailCores: true,
   },
   hazards: {
     enabled: true,
@@ -49,7 +50,6 @@ export const DEFAULT_SETTINGS: Settings = {
     hitKm: 10,
     enableHail: true,
     enableFlood: true,
-    enableLightning: true,
     retentionDays: 14,
   },
 };

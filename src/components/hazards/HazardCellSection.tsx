@@ -1,4 +1,4 @@
-import { CloudHail, CloudRain, Zap } from "@/components/icons";
+import { CloudHail, CloudRain } from "@/components/icons";
 import type { HazardCellReport, HazardDiagnosis, HazardKind } from "@/lib/weather/hazards/types";
 import { cn } from "@/lib/utils";
 import { HAZARD_KIND_LABEL, HAZARD_LEVEL_LABEL, HAZARD_LEVEL_TONE } from "./hazard-tokens";
@@ -6,14 +6,8 @@ import { HAZARD_KIND_LABEL, HAZARD_LEVEL_LABEL, HAZARD_LEVEL_TONE } from "./haza
 const ICONS: Record<HazardKind, React.ElementType> = {
   hail: CloudHail,
   flood: CloudRain,
-  lightning: Zap,
 };
 
-/**
- * Drei kompakte Diagnose-Blöcke (Hagel, Sturzflut, Blitz) für den
- * StormCellDrawer. Eine Karte pro Hazard mit Score, Level, Bullet-Reasons
- * und Quellen-Footer.
- */
 export function HazardCellSection({ report }: { report: HazardCellReport | null }) {
   if (!report) return null;
   const items: { kind: HazardKind; diag: HazardDiagnosis; metric: string | null }[] = [
@@ -36,13 +30,6 @@ export function HazardCellSection({ report }: { report: HazardCellReport | null 
           : Math.max(report.flood.rrMm.h1, report.flood.rrMm.h3) > 0
             ? `${Math.round(report.flood.rrMm.h3)} mm/3 h`
             : null,
-    },
-    {
-      kind: "lightning",
-      diag: report.lightning,
-      metric: report.lightning.jumpActive
-        ? `Jump ${report.lightning.jumpSigma} σ`
-        : `${report.lightning.ratePerMin.toFixed(1)} /min`,
     },
   ];
 
@@ -73,7 +60,7 @@ export function HazardCellSection({ report }: { report: HazardCellReport | null 
             </header>
             <div className="px-3 py-2">
               <ul className="space-y-1 text-[11px] text-muted-foreground">
-                {diag.reasons.map((r, i) => (
+                {diag.reasons.map((r: string, i: number) => (
                   <li key={i} className="flex items-start gap-1.5">
                     <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-muted-foreground/60" />
                     <span>{r}</span>

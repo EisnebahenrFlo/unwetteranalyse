@@ -11,25 +11,25 @@ import {
 export interface StormTrackingResult {
   cells: StormCell[];
   alerts: StormAlert[];
-  /** ETA / nächste Zelle für den aktiven Ort. */
   activeEta: { cell: StormCell; etaMin: number; distanceKm: number } | null;
   lastRun: number;
-  wsStatus: StormBackgroundSnapshot["wsStatus"];
+  lastFrameTime: string | null;
+  snapshotStatus: StormBackgroundSnapshot["snapshotStatus"];
 }
 
 const SERVER_SNAPSHOT: StormBackgroundSnapshot = {
   cells: [],
   alerts: [],
-  strikes: [],
   lastRun: 0,
-  wsStatus: "idle",
+  lastFrameTime: null,
+  snapshotStatus: "idle",
+  lastError: null,
 };
 
 /**
- * Liest den globalen Stormtracking-Snapshot. Die Detection läuft im
- * Hintergrund-Service (`stormBackground`) route-übergreifend weiter —
- * Lebensdauer, Zugbahnen und ETA bleiben auch nach Routenwechsel erhalten.
- * Konfiguriert wird der Service zentral im `StormProvider`.
+ * Liest den globalen Stormtracking-Snapshot. Detection und Polling laufen
+ * im Hintergrund (`stormBackground`), Lebensdauer und Zugbahnen bleiben
+ * route-übergreifend erhalten.
  */
 export function useStormTracking(opts: {
   activePoint: { lat: number; lon: number };
@@ -74,11 +74,11 @@ export function useStormTracking(opts: {
     alerts: snapshot.alerts,
     activeEta,
     lastRun: snapshot.lastRun,
-    wsStatus: snapshot.wsStatus,
+    lastFrameTime: snapshot.lastFrameTime,
+    snapshotStatus: snapshot.snapshotStatus,
   };
 }
 
-/** Subscribt nur auf den Service-Snapshot — z. B. für die LocationSwitcher-Warnampel. */
 export function useStormSnapshot(): StormBackgroundSnapshot {
   return useSyncExternalStore(
     (cb) => stormBackground.subscribe(cb),

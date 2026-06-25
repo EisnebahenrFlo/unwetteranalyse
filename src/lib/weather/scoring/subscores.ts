@@ -22,14 +22,14 @@ import { kIndex, thunderProbability, totalTotals } from "./derived";
 export interface Contributor {
   label: string;
   raw: string;
-  points: number; // beigesteuerte Score-Punkte (0–100)
+  points: number;
 }
 
 export interface Subscore {
   value: number;
   band: Band;
   contributors: Contributor[];
-  confidence: number; // 0–100
+  confidence: number;
 }
 
 function build(value: number, contributors: Contributor[], confidence = 80): Subscore {
@@ -41,14 +41,12 @@ function pickTop(c: Contributor[]) {
   return c.filter((x) => x.points > 0).sort((a, b) => b.points - a.points);
 }
 
-// ─── Regenrisiko ────────────────────────────────────────────────────────
 export function rainSubscore(p: HourlyPoint): Subscore {
   const c: Contributor[] = [];
   const mm = p.precipitationMm ?? 0;
   const prob = p.precipitationProbability ?? 0;
   const rPts = normRainMmH(mm);
   if (rPts > 0) c.push({ label: "Niederschlagsrate", raw: `${mm.toFixed(1)} mm/h`, points: rPts });
-  // Wahrscheinlichkeit als sanfter Modulator (max +12)
   const probPts = (prob / 100) * 12 * (mm < 0.5 ? 1 : 0.4);
   if (probPts > 0.5)
     c.push({ label: "Niederschlagswahrscheinl.", raw: `${prob.toFixed(0)} %`, points: probPts });
@@ -56,7 +54,6 @@ export function rainSubscore(p: HourlyPoint): Subscore {
   return build(total, pickTop(c), p.precipitationMm != null ? 85 : 50);
 }
 
-// ─── Windrisiko ─────────────────────────────────────────────────────────
 export function windSubscore(p: HourlyPoint): Subscore {
   const c: Contributor[] = [];
   const gKmh = (p.windGustMs ?? 0) * 3.6;
@@ -69,8 +66,10 @@ export function windSubscore(p: HourlyPoint): Subscore {
   return build(total, pickTop(c), p.windGustMs != null ? 85 : 55);
 }
 
-// ─── Gewitterrisiko ─────────────────────────────────────────────────────
-export function thunderSubscore(p: HourlyPoint, opts?: { lightning5min?: number }): Subscore {
+export function thunderSubscore(
+  p: HourlyPoint,
+  opts?: { radarTopDbz?: number | null },
+): Subscore {
   const c: Contributor[] = [];
   const tp = thunderProbability(p);
   const tpPts = normThunderProb(tp) * 0.6;
@@ -79,20 +78,23 @@ export function thunderSubscore(p: HourlyPoint, opts?: { lightning5min?: number 
   if (p.weatherCode != null && p.weatherCode >= 95) {
     c.push({ label: "Modell meldet Gewitter", raw: `Code ${p.weatherCode}`, points: 15 });
   }
-  if (opts?.lightning5min != null && opts.lightning5min > 0) {
-    const lPts = Math.min(40, opts.lightning5min * 2 + 10);
-    c.push({ label: "Live-Blitze (5 min)", raw: `${opts.lightning5min} Strikes`, points: lPts });
+  if (opts?.radarTopDbz != null && opts.radarTopDbz >= 40) {
+    const pts = Math.min(40, (opts.radarTopDbz - 35) * 3);
+    c.push({
+      label: "Radar-Echo",
+      raw: `${Math.round(opts.radarTopDbz)} dBZ`,
+      points: pts,
+    });
   }
   const total = c.reduce((s, x) => s + x.points, 0);
   const conf =
     (p.cape != null ? 30 : 0) +
     (p.liftedIndex != null ? 25 : 0) +
-    (opts?.lightning5min != null ? 30 : 0) +
-    15;
+    (opts?.radarTopDbz != null ? 25 : 0) +
+    20;
   return build(total, pickTop(c), Math.min(100, conf));
 }
 
-// ─── Konvektionssignal (Energie / Labilität) ────────────────────────────
 export function convectionSubscore(p: HourlyPoint): Subscore {
   const c: Contributor[] = [];
   const damp = cinDamping(p.convectiveInhibition);
@@ -123,23 +125,21 @@ export function convectionSubscore(p: HourlyPoint): Subscore {
   return build(total, pickTop(c), Math.min(100, conf));
 }
 
-// ─── Datenvertrauen ─────────────────────────────────────────────────────
 export interface DataContextInput {
   hasMinutely: boolean;
   hasUpperLevels: boolean;
   hasConvective: boolean;
   liveObsAgeMinutes: number | null;
   radarAgeMinutes: number | null;
-  lightningConnected: boolean;
-  modelObsConsistent: boolean | null; // null = unknown
+  modelObsConsistent: boolean | null;
 }
 
 export function dataConfidence(input: DataContextInput): Subscore {
   const c: Contributor[] = [];
-  let score = 30;
+  let score = 35;
   if (input.hasConvective) {
-    score += 15;
-    c.push({ label: "Konvektive Felder", raw: "CAPE/LI", points: 15 });
+    score += 18;
+    c.push({ label: "Konvektive Felder", raw: "CAPE/LI", points: 18 });
   }
   if (input.hasUpperLevels) {
     score += 12;
@@ -161,7 +161,7 @@ export function dataConfidence(input: DataContextInput): Subscore {
     c.push({ label: "Live-Beobachtung", raw: "fehlt", points: 0 });
   }
   if (input.radarAgeMinutes != null) {
-    const pts = input.radarAgeMinutes <= 10 ? 10 : input.radarAgeMinutes <= 25 ? 5 : 0;
+    const pts = input.radarAgeMinutes <= 10 ? 14 : input.radarAgeMinutes <= 25 ? 8 : 0;
     score += pts;
     c.push({
       label: "DWD-Radar",
@@ -171,10 +171,6 @@ export function dataConfidence(input: DataContextInput): Subscore {
   } else {
     c.push({ label: "DWD-Radar", raw: "keine Frische bekannt", points: 0 });
   }
-  if (input.lightningConnected) {
-    score += 8;
-    c.push({ label: "Blitz-Stream", raw: "verbunden", points: 8 });
-  } else c.push({ label: "Blitz-Stream", raw: "offline", points: 0 });
   if (input.modelObsConsistent === false) {
     score -= 15;
     c.push({ label: "Modell ↔ Live", raw: "abweichend", points: -15 });

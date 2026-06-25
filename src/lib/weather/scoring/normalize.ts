@@ -1,7 +1,5 @@
 /**
  * Lineare/abschnittsweise Normalisierung roher Messwerte auf 0–100.
- * Sauber begrenzt, monoton steigend. Punktzahlen sind Beiträge,
- * nicht Wahrscheinlichkeiten.
  */
 
 export function clamp(value: number, min = 0, max = 100): number {
@@ -9,7 +7,6 @@ export function clamp(value: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, value));
 }
 
-/** Stückweise lineare Abbildung [(x,y), …]. */
 export function piecewise(x: number, points: Array<[number, number]>): number {
   if (Number.isNaN(x)) return 0;
   if (x <= points[0][0]) return points[0][1];
@@ -25,7 +22,6 @@ export function piecewise(x: number, points: Array<[number, number]>): number {
   return 0;
 }
 
-// ─── Niederschlag (mm/h) ────────────────────────────────────────────────
 export const normRainMmH = (mm: number) =>
   piecewise(mm, [
     [0, 0],
@@ -38,7 +34,6 @@ export const normRainMmH = (mm: number) =>
     [60, 100],
   ]);
 
-// ─── Wind / Böen (km/h) ─────────────────────────────────────────────────
 export const normGustKmh = (kmh: number) =>
   piecewise(kmh, [
     [0, 0],
@@ -60,7 +55,6 @@ export const normWindKmh = (kmh: number) =>
     [100, 100],
   ]);
 
-// ─── Konvektive Energie ─────────────────────────────────────────────────
 export const normCape = (jkg: number) =>
   piecewise(jkg, [
     [0, 0],
@@ -71,7 +65,6 @@ export const normCape = (jkg: number) =>
     [4000, 100],
   ]);
 
-/** Lifted Index: negativer = labiler. */
 export const normLiftedIndex = (li: number) =>
   piecewise(li, [
     [4, 0],
@@ -83,7 +76,6 @@ export const normLiftedIndex = (li: number) =>
     [-10, 100],
   ]);
 
-/** K-Index (°C): ≥20 schwach, ≥30 wahrscheinlich, ≥40 sehr wahrscheinlich. */
 export const normKIndex = (k: number) =>
   piecewise(k, [
     [0, 0],
@@ -95,7 +87,6 @@ export const normKIndex = (k: number) =>
     [45, 100],
   ]);
 
-/** Total Totals (°C): ≥44 möglich, ≥50 wahrscheinlich, ≥55 schwer. */
 export const normTotalTotals = (tt: number) =>
   piecewise(tt, [
     [0, 0],
@@ -107,24 +98,10 @@ export const normTotalTotals = (tt: number) =>
     [60, 100],
   ]);
 
-/** Gewitterwahrscheinlichkeit (0–1) → 0–100. */
 export const normThunderProb = (p: number) => clamp(p * 100);
 
-/** Blitzaktivität (Strikes / 5 min im Radius). */
-export const normLightning5min = (n: number) =>
-  piecewise(n, [
-    [0, 0],
-    [1, 25],
-    [5, 50],
-    [15, 75],
-    [40, 95],
-    [100, 100],
-  ]);
-
-/** Radarintensität (mm/h aus Reflektivität). */
 export const normRadarDbz = (mmh: number) => normRainMmH(mmh);
 
-/** CIN dämpft konvektive Werte (CIN ist negativ, J/kg). 0..1 Faktor. */
 export function cinDamping(cin: number | undefined): number {
   if (cin == null) return 1;
   if (cin <= -200) return 0.4;

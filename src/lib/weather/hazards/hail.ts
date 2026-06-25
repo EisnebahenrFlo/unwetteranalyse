@@ -1,102 +1,74 @@
 /**
- * Hagel-Diagnose aus den offen verfügbaren Größen:
- *  - dBZ-Schätzung aus Blitzdichte (Reflektivitäts-Proxy ohne 3D-Radar)
- *  - Echo-Top-Höhe H45 aus CAPE-Updraft-Schätzung
- *  - Freezing Level H0 aus Open-Meteo (freezing_level_height)
- *  - POH (Probability of Hail) nach Waldvogel et al. 1979:
- *      POH = f(H45 - H0)  mit Übergang 1.6 km .. 5.5 km
- *  - MESHS (Maximum Expected Severe Hail Size) nach Witt 1998:
- *      vereinfachte Skalierung über CAPE + Δh + Reflektivitäts-Proxy
+ * Hagel-Diagnose aus echten Radar-Größen plus Umgebungs-Stütze.
  *
- * Wichtig: ohne echtes 3D-Radar bleibt das eine fundierte Schätzung,
- * nicht das operationelle POH der Wetterdienste. Wir markieren das
- * in den Quellen explizit ("Proxy").
+ *  - topDbz: Maximalreflektivität der Zelle (DWD-RY) — Hauptindikator
+ *  - hailCoreAreaKm2: Fläche der ≥57-dBZ-Pixel (Kernindikator)
+ *  - Echo-Top H45 aus CAPE-Updraft-Schätzung
+ *  - Freezing Level H0 aus Open-Meteo
+ *  - POH (Probability of Hail) nach Waldvogel et al. 1979
+ *  - MESHS-Schätzung kombiniert dBZ, Δh und CAPE
+ *
+ * Ohne echtes 3D-Radar bleibt MESHS eine fundierte Schätzung.
  */
 
 import type { HailDiagnosis, HazardLevel, HazardSource } from "./types";
 
 export interface HailInput {
-  /** Strikes/min in der Zelle. */
-  strikeRatePerMin: number;
-  /** Strikes im Detection-Fenster. */
-  strikeCount: number;
-  /** Cluster-Radius (km). */
-  radiusKm: number;
+  /** Top-Reflektivität in dBZ. */
+  topDbz: number;
+  /** Hagelkern-Fläche (≥57 dBZ) in km². */
+  hailCoreAreaKm2: number;
+  /** Gesamtfläche der Zelle in km². */
+  areaKm2: number;
   /** CAPE am Zellort (J/kg). */
   cape: number | null;
   /** Lifted Index am Zellort (°C). */
   liftedIndex: number | null;
   /** Freezing Level Höhe (m AGL). */
   freezingLevelM: number | null;
-  /** Lightning-Jump aktiv? Erhöht Hagelwahrscheinlichkeit deutlich. */
-  jumpActive: boolean;
 }
 
 function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
 }
 
-/**
- * dBZ-Proxy aus Blitzdichte. Wolken mit starker Elektrik und kompaktem Kern
- * korrelieren empirisch mit Reflektivität > 50 dBZ. Wir bilden 0..70 dBZ.
- */
-function reflectivityProxy(input: HailInput): number {
-  const rate = input.strikeRatePerMin;
-  const density = input.radiusKm > 0 ? input.strikeCount / Math.max(1, input.radiusKm) : 0;
-  // Basis 30 dBZ, +Rate, +Dichte. Cap 70 dBZ.
-  return clamp(30 + rate * 4 + density * 1.5, 0, 70);
-}
-
-/**
- * Echo-Top H45 (m) aus CAPE-Updraft-Schätzung.
- * Updraft w ≈ sqrt(2·CAPE). Stoppt nahe der Tropopause.
- * Wir nähern die Höhe als Funktion von CAPE und LI an, gedeckelt bei 14 km.
- */
-function echoTopMeters(input: HailInput): number | null {
-  if (input.cape == null) return null;
-  const cape = Math.max(0, input.cape);
-  // Empirisch: 500 J/kg → ~7 km, 1500 J/kg → ~10 km, 2500 J/kg → ~12 km.
-  const base = 5000 + Math.sqrt(cape) * 130;
-  const liBoost = input.liftedIndex != null && input.liftedIndex < 0 ? -input.liftedIndex * 200 : 0;
+function echoTopMeters(cape: number | null, li: number | null): number | null {
+  if (cape == null) return null;
+  const c = Math.max(0, cape);
+  const base = 5000 + Math.sqrt(c) * 130;
+  const liBoost = li != null && li < 0 ? -li * 200 : 0;
   return clamp(base + liBoost, 3000, 14000);
 }
 
-/** POH nach Waldvogel: stetiger Anstieg zwischen Δh = 1.6 km und 5.5 km. */
 function pohFromDeltaH(deltaKm: number): number {
   if (deltaKm <= 1.6) return 0;
   if (deltaKm >= 5.5) return 100;
   return Math.round(((deltaKm - 1.6) / (5.5 - 1.6)) * 100);
 }
 
-/**
- * MESHS-Schätzung. Witt 1998 nutzt vertikal integriertes Eisreflektivitätsfeld
- * (SHI). Wir simplifizieren: kombiniertes Maß aus dBZ-Proxy, Δh und CAPE,
- * skaliert auf typische Hagelgrößen 0..6 cm.
- */
-function meshsCm(dbz: number, deltaKm: number, cape: number | null, jump: boolean): number {
-  if (deltaKm < 1.6) return 0;
-  const dbzPart = clamp((dbz - 45) / 25, 0, 1); // 45..70 dBZ
+function meshsCm(dbz: number, deltaKm: number, cape: number | null, coreKm2: number): number {
+  if (deltaKm < 1.6 && coreKm2 < 1) return 0;
+  const dbzPart = clamp((dbz - 45) / 20, 0, 1); // 45..65 dBZ
   const dhPart = clamp((deltaKm - 1.6) / 4, 0, 1);
   const capePart = cape != null ? clamp(cape / 2500, 0, 1) : 0.3;
-  const jumpPart = jump ? 0.2 : 0;
-  const raw = (dbzPart * 0.45 + dhPart * 0.35 + capePart * 0.2 + jumpPart) * 6;
+  const corePart = clamp(coreKm2 / 8, 0, 1);
+  const raw = (dbzPart * 0.4 + dhPart * 0.25 + capePart * 0.15 + corePart * 0.2) * 6;
   return Math.round(raw * 10) / 10;
 }
 
-function levelFor(poh: number, meshs: number): HazardLevel {
-  if (meshs >= 4 || poh >= 90) return "extreme";
-  if (meshs >= 2.5 || poh >= 75) return "high";
-  if (meshs >= 1.2 || poh >= 50) return "elevated";
+function levelFor(poh: number, meshs: number, coreKm2: number): HazardLevel {
+  if (meshs >= 4 || poh >= 90 || coreKm2 >= 8) return "extreme";
+  if (meshs >= 2.5 || poh >= 75 || coreKm2 >= 3) return "high";
+  if (meshs >= 1.2 || poh >= 50 || coreKm2 >= 1) return "elevated";
   if (poh >= 25) return "watch";
   return "none";
 }
 
 export function diagnoseHail(input: HailInput): HailDiagnosis {
   const reasons: string[] = [];
-  const sources: HazardSource[] = [{ label: "Blitzortung (Reflektivitäts-Proxy)" }];
+  const sources: HazardSource[] = [{ label: "DWD-RY (Reflektivität)" }];
 
-  const dbz = reflectivityProxy(input);
-  const top = echoTopMeters(input);
+  const top = echoTopMeters(input.cape, input.liftedIndex);
   let deltaKm: number | null = null;
 
   if (top != null && input.freezingLevelM != null) {
@@ -111,17 +83,20 @@ export function diagnoseHail(input: HailInput): HailDiagnosis {
   }
 
   const poh = deltaKm != null ? pohFromDeltaH(deltaKm) : 0;
-  const meshs = deltaKm != null ? meshsCm(dbz, deltaKm, input.cape, input.jumpActive) : 0;
-  const level = levelFor(poh, meshs);
+  const meshs = meshsCm(input.topDbz, deltaKm ?? 0, input.cape, input.hailCoreAreaKm2);
+  const level = levelFor(poh, meshs, input.hailCoreAreaKm2);
 
-  reasons.unshift(
-    `Reflektivitäts-Proxy ≈ ${Math.round(dbz)} dBZ aus ${input.strikeRatePerMin.toFixed(1)} Blitze/min`,
-  );
+  reasons.unshift(`Top ${Math.round(input.topDbz)} dBZ · Fläche ${Math.round(input.areaKm2)} km²`);
+  if (input.hailCoreAreaKm2 >= 1)
+    reasons.push(`Hagelkern ${input.hailCoreAreaKm2.toFixed(0)} km² (≥57 dBZ)`);
   if (poh > 0) reasons.push(`POH ${poh} %`);
   if (meshs > 0) reasons.push(`MESHS ≈ ${meshs.toFixed(1)} cm`);
-  if (input.jumpActive) reasons.push("Lightning Jump aktiv — Hagel wahrscheinlicher");
 
-  const score = clamp(Math.round(poh * 0.6 + meshs * 8 + (input.jumpActive ? 10 : 0)), 0, 100);
+  const score = clamp(
+    Math.round(poh * 0.5 + meshs * 8 + input.hailCoreAreaKm2 * 3 + Math.max(0, input.topDbz - 45)),
+    0,
+    100,
+  );
 
   return {
     kind: "hail",

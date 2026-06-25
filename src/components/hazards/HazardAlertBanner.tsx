@@ -1,4 +1,4 @@
-import { AlertTriangle, CloudHail, CloudRain, Zap } from "@/components/icons";
+import { AlertTriangle, CloudHail, CloudRain } from "@/components/icons";
 import type { HazardAlert, HazardKind } from "@/lib/weather/hazards/types";
 import { HAZARD_KIND_LABEL, HAZARD_LEVEL_TONE } from "./hazard-tokens";
 import { cn } from "@/lib/utils";
@@ -6,13 +6,8 @@ import { cn } from "@/lib/utils";
 const ICONS: Record<HazardKind, React.ElementType> = {
   hail: CloudHail,
   flood: CloudRain,
-  lightning: Zap,
 };
 
-/**
- * Kompakter Banner über dem Cockpit. Zeigt die nächstliegenden Hazards
- * (max 3) mit ETA und Klartext-Headline.
- */
 export function HazardAlertBanner({ alerts }: { alerts: HazardAlert[] }) {
   if (!alerts.length) return null;
   const top = alerts.slice(0, 3);

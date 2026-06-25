@@ -1,6 +1,5 @@
 /**
  * 2-Stunden Nowcast in 10-Minuten-Schritten mit transparentem Scoring.
- * Gewichtung Kurzfrist: Niederschlag/Wind/Blitz/Live > Konvektion.
  */
 
 import type { HourlyPoint, MinutelyPoint } from "../types";
@@ -16,7 +15,7 @@ import {
 } from "./subscores";
 
 const STEP_MINUTES = 10;
-const STEPS = 12; // 2 h
+const STEPS = 12;
 
 export interface NowcastStep {
   time: string;
@@ -29,7 +28,6 @@ export interface NowcastStep {
   convection: Subscore;
   total: number;
   band: Band;
-  lightning5min?: number;
 }
 
 export interface NowcastResult {
@@ -44,12 +42,10 @@ export interface NowcastResult {
   confidence: "niedrig" | "mittel" | "hoch";
 }
 
-// Gewichte für Kurzfrist (Summe ≈ 1.0)
 const W = { rain: 0.35, wind: 0.2, thunder: 0.3, convection: 0.15 };
 
 function combine(rain: number, wind: number, thunder: number, convection: number): number {
   const linear = rain * W.rain + wind * W.wind + thunder * W.thunder + convection * W.convection;
-  // Worst-of-Korrektur: ein hoher Einzelfaktor zieht den Score nach oben.
   const maxSub = Math.max(rain, wind, thunder, convection);
   return Math.round(Math.max(linear, maxSub * 0.85));
 }
@@ -119,7 +115,6 @@ function interpolate(points: HourlyPoint[], t: Date): HourlyPoint | null {
 }
 
 function aggregateSub(steps: Subscore[], take = 6): Subscore {
-  // Aggregation für den Header: stärkster Step + häufigste Contributors.
   let best = steps[0];
   for (const s of steps) if (s.value > best.value) best = s;
   const slice = steps.slice(0, take);
@@ -131,11 +126,10 @@ export interface NowcastInput {
   hourly: HourlyPoint[];
   minutely?: MinutelyPoint[];
   now: Date;
-  lightning5min?: number; // gesamt
-  lightningPerStep?: number[]; // optional pro 10-min-Step
   liveObsAgeMinutes?: number | null;
   radarAgeMinutes?: number | null;
-  lightningConnected?: boolean;
+  /** Max-dBZ aus dem aktuellen Radar-Snapshot (für Gewitter-Verstärkung im ersten Step). */
+  radarTopDbz?: number | null;
   modelObsConsistent?: boolean | null;
 }
 
@@ -159,11 +153,10 @@ export function buildNowcast(input: NowcastInput): NowcastResult {
         minute?.precipitationProbability ?? interp?.precipitationProbability,
       weatherCode: code,
     };
-    const l5 = input.lightningPerStep?.[i];
     const rain = rainSubscore(point);
     const wind = windSubscore(point);
     const thunder = thunderSubscore(point, {
-      lightning5min: l5 ?? (i === 0 ? input.lightning5min : undefined),
+      radarTopDbz: i === 0 ? (input.radarTopDbz ?? null) : null,
     });
     const conv = convectionSubscore(point);
     const total = combine(rain.value, wind.value, thunder.value, conv.value);
@@ -178,7 +171,6 @@ export function buildNowcast(input: NowcastInput): NowcastResult {
       convection: conv,
       total,
       band: bandFromScore(total),
-      lightning5min: l5,
     });
   }
 
@@ -195,7 +187,6 @@ export function buildNowcast(input: NowcastInput): NowcastResult {
     hasConvective: hourly.some((h) => h.cape != null || h.liftedIndex != null),
     liveObsAgeMinutes: input.liveObsAgeMinutes ?? null,
     radarAgeMinutes: input.radarAgeMinutes ?? null,
-    lightningConnected: input.lightningConnected ?? false,
     modelObsConsistent: input.modelObsConsistent ?? null,
   };
   const data = dataConfidence(ctx);

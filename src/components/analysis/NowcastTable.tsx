@@ -6,9 +6,6 @@ import { bandColorClass } from "@/lib/weather/scoring/labels";
 import { formatHour } from "@/lib/weather/format";
 import { cn } from "@/lib/utils";
 
-/**
- * 10-Minuten-Zeilen für 0–2 h.
- */
 export function NowcastTable({ steps, daily }: { steps: NowcastStep[]; daily?: DailyPoint[] }) {
   const maxRain = Math.max(1, ...steps.map((s) => s.point.precipitationMm ?? 0));
   return (
@@ -16,7 +13,7 @@ export function NowcastTable({ steps, daily }: { steps: NowcastStep[]; daily?: D
       <div className="grid grid-cols-[58px_36px_44px_minmax(0,1fr)_64px_44px_30px] items-center gap-2 border-b border-border bg-muted/50 px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
         <div>Zeit</div>
         <div>Wetter</div>
-        <div>Blitz</div>
+        <div>Gewitter</div>
         <div>Regen / Wind</div>
         <div className="text-right">km/h Bö</div>
         <div className="text-right">Score</div>
@@ -45,7 +42,6 @@ function Row({
   const mm = step.point.precipitationMm ?? 0;
   const rainPct = Math.max(0, Math.min(100, (mm / maxRain) * 100));
   const gKmh = step.point.windGustMs != null ? step.point.windGustMs * 3.6 : null;
-  const lightning = step.lightning5min ?? 0;
   const thunderPct = step.thunder.value;
   const conf = Math.round(
     (step.rain.confidence +
@@ -62,10 +58,7 @@ function Row({
         step.minutesFromNow === 0 && "bg-accent/40",
       )}
     >
-      <div
-        className="font-mono text-[11px] leading-tight tabular-nums"
-        style={{ fontFamily: "var(--font-mono)" }}
-      >
+      <div className="font-mono text-[11px] leading-tight tabular-nums">
         <div className="font-semibold text-foreground">
           {step.minutesFromNow === 0 ? "jetzt" : `+${step.minutesFromNow}m`}
         </div>
@@ -75,11 +68,7 @@ function Row({
         <MeteoconIcon code={step.weatherCode} isNight={night} className="h-7 w-7" label="Wetter" />
       </div>
       <div className="flex items-center gap-1 text-[10.5px]">
-        {lightning > 0 ? (
-          <span className="rounded bg-warn-severe/20 px-1.5 py-0.5 font-semibold text-warn-severe">
-            <Zap className="h-3 w-3 inline-block" /> {lightning}
-          </span>
-        ) : thunderPct >= 30 ? (
+        {thunderPct >= 30 ? (
           <span className="rounded bg-warn-moderate/15 px-1.5 py-0.5 font-semibold text-warn-moderate">
             <Zap className="h-3 w-3 inline-block" /> {thunderPct}
           </span>
@@ -95,18 +84,12 @@ function Row({
               style={{ width: `${rainPct}%` }}
             />
           </div>
-          <span
-            className="font-mono text-[10.5px] tabular-nums text-foreground"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
+          <span className="font-mono text-[10.5px] tabular-nums text-foreground">
             {mm >= 0.05 ? `${mm.toFixed(1)} mm/h` : "—"}
           </span>
         </div>
       </div>
-      <div
-        className="text-right font-mono text-[11px] tabular-nums text-foreground"
-        style={{ fontFamily: "var(--font-mono)" }}
-      >
+      <div className="text-right font-mono text-[11px] tabular-nums text-foreground">
         {gKmh != null ? gKmh.toFixed(0) : "—"}
       </div>
       <div className="text-right">
@@ -116,7 +99,6 @@ function Row({
             c.bg,
             c.text,
           )}
-          style={{ fontFamily: "var(--font-mono)" }}
         >
           {step.total}
         </span>

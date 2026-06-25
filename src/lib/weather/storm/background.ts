@@ -1,5 +1,5 @@
 import type { SavedLocation } from "@/lib/weather/types";
-import { decodeLzw, type LightningStrike } from "@/lib/weather/sources/blitzortung";
+import { fetchRadarSnapshot, type RadarSnapshot } from "@/lib/weather/radar/snapshot";
 import { stepStormTracking, exportTrackState, importTrackState, resetStormTracking } from "./track";
 import { computeStormAlerts } from "./alerts";
 import { gridKey, loadCellEnvironments, type CellEnvSample } from "./environment";
@@ -14,17 +14,20 @@ import {
 } from "./types";
 
 /**
- * Globaler Stormtracking-Service. Hält Blitzortung-WebSocket, Strike-Puffer,
- * Detection-Tick und Persistenz route-übergreifend am Leben, damit Lebensdauer,
- * Zugbahnen und ETA in jeder Ansicht verfügbar sind.
+ * Globaler Stormtracking-Service. Pollt alle 60 s einen Radar-Snapshot
+ * vom DWD-WMS, klassifiziert Zellen und führt das Frame-zu-Frame-Tracking.
+ * Lebt route-übergreifend, damit IDs und Zugbahnen erhalten bleiben.
  */
+
+export type SnapshotStatus = "idle" | "loading" | "ok" | "error";
 
 export interface StormBackgroundSnapshot {
   cells: StormCell[];
   alerts: StormAlert[];
-  strikes: LightningStrike[];
   lastRun: number;
-  wsStatus: "idle" | "connecting" | "open" | "error" | "closed";
+  lastFrameTime: string | null;
+  snapshotStatus: SnapshotStatus;
+  lastError: string | null;
 }
 
 interface ServiceConfig {
@@ -34,31 +37,20 @@ interface ServiceConfig {
   thresholds: StormThresholds;
 }
 
-const WS_ENDPOINTS = [
-  "wss://ws1.blitzortung.org/",
-  "wss://ws7.blitzortung.org/",
-  "wss://ws8.blitzortung.org/",
-];
-const BUFFER_MS = 60 * 60 * 1000;
-const TICK_MS = 15_000;
-const PERSIST_KEY = "meteoflo.storm.tracks.v1";
+const TICK_MS = 60_000;
+const PERSIST_KEY = "meteoflo.storm.tracks.v2";
 const PERSIST_INTERVAL_MS = 60_000;
 
 const EMPTY_SNAPSHOT: StormBackgroundSnapshot = {
   cells: [],
   alerts: [],
-  strikes: [],
   lastRun: 0,
-  wsStatus: "idle",
+  lastFrameTime: null,
+  snapshotStatus: "idle",
+  lastError: null,
 };
 
 class StormBackgroundService {
-  private buffer: LightningStrike[] = [];
-  private ws: WebSocket | null = null;
-  private endpointIdx = 0;
-  private wsAttempt = 0;
-  private wsStatus: StormBackgroundSnapshot["wsStatus"] = "idle";
-  private reconnectTimer: number | null = null;
   private tickTimer: number | null = null;
   private persistTimer: number | null = null;
   private cellEnv: Map<string, CellEnvSample> = new Map();
@@ -73,13 +65,13 @@ class StormBackgroundService {
   };
   private started = false;
   private persistLoaded = false;
+  private tickInFlight = false;
 
   configure(patch: Partial<ServiceConfig>) {
     const wasEnabled = this.config.enabled;
     this.config = { ...this.config, ...patch };
     if (this.config.enabled && !wasEnabled) this.start();
     else if (!this.config.enabled && wasEnabled) this.stop();
-    else if (this.started) this.tick();
   }
 
   subscribe(cb: () => void) {
@@ -96,13 +88,12 @@ class StormBackgroundService {
   reset() {
     resetStormTracking();
     this.cellEnv.clear();
-    this.buffer = [];
     try {
       window.localStorage.removeItem(PERSIST_KEY);
     } catch {
       /* noop */
     }
-    this.snapshot = { ...EMPTY_SNAPSHOT, wsStatus: this.wsStatus };
+    this.snapshot = { ...EMPTY_SNAPSHOT };
     this.emit();
     if (this.started) this.tick();
   }
@@ -111,7 +102,7 @@ class StormBackgroundService {
     if (typeof window === "undefined" || this.started) return;
     this.started = true;
     this.loadPersisted();
-    this.connect();
+    this.tick();
     this.tickTimer = window.setInterval(() => this.tick(), TICK_MS);
     this.persistTimer = window.setInterval(() => this.persist(), PERSIST_INTERVAL_MS);
     document.addEventListener("visibilitychange", this.onVisibility);
@@ -122,81 +113,50 @@ class StormBackgroundService {
     this.started = false;
     if (this.tickTimer) window.clearInterval(this.tickTimer);
     if (this.persistTimer) window.clearInterval(this.persistTimer);
-    if (this.reconnectTimer) window.clearTimeout(this.reconnectTimer);
-    this.tickTimer = this.persistTimer = this.reconnectTimer = null;
+    this.tickTimer = this.persistTimer = null;
     document.removeEventListener("visibilitychange", this.onVisibility);
-    const ws = this.ws;
-    this.ws = null;
-    if (ws && ws.readyState <= 1) ws.close();
-    this.setStatus("idle");
   }
 
   private onVisibility = () => {
     if (typeof document === "undefined") return;
-    if (document.visibilityState === "hidden") {
-      this.ws?.close();
-    } else if (this.started && (!this.ws || this.ws.readyState >= 2)) {
-      this.connect();
+    if (document.visibilityState === "visible" && this.started) {
+      // Sofortiger Refresh beim Zurückkehren.
+      this.tick();
     }
   };
 
-  private connect() {
-    if (!this.started) return;
-    const url = WS_ENDPOINTS[this.endpointIdx % WS_ENDPOINTS.length];
-    this.endpointIdx++;
-    this.setStatus("connecting");
+  private async tick() {
+    if (!this.started || this.tickInFlight) return;
+    this.tickInFlight = true;
+    this.setStatus("loading");
     try {
-      const ws = new WebSocket(url);
-      this.ws = ws;
-      ws.onopen = () => {
-        this.wsAttempt = 0;
-        this.setStatus("open");
-        ws.send(JSON.stringify({ a: 111 }));
+      const snap = await fetchRadarSnapshot(null);
+      this.processSnapshot(snap);
+    } catch (err) {
+      this.snapshot = {
+        ...this.snapshot,
+        snapshotStatus: "error",
+        lastError: err instanceof Error ? err.message : String(err),
       };
-      ws.onmessage = (evt) => {
-        try {
-          const raw = typeof evt.data === "string" ? evt.data : "";
-          if (!raw) return;
-          const json = decodeLzw(raw);
-          const parsed = JSON.parse(json) as { time?: number; lat?: number; lon?: number };
-          if (typeof parsed.lat !== "number" || typeof parsed.lon !== "number") return;
-          const tsMs =
-            typeof parsed.time === "number" ? Math.floor(parsed.time / 1_000_000) : Date.now();
-          this.buffer.push({ time: tsMs, lat: parsed.lat, lon: parsed.lon });
-        } catch {
-          /* korruptes Frame ignorieren */
-        }
-      };
-      ws.onerror = () => this.setStatus("error");
-      ws.onclose = () => {
-        this.setStatus("closed");
-        if (!this.started) return;
-        const delay = Math.min(30_000, 1_000 * 2 ** this.wsAttempt++);
-        this.reconnectTimer = window.setTimeout(() => this.connect(), delay);
-      };
-    } catch {
-      this.setStatus("error");
+      this.emit();
+    } finally {
+      this.tickInFlight = false;
     }
   }
 
-  private setStatus(s: StormBackgroundSnapshot["wsStatus"]) {
-    if (this.wsStatus === s) return;
-    this.wsStatus = s;
-    this.snapshot = { ...this.snapshot, wsStatus: s };
+  private setStatus(status: SnapshotStatus) {
+    if (this.snapshot.snapshotStatus === status) return;
+    this.snapshot = { ...this.snapshot, snapshotStatus: status };
     this.emit();
   }
 
-  private tick() {
-    if (!this.started) return;
+  private processSnapshot(snap: RadarSnapshot) {
     const now = Date.now();
-    const cutoff = now - BUFFER_MS;
-    if (this.buffer.length) this.buffer = this.buffer.filter((s) => s.time >= cutoff);
-
-    const regionalEnv: StormEnvironment = { ...this.config.environment, source: "region" };
-    // Detection nur auf Strikes in DACH + Italien (mit Puffer). Der volle Buffer bleibt für
-    // die Lightning-Anzeige erhalten, lediglich die Cluster-Eingabe wird regional begrenzt.
-    const regionStrikes = this.buffer.filter((s) => isInRegion(s.lat, s.lon));
-    const baseCells = stepStormTracking(regionStrikes, regionalEnv, now, this.config.thresholds);
+    const regional: StormEnvironment = { ...this.config.environment, source: "region" };
+    const cellsInRegion = snap.cells.filter((c) =>
+      isInRegion(c.centroid.lat, c.centroid.lon, 0),
+    );
+    const baseCells = stepStormTracking(cellsInRegion, regional, now, this.config.thresholds);
 
     const cells = baseCells.map((cell) => {
       const sample = this.cellEnv.get(gridKey(cell.centroid.lat, cell.centroid.lon));
@@ -208,24 +168,24 @@ class StormBackgroundService {
         source: "cell",
       };
       const severity = scoreCell({
-        strikeRatePerMin: cell.strikeRatePerMin,
-        strikeRateTrend: cell.strikeRateTrend,
-        radiusKm: cell.radiusKm,
-        strikeCount: cell.strikeCount,
+        topDbz: cell.topDbz,
+        hailCoreAreaKm2: cell.hailCoreAreaKm2,
+        areaKm2: cell.areaKm2,
+        dbzTrend: cell.dbzTrend,
+        areaTrend: cell.areaTrend,
         env,
       });
       return { ...cell, severity };
     });
-    // Zellen, die durch Drift aus dem Pufferbereich gewandert sind, sauber droppen.
-    const inRegion = cells.filter((c) => isInRegion(c.centroid.lat, c.centroid.lon, 0));
-    inRegion.sort((a, b) => b.severity.score - a.severity.score || b.strikeCount - a.strikeCount);
+
+    cells.sort((a, b) => b.severity.score - a.severity.score || b.areaKm2 - a.areaKm2);
 
     // Anzeigenamen vergeben: pro Land fortlaufender Index nach Severity-Rang.
     const perCountry: Record<string, number> = {};
-    const named = inRegion.map((cell) => {
+    const named = cells.map((cell) => {
       const prefix = regionCountryPrefix(cell.centroid.lat, cell.centroid.lon);
       const idx = (perCountry[prefix] = (perCountry[prefix] ?? 0) + 1);
-      const letter = String.fromCharCode(64 + Math.min(26, idx)); // A..Z
+      const letter = String.fromCharCode(64 + Math.min(26, idx));
       const displayName = `Zelle ${prefix}-${letter}${idx > 26 ? idx - 26 : ""}`;
       return { ...cell, displayName };
     });
@@ -250,9 +210,10 @@ class StormBackgroundService {
     this.snapshot = {
       cells: named,
       alerts,
-      strikes: this.buffer.slice(),
       lastRun: now,
-      wsStatus: this.wsStatus,
+      lastFrameTime: snap.frameTime,
+      snapshotStatus: "ok",
+      lastError: null,
     };
     this.emit();
   }

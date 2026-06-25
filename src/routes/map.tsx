@@ -8,7 +8,7 @@ export const Route = createFileRoute("/map")({
       {
         name: "description",
         content:
-          "DWD RY/WN/PI, Blitzortung live, Datenvertrauen und Kurzfrist-Nowcast in einer Karte.",
+          "DWD RY/WN/PI mit Stormtracking direkt aus der Radar-Reflektivität, Hagelkern-Erkennung und Kurzfrist-Nowcast.",
       },
     ],
   }),
@@ -22,7 +22,7 @@ function MapPage() {
         <div className="min-w-0">
           <h1 className="truncate text-lg font-semibold tracking-tight">Radar-Cockpit</h1>
           <p className="truncate text-xs text-muted-foreground">
-            DWD RY · WN-Nowcast · PI Mitteleuropa · Blitzortung live.
+            DWD RY · WN-Nowcast · PI Mitteleuropa · Stormtrack aus echter Reflektivität.
           </p>
         </div>
       </header>

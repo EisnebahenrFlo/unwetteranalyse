@@ -1,14 +1,10 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import maplibregl, { Map as MlMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { LightningStrike } from "@/lib/weather/sources/blitzortung";
-import { classifyAge } from "@/lib/weather/sources/blitzortung";
-import type { CellTrack } from "@/lib/weather/analysis/cockpit-diagnostics";
 import type { StormCell } from "@/lib/weather/storm/types";
 import { SEVERITY_COLOR, SEVERITY_BADGE } from "@/components/storm/severity-tokens";
 import { etaToNearestTarget, type NamedTarget } from "@/lib/weather/storm/estimate";
 
-/** 64-Punkt-Approximation eines Kreises in Lon/Lat um (lat, lon) mit Radius in km. */
 function ringCoords(lat: number, lon: number, km: number, steps = 64): [number, number][] {
   const coords: [number, number][] = [];
   const latKm = 111.32;
@@ -22,21 +18,15 @@ function ringCoords(lat: number, lon: number, km: number, steps = 64): [number, 
 
 export interface RadarMapHandle {
   setRasterTiles: (id: string, tileUrl: string | null, opacity?: number) => void;
-  /**
-   * Verwaltet einen vorgeladenen Frame-Stack für flüssige Animation.
-   * Alle Frames bleiben als Layer gemountet, nur die Opazität wird gewechselt
-   * → kein Tile-Refetch beim Scrubben/Playback und weicher Crossfade.
-   */
   setFrameStack: (
     stackKey: string,
     frames: { time: string; url: string }[],
     activeTime: string | null,
     opacity: number,
   ) => void;
-  setLightning: (strikes: LightningStrike[]) => void;
-  setCellTrack: (track: CellTrack | null) => void;
   setStormCells: (cells: StormCell[]) => void;
   setNamedTargets: (targets: NamedTarget[]) => void;
+  setHailCores: (cells: StormCell[]) => void;
   getBbox: () => [number, number, number, number] | null;
   flyTo: (lon: number, lat: number, zoom?: number) => void;
   setFocusRings: (center: { lat: number; lon: number } | null, kmRadii?: number[]) => void;
@@ -49,11 +39,6 @@ interface Props {
   onInteractionChange?: (busy: boolean) => void;
 }
 
-/**
- * Schlanke Map-Shell für das Radar-Cockpit.
- * Layer-Verwaltung erfolgt imperativ über das exponierte Handle,
- * damit React-Renders die Karte nicht zerstören.
- */
 export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
   { initialCenter, initialZoom = 6.5, onBboxChange, onInteractionChange },
   ref,
@@ -61,11 +46,9 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
   const readyRef = useRef(false);
-  /** Aktive Frame-Stacks: key → Liste der gemounteten (sourceId, layerId, time, url). */
   const stacksRef = useRef<
     Map<string, { sourceId: string; layerId: string; time: string; url: string }[]>
   >(new Map());
-  /** Letzte bekannte Zellen + Ziele, damit Label-Refreshes ohne neuen setStormCells funktionieren. */
   const cellsRef = useRef<StormCell[]>([]);
   const targetsRef = useRef<NamedTarget[]>([]);
 
@@ -115,36 +98,11 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
       readyRef.current = true;
       map.resize();
       emitBbox();
-      // Leerer Lightning-Source initialisieren.
-      map.addSource("lightning-src", {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-      });
-      map.addLayer({
-        id: "lightning-layer",
-        type: "circle",
-        source: "lightning-src",
-        paint: {
-          "circle-radius": ["match", ["get", "age"], "fresh", 5, "recent", 4, 3],
-          "circle-color": [
-            "match",
-            ["get", "age"],
-            "fresh",
-            "#facc15",
-            "recent",
-            "#f59e0b",
-            "#9ca3af",
-          ],
-          "circle-stroke-width": 1,
-          "circle-stroke-color": "#1f2937",
-          "circle-opacity": ["match", ["get", "age"], "fresh", 0.95, "recent", 0.7, 0.4],
-        },
-      });
-      // Fokusringe (Relevanzradius) als geojson polygon + labels.
-      map.addSource("focus-rings-src", {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-      });
+
+      const emptyFC = { type: "FeatureCollection" as const, features: [] };
+
+      // Fokusringe
+      map.addSource("focus-rings-src", { type: "geojson", data: emptyFC });
       map.addLayer({
         id: "focus-rings-line",
         type: "line",
@@ -156,10 +114,7 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
           "line-opacity": 0.75,
         },
       });
-      map.addSource("focus-labels-src", {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-      });
+      map.addSource("focus-labels-src", { type: "geojson", data: emptyFC });
       map.addLayer({
         id: "focus-labels",
         type: "symbol",
@@ -171,16 +126,9 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
           "text-offset": [0.4, 0],
           "text-allow-overlap": true,
         },
-        paint: {
-          "text-color": "#0c4a6e",
-          "text-halo-color": "#ffffff",
-          "text-halo-width": 1.2,
-        },
+        paint: { "text-color": "#0c4a6e", "text-halo-color": "#ffffff", "text-halo-width": 1.2 },
       });
-      map.addSource("focus-center-src", {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-      });
+      map.addSource("focus-center-src", { type: "geojson", data: emptyFC });
       map.addLayer({
         id: "focus-center",
         type: "circle",
@@ -193,71 +141,7 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         },
       });
 
-      /* ----------- Stormtrack-Layer ----------- */
-      const emptyFC = { type: "FeatureCollection" as const, features: [] };
-      map.addSource("track-past-src", { type: "geojson", data: emptyFC });
-      map.addLayer({
-        id: "track-past",
-        type: "line",
-        source: "track-past-src",
-        paint: {
-          "line-color": "#ef4444",
-          "line-width": 3,
-          "line-opacity": 0.85,
-        },
-      });
-      map.addSource("track-forecast-src", { type: "geojson", data: emptyFC });
-      map.addLayer({
-        id: "track-forecast",
-        type: "line",
-        source: "track-forecast-src",
-        paint: {
-          "line-color": "#ef4444",
-          "line-width": 2.5,
-          "line-dasharray": [1.5, 1.5],
-          "line-opacity": 0.9,
-        },
-      });
-      map.addSource("track-points-src", { type: "geojson", data: emptyFC });
-      map.addLayer({
-        id: "track-points",
-        type: "circle",
-        source: "track-points-src",
-        paint: {
-          "circle-radius": ["match", ["get", "kind"], "fresh", 6, "forecast", 5, 4],
-          "circle-color": [
-            "match",
-            ["get", "kind"],
-            "fresh",
-            "#ef4444",
-            "forecast",
-            "#fff",
-            "#fca5a5",
-          ],
-          "circle-stroke-color": "#ef4444",
-          "circle-stroke-width": 2,
-        },
-      });
-      map.addLayer({
-        id: "track-labels",
-        type: "symbol",
-        source: "track-points-src",
-        layout: {
-          "text-field": ["coalesce", ["get", "label"], ""],
-          "text-size": 10,
-          "text-anchor": "left",
-          "text-offset": [0.6, 0],
-          "text-allow-overlap": true,
-          "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"],
-        },
-        paint: {
-          "text-color": "#7f1d1d",
-          "text-halo-color": "#ffffff",
-          "text-halo-width": 1.2,
-        },
-      });
-
-      /* ----------- Storm-Cells: Cone, Polygon, Forecast-Pfade ----------- */
+      /* ----------- Storm-Cells ----------- */
       map.addSource("storm-cone-src", { type: "geojson", data: emptyFC });
       map.addLayer({
         id: "storm-cone",
@@ -269,17 +153,12 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
           "fill-outline-color": ["get", "color"],
         },
       });
-      // Zugbahn vergangener Centroiden je Zelle.
       map.addSource("storm-past-halo-src", { type: "geojson", data: emptyFC });
       map.addLayer({
         id: "storm-past-halo",
         type: "line",
         source: "storm-past-halo-src",
-        paint: {
-          "line-color": "#ffffff",
-          "line-width": 3.2,
-          "line-opacity": 0.55,
-        },
+        paint: { "line-color": "#ffffff", "line-width": 3.2, "line-opacity": 0.55 },
         layout: { "line-cap": "round", "line-join": "round" },
       });
       map.addSource("storm-past-src", { type: "geojson", data: emptyFC });
@@ -287,25 +166,8 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         id: "storm-past-line",
         type: "line",
         source: "storm-past-src",
-        paint: {
-          "line-color": ["get", "color"],
-          "line-width": 2,
-          "line-opacity": 0.55,
-        },
+        paint: { "line-color": ["get", "color"], "line-width": 2, "line-opacity": 0.55 },
         layout: { "line-cap": "round", "line-join": "round" },
-      });
-      map.addSource("storm-past-pts-src", { type: "geojson", data: emptyFC });
-      map.addLayer({
-        id: "storm-past-pts",
-        type: "circle",
-        source: "storm-past-pts-src",
-        paint: {
-          "circle-radius": 2.5,
-          "circle-color": ["get", "color"],
-          "circle-opacity": ["coalesce", ["get", "fade"], 0.6],
-          "circle-stroke-width": 1,
-          "circle-stroke-color": "#ffffff",
-        },
       });
       map.addSource("storm-poly-src", { type: "geojson", data: emptyFC });
       map.addLayer({
@@ -333,7 +195,6 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         },
         layout: { "line-cap": "round", "line-join": "round" },
       });
-      // Pfeilspitze am Ende der Prognose (Bewegungsrichtung).
       map.addSource("storm-fc-arrow-src", { type: "geojson", data: emptyFC });
       map.addLayer({
         id: "storm-fc-arrow",
@@ -356,7 +217,6 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
           "text-halo-width": 1.8,
         },
       });
-      // ETA-Marker (+15/+30/+60 min) entlang des Forecasts.
       map.addSource("storm-eta-src", { type: "geojson", data: emptyFC });
       map.addLayer({
         id: "storm-eta-pts",
@@ -430,6 +290,30 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
           "text-halo-width": 2,
         },
       });
+
+      // Hagelkern-Layer (Pulse).
+      map.addSource("hail-core-src", { type: "geojson", data: emptyFC });
+      map.addLayer({
+        id: "hail-core-halo",
+        type: "circle",
+        source: "hail-core-src",
+        paint: {
+          "circle-radius": 14,
+          "circle-color": "#dc2626",
+          "circle-opacity": 0.18,
+        },
+      });
+      map.addLayer({
+        id: "hail-core-dot",
+        type: "circle",
+        source: "hail-core-src",
+        paint: {
+          "circle-radius": 6,
+          "circle-color": "#dc2626",
+          "circle-stroke-color": "#ffffff",
+          "circle-stroke-width": 2,
+        },
+      });
     });
 
     map.on("movestart", () => onInteractionChange?.(true));
@@ -449,7 +333,6 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
       readyRef.current = false;
       stacksRef.current.clear();
     };
-    // initial-only
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -463,14 +346,12 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         if (map.getLayer(layerId)) map.removeLayer(layerId);
         if (map.getSource(sourceId)) map.removeSource(sourceId);
         if (!tileUrl) return;
-        // tileSize 512 halbiert die Anzahl der Requests gegenüber 256 bei gleichem Viewport.
         map.addSource(sourceId, {
           type: "raster",
           tiles: [tileUrl],
           tileSize: 512,
           attribution: "© Deutscher Wetterdienst",
         });
-        // Unter Lightning einfügen, damit Blitze sichtbar bleiben.
         const before = firstOverlayLayer(map);
         map.addLayer(
           {
@@ -492,7 +373,6 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         const before = firstOverlayLayer(map);
         const existing = stacksRef.current.get(stackKey) ?? [];
         const incomingTimes = new Set(frames.map((f) => f.time));
-        // Entferne Frames, die nicht mehr im neuen Set sind.
         for (const e of existing) {
           if (!incomingTimes.has(e.time)) {
             if (map.getLayer(e.layerId)) map.removeLayer(e.layerId);
@@ -505,7 +385,6 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         const next: { sourceId: string; layerId: string; time: string; url: string }[] = [];
         for (const f of frames) {
           let entry = keep.get(f.time);
-          // Falls URL sich änderte (z. B. anderer Layerschlüssel im selben Stack), neu anlegen.
           if (entry && entry.url !== f.url) {
             if (map.getLayer(entry.layerId)) map.removeLayer(entry.layerId);
             if (map.getSource(entry.sourceId)) map.removeSource(entry.sourceId);
@@ -538,7 +417,6 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
           }
           next.push(entry);
         }
-        // Opazitäten setzen — nur aktiver Frame sichtbar, andere bleiben im Cache.
         for (const e of next) {
           const isActive = e.time === activeTime;
           map.setPaintProperty(e.layerId, "raster-opacity", isActive ? opacity : 0);
@@ -547,114 +425,6 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
       };
       if (readyRef.current) apply();
       else map.once("load", apply);
-    },
-    setLightning(strikes) {
-      const map = mapRef.current;
-      if (!map || !readyRef.current) return;
-      const src = map.getSource("lightning-src") as maplibregl.GeoJSONSource | undefined;
-      if (!src) return;
-      const now = Date.now();
-      src.setData({
-        type: "FeatureCollection",
-        features: strikes.map((s) => ({
-          type: "Feature",
-          geometry: { type: "Point", coordinates: [s.lon, s.lat] },
-          properties: { age: classifyAge(s.time, now), time: s.time },
-        })),
-      });
-    },
-    setCellTrack(track) {
-      const map = mapRef.current;
-      if (!map || !readyRef.current) return;
-      const pastSrc = map.getSource("track-past-src") as maplibregl.GeoJSONSource | undefined;
-      const fcSrc = map.getSource("track-forecast-src") as maplibregl.GeoJSONSource | undefined;
-      const ptsSrc = map.getSource("track-points-src") as maplibregl.GeoJSONSource | undefined;
-      if (!pastSrc || !fcSrc || !ptsSrc) return;
-      const empty = { type: "FeatureCollection" as const, features: [] };
-      if (!track || !track.freshCentroid) {
-        pastSrc.setData(empty);
-        fcSrc.setData(empty);
-        ptsSrc.setData(empty);
-        return;
-      }
-      type Feat = {
-        type: "Feature";
-        geometry: { type: "Point"; coordinates: [number, number] };
-        properties: Record<string, unknown>;
-      };
-      const features: Feat[] = [
-        {
-          type: "Feature",
-          geometry: {
-            type: "Point",
-            coordinates: [track.freshCentroid.lon, track.freshCentroid.lat],
-          },
-          properties: {
-            kind: "fresh",
-            label:
-              track.speedKmh != null && track.bearingCompass
-                ? `${Math.round(track.speedKmh)} km/h ${track.bearingCompass}`
-                : "Zelle",
-          },
-        },
-      ];
-      if (track.olderCentroid && track.hasTrack) {
-        pastSrc.setData({
-          type: "FeatureCollection",
-          features: [
-            {
-              type: "Feature",
-              geometry: {
-                type: "LineString",
-                coordinates: [
-                  [track.olderCentroid.lon, track.olderCentroid.lat],
-                  [track.freshCentroid.lon, track.freshCentroid.lat],
-                ],
-              },
-              properties: {},
-            },
-          ],
-        });
-        features.push({
-          type: "Feature",
-          geometry: {
-            type: "Point",
-            coordinates: [track.olderCentroid.lon, track.olderCentroid.lat],
-          },
-          properties: { kind: "older" },
-        });
-      } else {
-        pastSrc.setData(empty);
-      }
-      if (track.forecastPosition) {
-        fcSrc.setData({
-          type: "FeatureCollection",
-          features: [
-            {
-              type: "Feature",
-              geometry: {
-                type: "LineString",
-                coordinates: [
-                  [track.freshCentroid.lon, track.freshCentroid.lat],
-                  [track.forecastPosition.lon, track.forecastPosition.lat],
-                ],
-              },
-              properties: {},
-            },
-          ],
-        });
-        features.push({
-          type: "Feature",
-          geometry: {
-            type: "Point",
-            coordinates: [track.forecastPosition.lon, track.forecastPosition.lat],
-          },
-          properties: { kind: "forecast", label: `+${track.forecastPosition.offsetMinutes} min` },
-        });
-      } else {
-        fcSrc.setData(empty);
-      }
-      ptsSrc.setData({ type: "FeatureCollection", features });
     },
     setFocusRings(center, kmRadii = [10, 25, 50, 100]) {
       const map = mapRef.current;
@@ -714,6 +484,22 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
       if (!map || !readyRef.current) return;
       renderStormCells(map, cellsRef.current, targets);
     },
+    setHailCores(cells) {
+      const map = mapRef.current;
+      if (!map || !readyRef.current) return;
+      const src = map.getSource("hail-core-src") as maplibregl.GeoJSONSource | undefined;
+      if (!src) return;
+      src.setData({
+        type: "FeatureCollection",
+        features: cells
+          .filter((c) => c.hailCoreAreaKm2 >= 1)
+          .map((c) => ({
+            type: "Feature" as const,
+            geometry: { type: "Point" as const, coordinates: [c.centroid.lon, c.centroid.lat] },
+            properties: { id: c.id, areaKm2: c.hailCoreAreaKm2 },
+          })),
+      });
+    },
     getBbox() {
       const map = mapRef.current;
       if (!map) return null;
@@ -732,7 +518,6 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
   return <div ref={containerRef} className="h-full w-full" />;
 });
 
-/** Schreibt Storm-Cell-Geometrien + Labels in alle storm-* GeoJSON-Sources. */
 function renderStormCells(map: MlMap, cells: StormCell[], targets: NamedTarget[]) {
   const coneSrc = map.getSource("storm-cone-src") as maplibregl.GeoJSONSource | undefined;
   const polySrc = map.getSource("storm-poly-src") as maplibregl.GeoJSONSource | undefined;
@@ -740,20 +525,9 @@ function renderStormCells(map: MlMap, cells: StormCell[], targets: NamedTarget[]
   const cenSrc = map.getSource("storm-centroid-src") as maplibregl.GeoJSONSource | undefined;
   const pastSrc = map.getSource("storm-past-src") as maplibregl.GeoJSONSource | undefined;
   const pastHaloSrc = map.getSource("storm-past-halo-src") as maplibregl.GeoJSONSource | undefined;
-  const pastPtsSrc = map.getSource("storm-past-pts-src") as maplibregl.GeoJSONSource | undefined;
   const etaSrc = map.getSource("storm-eta-src") as maplibregl.GeoJSONSource | undefined;
   const arrowSrc = map.getSource("storm-fc-arrow-src") as maplibregl.GeoJSONSource | undefined;
-  if (
-    !coneSrc ||
-    !polySrc ||
-    !fcSrc ||
-    !cenSrc ||
-    !pastSrc ||
-    !pastHaloSrc ||
-    !pastPtsSrc ||
-    !etaSrc ||
-    !arrowSrc
-  )
+  if (!coneSrc || !polySrc || !fcSrc || !cenSrc || !pastSrc || !pastHaloSrc || !etaSrc || !arrowSrc)
     return;
   const empty = { type: "FeatureCollection" as const, features: [] };
   if (cells.length === 0) {
@@ -763,7 +537,6 @@ function renderStormCells(map: MlMap, cells: StormCell[], targets: NamedTarget[]
     cenSrc.setData(empty);
     pastSrc.setData(empty);
     pastHaloSrc.setData(empty);
-    pastPtsSrc.setData(empty);
     etaSrc.setData(empty);
     arrowSrc.setData(empty);
     return;
@@ -782,11 +555,10 @@ function renderStormCells(map: MlMap, cells: StormCell[], targets: NamedTarget[]
   const centroids: AnyFeature[] = [];
   const pastLines: AnyFeature[] = [];
   const pastHalos: AnyFeature[] = [];
-  const pastPts: AnyFeature[] = [];
   const etaPts: AnyFeature[] = [];
   const arrows: AnyFeature[] = [];
   const ETA_OFFSETS = [15, 30, 60];
-  const SEV_RANK: Record<string, number> = { calm: 0, watch: 1, serious: 2, severe: 3 };
+  const SEV_RANK: Record<string, number> = { calm: 0, watch: 1, serious: 2, severe: 3, extreme: 4 };
 
   for (const cell of cells) {
     const color = SEVERITY_COLOR[cell.severity.level];
@@ -805,7 +577,6 @@ function renderStormCells(map: MlMap, cells: StormCell[], targets: NamedTarget[]
         properties: { color, id: cell.id },
       });
     }
-    // Zugbahn: history (älteste → neueste) + aktueller Centroid.
     if (cell.history.length >= 2) {
       const coords: [number, number][] = cell.history.map((h) => [h.lon, h.lat]);
       pastHalos.push({
@@ -817,17 +588,6 @@ function renderStormCells(map: MlMap, cells: StormCell[], targets: NamedTarget[]
         type: "Feature",
         geometry: { type: "LineString", coordinates: coords },
         properties: { color, id: cell.id },
-      });
-      // Nur jeden 2. Punkt rendern, älteste deutlich verblasst.
-      const n = cell.history.length;
-      cell.history.forEach((h, i) => {
-        if (i % 2 !== 0 && i !== n - 1) return;
-        const fade = 0.2 + 0.55 * (i / Math.max(1, n - 1));
-        pastPts.push({
-          type: "Feature",
-          geometry: { type: "Point", coordinates: [h.lon, h.lat] },
-          properties: { color, fade },
-        });
       });
     }
     if (cell.forecast.length > 0) {
@@ -851,7 +611,6 @@ function renderStormCells(map: MlMap, cells: StormCell[], targets: NamedTarget[]
           properties: { color, label: `+${off} min` },
         });
       }
-      // Pfeilspitze am Ende der Forecast-Linie, Rotation aus Bewegungsrichtung.
       const tip = cell.forecast[cell.forecast.length - 1];
       const bearing = cell.motion?.bearingDeg ?? 0;
       arrows.push({
@@ -860,7 +619,6 @@ function renderStormCells(map: MlMap, cells: StormCell[], targets: NamedTarget[]
         properties: { color, bearing },
       });
     }
-    // Zoom-abhängige Labels: kurz / mittel / lang.
     const name = cell.displayName ?? cell.id;
     const badge = SEVERITY_BADGE[cell.severity.level];
     const labelShort = `${name} · ${badge}`;
@@ -871,7 +629,8 @@ function renderStormCells(map: MlMap, cells: StormCell[], targets: NamedTarget[]
     const labelMid = motionLine ? `${labelShort}\n${motionLine}` : labelShort;
     const eta = etaToNearestTarget(cell, targets);
     const etaLine = eta ? `→ ${eta.target.name} ${eta.minutes} min` : null;
-    const labelFull = [labelShort, motionLine, etaLine].filter(Boolean).join("\n");
+    const dbzLine = `${Math.round(cell.topDbz)} dBZ · ${Math.round(cell.areaKm2)} km²`;
+    const labelFull = [labelShort, motionLine, dbzLine, etaLine].filter(Boolean).join("\n");
     centroids.push({
       type: "Feature",
       geometry: { type: "Point", coordinates: [cell.centroid.lon, cell.centroid.lat] },
@@ -885,9 +644,7 @@ function renderStormCells(map: MlMap, cells: StormCell[], targets: NamedTarget[]
           cell.severity.level === "severe" || cell.severity.level === "extreme"
             ? "#7f1d1d"
             : "#0f172a",
-        // Höchste Severity zuerst platzieren (großer sort-key = höhere Priorität bei Kollision).
         rank: SEV_RANK[cell.severity.level] ?? 0,
-        // Negativer Sort-Key, damit MapLibre die wichtigsten zuerst rendert.
         sortKey: -(SEV_RANK[cell.severity.level] ?? 0),
       },
     });
@@ -899,21 +656,15 @@ function renderStormCells(map: MlMap, cells: StormCell[], targets: NamedTarget[]
   cenSrc.setData({ type: "FeatureCollection", features: centroids as unknown as never[] });
   pastSrc.setData({ type: "FeatureCollection", features: pastLines as unknown as never[] });
   pastHaloSrc.setData({ type: "FeatureCollection", features: pastHalos as unknown as never[] });
-  pastPtsSrc.setData({ type: "FeatureCollection", features: pastPts as unknown as never[] });
   etaSrc.setData({ type: "FeatureCollection", features: etaPts as unknown as never[] });
   arrowSrc.setData({ type: "FeatureCollection", features: arrows as unknown as never[] });
 }
 
-/**
- * Liefert die ID der ersten "Overlay"-Schicht (Lightning/Track/Ringe), damit Raster
- * konsistent darunter einsortiert werden. Verhindert, dass neue Frames Blitze überdecken.
- */
 function firstOverlayLayer(map: MlMap): string | undefined {
   for (const id of [
     "storm-cone",
     "storm-past-halo",
     "storm-past-line",
-    "storm-past-pts",
     "storm-poly-fill",
     "storm-poly-line",
     "storm-fc-line",
@@ -922,11 +673,8 @@ function firstOverlayLayer(map: MlMap): string | undefined {
     "storm-eta-labels",
     "storm-centroid",
     "storm-labels",
-    "track-past",
-    "track-forecast",
-    "track-points",
-    "track-labels",
-    "lightning-layer",
+    "hail-core-halo",
+    "hail-core-dot",
     "focus-rings-line",
     "focus-labels",
     "focus-center",

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CloudHail, CloudRain, Zap, Inbox } from "@/components/icons";
+import { CloudHail, CloudRain, Inbox } from "@/components/icons";
 import { getFavoriteHistory } from "@/lib/weather/hazards/history";
 import type { HazardHistoryEvent, HazardKind } from "@/lib/weather/hazards/types";
 import { HAZARD_KIND_LABEL, HAZARD_LEVEL_LABEL, HAZARD_LEVEL_TONE } from "./hazard-tokens";
@@ -8,13 +8,8 @@ import { cn } from "@/lib/utils";
 const ICONS: Record<HazardKind, React.ElementType> = {
   hail: CloudHail,
   flood: CloudRain,
-  lightning: Zap,
 };
 
-/**
- * Hazard-Verlauf für einen Favoriten der letzten N Tage.
- * Aktualisiert sich live, wenn neue Events geschrieben werden.
- */
 export function HazardHistoryList({
   favoriteId,
   days = 14,

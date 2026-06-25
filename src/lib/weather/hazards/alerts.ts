@@ -1,9 +1,5 @@
 /**
- * Hazard-Alerts pro Favorit × Hazard.
- *
- * - Treffer-Logik nutzt den vorhandenen Storm-Forecast-Cone der Zelle.
- * - Pro `favoriteId × kind` eigener Cooldown (default 10 min).
- * - Headline fasst Diagnose in einem Satz zusammen.
+ * Hazard-Alerts pro Favorit × Hazard (hail | flood).
  */
 
 import type { StormCell } from "@/lib/weather/storm/types";
@@ -18,7 +14,7 @@ import {
   type HazardThresholds,
 } from "./types";
 
-const STORAGE_KEY = "meteoflo.hazard-alerts.v1";
+const STORAGE_KEY = "meteoflo.hazard-alerts.v2";
 
 interface StoredMeta {
   lastFiredAt: number;
@@ -45,19 +41,13 @@ function headlineFor(kind: HazardKind, report: HazardCellReport): string {
       return `Hagel bis ~${h.meshsCm.toFixed(1)} cm möglich (POH ${h.pohPercent}%)`;
     return `Hagelrisiko erhöht (POH ${h.pohPercent}%)`;
   }
-  if (kind === "flood") {
-    const f = report.flood;
-    const ret = f.returnYears != null ? ` (T≈${f.returnYears}a)` : "";
-    return `Starkregen ${Math.round(Math.max(f.rrMm.h1, f.rrMm.h3))} mm in kurzer Zeit${ret}`;
-  }
-  const l = report.lightning;
-  if (l.jumpActive)
-    return `Lightning Jump aktiv — Eskalation wahrscheinlich (${l.ratePerMin.toFixed(1)}/min)`;
-  return `Hohe Blitzaktivität ${l.ratePerMin.toFixed(1)}/min`;
+  const f = report.flood;
+  const ret = f.returnYears != null ? ` (T≈${f.returnYears}a)` : "";
+  return `Starkregen ${Math.round(Math.max(f.rrMm.h1, f.rrMm.h3))} mm in kurzer Zeit${ret}`;
 }
 
 function pickKindReport(report: HazardCellReport, kind: HazardKind) {
-  return kind === "hail" ? report.hail : kind === "flood" ? report.flood : report.lightning;
+  return kind === "hail" ? report.hail : report.flood;
 }
 
 export function computeHazardAlerts(
@@ -77,14 +67,12 @@ export function computeHazardAlerts(
   const kindsEnabled: HazardKind[] = [];
   if (thresholds.enableHail) kindsEnabled.push("hail");
   if (thresholds.enableFlood) kindsEnabled.push("flood");
-  if (thresholds.enableLightning) kindsEnabled.push("lightning");
 
   for (const cell of cells) {
     const report = reportById.get(cell.id);
     if (!report) continue;
 
     for (const fav of favorites) {
-      // ETA aus Cone des Storm-Forecasts.
       const dNow = distanceKm(cell.centroid, fav);
       let etaMin: number | null = null;
       let bestDist = dNow;
@@ -125,7 +113,6 @@ export function computeHazardAlerts(
     }
   }
 
-  // GC > 2 h.
   for (const k of Object.keys(meta)) {
     if (now - meta[k].lastFiredAt > 2 * 60 * 60_000) delete meta[k];
   }

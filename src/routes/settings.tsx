@@ -143,13 +143,12 @@ function SettingsPage() {
             </li>
           ))}
         </ul>
-        <p className="mt-2 text-[11px] text-muted-foreground">
-          Standard-Orte (Berlin, Wien, Zürich, Bozen) lassen sich nicht löschen, neue über den
-          Ortswechsler oben hinzufügen.
-        </p>
       </DataCard>
 
-      <DataCard title="Stormtracking" subtitle="Detection aus Blitz-Clustern, Forecast +60 min">
+      <DataCard
+        title="Stormtracking"
+        subtitle="Detection direkt aus DWD-RY-Reflektivität, Forecast +60 min"
+      >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Group label="Status">
             <Choice
@@ -173,6 +172,17 @@ function SettingsPage() {
               }
             >
               Karten-Layer
+            </Choice>
+            <Choice
+              active={settings.storm.showHailCores}
+              onClick={() =>
+                setSettings({
+                  ...settings,
+                  storm: { ...settings.storm, showHailCores: !settings.storm.showHailCores },
+                })
+              }
+            >
+              Hagelkerne
             </Choice>
           </Group>
           <Group label="Alert ETA-Schwelle">
@@ -203,13 +213,14 @@ function SettingsPage() {
           </Group>
         </div>
         <p className="mt-3 text-[11px] text-muted-foreground">
-          Alerts werden ausgelöst, wenn der Forecast-Cone einen Favoriten innerhalb der ETA-Schwelle
-          streift und die Severity mindestens dem gewählten Niveau entspricht. Cooldown 10 min pro
-          Zelle und Favorit.
+          Quelle: DWD RADOLAN-RY (5-min, 1-km). Zell-Detektion über Reflektivitäts-Threshold und
+          Connected-Component-Labeling, Tracking via Centroid-Matching zwischen aufeinanderfolgenden
+          Frames. Alerts feuern, wenn der Forecast-Cone einen Favoriten innerhalb der ETA-Schwelle
+          streift und die Severity passt. Cooldown 10 min pro Zelle und Favorit.
         </p>
       </DataCard>
 
-      <DataCard title="Hazard-Engine" subtitle="Hagel, Sturzflut und Blitz-Jump pro Storm-Zelle">
+      <DataCard title="Hazard-Engine" subtitle="Hagel und Sturzflut pro Storm-Zelle">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Group label="Status">
             <Choice
@@ -246,20 +257,6 @@ function SettingsPage() {
               }
             >
               Sturzflut
-            </Choice>
-            <Choice
-              active={settings.hazards.enableLightning}
-              onClick={() =>
-                setSettings({
-                  ...settings,
-                  hazards: {
-                    ...settings.hazards,
-                    enableLightning: !settings.hazards.enableLightning,
-                  },
-                })
-              }
-            >
-              Blitz-Jump
             </Choice>
           </Group>
           <Group label="Mindeststufe für Alerts">
@@ -312,10 +309,9 @@ function SettingsPage() {
           </Group>
         </div>
         <p className="mt-3 text-[11px] text-muted-foreground">
-          Hagel-POH/MESHS aus CAPE, Lifted Index und Freezing Level (Open-Meteo) plus
-          Reflektivitäts-Proxy aus Blitzdichte. Sturzflut aus Open-Meteo-Niederschlag (1 h / 3 h / 6
-          h / 24 h) gegen KOSTRA-DWD-Schwellen. Blitz-Jump nach Schultz (σ-Anstieg über
-          10-min-Baseline). Alles deterministisch, lokal berechnet.
+          Hagel-POH/MESHS aus Radar-Top-dBZ + Hagelkern-Fläche, gestützt durch CAPE, Lifted Index
+          und Freezing Level (Open-Meteo). Sturzflut aus Open-Meteo-Niederschlag (1 h / 3 h / 6 h /
+          24 h) gegen KOSTRA-DWD-Schwellen.
         </p>
       </DataCard>
 
@@ -348,15 +344,15 @@ function SettingsPage() {
         <ul className="space-y-2 text-xs text-muted-foreground">
           <li>
             <strong className="text-foreground">Open-Meteo</strong> · Forecast, Modellvergleich,
-            abgeleitete Werte. Kostenlos, ohne Key, freie nicht-kommerzielle Nutzung.
+            abgeleitete Werte.
           </li>
           <li>
             <strong className="text-foreground">Bright Sky / DWD Open Data</strong> ·
             Stationsbeobachtungen und offizielle Warnungen für DACH.
           </li>
           <li>
-            <strong className="text-foreground">DWD Radar</strong> · Niederschlagsradar als
-            WMS-Layer für Deutschland und angrenzende Bereiche.
+            <strong className="text-foreground">DWD Radar (WMS)</strong> · RY-Reflektivität als
+            Basis für Karten-Layer und Stormtracking.
           </li>
           <li>
             <strong className="text-foreground">OpenStreetMap</strong> · Karten-Basislayer.

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -6,7 +5,6 @@ import {
   Play,
   SkipBack,
   SkipForward,
-  Zap,
   Radar,
   Globe2,
   MapPin,
@@ -23,27 +21,19 @@ import {
   wmsTileUrl,
   type WmsLayerKey,
 } from "@/lib/weather/sources/dwd-wms";
-import { useLightningStream } from "@/lib/weather/sources/blitzortung";
+import { assessTimeline, type Confidence } from "@/lib/weather/analysis/radar-cockpit";
 import {
-  analyseLightning,
-  assessTimeline,
-  type Confidence,
-} from "@/lib/weather/analysis/radar-cockpit";
+  assessSnapshot,
+  modelVsObservation,
+  triggerLight,
+} from "@/lib/weather/analysis/cockpit-diagnostics";
 import { forecastQuery } from "@/lib/weather/queries";
 import { useLiveNow } from "@/hooks/use-live-now";
 import { liveHourly } from "@/lib/weather/live";
 import {
-  triggerLight,
-  blitzVsRadar,
-  modelVsObservation,
-  cellTracking,
-} from "@/lib/weather/analysis/cockpit-diagnostics";
-import {
-  TriggerLightCard,
-  BlitzRadarCard,
   ModelObsCard,
-  CellTrackCard,
   SourceConfidenceGrid,
+  TriggerLightCard,
   type SourceConfidence,
 } from "./CockpitDiagnostics";
 import { useStormTracking } from "@/lib/weather/storm/use-storm-tracking";
@@ -73,12 +63,10 @@ export function RadarCockpit() {
   const mapRef = useRef<RadarMapHandle>(null);
 
   const [mode, setMode] = useState<Mode>("focus");
-  const [showLightning, setShowLightning] = useState(true);
   const [showWnNowcast, setShowWnNowcast] = useState(false);
   const [showRings, setShowRings] = useState(true);
-  const [scrub, setScrub] = useState<number>(0); // negative = RY past, positive = WN future, in step-units
+  const [scrub, setScrub] = useState<number>(0);
   const [playing, setPlaying] = useState(false);
-  const [bbox, setBbox] = useState<[number, number, number, number] | null>(null);
 
   const ryQ = useQuery({
     queryKey: ["wms", "ry"],
@@ -102,9 +90,6 @@ export function RadarCockpit() {
   });
   const forecastQ = useQuery(forecastQuery(point));
 
-  const lightning = useLightningStream({ enabled: showLightning, bbox: bbox ?? undefined });
-
-  // Aktives Frame bestimmen
   const baseKey = MODE_DEFS[mode].baseLayer;
   const baseTimeline = baseKey === "pi" ? piQ.data : ryQ.data;
   const ryFrames = ryQ.data?.frames ?? [];
@@ -119,15 +104,12 @@ export function RadarCockpit() {
 
   const activeLayer: WmsLayerKey = mode === "europe" ? "pi" : scrub > 0 ? "wn" : "ry";
 
-  // Mode → Karte rezentrieren
   useEffect(() => {
     const def = MODE_DEFS[mode];
     mapRef.current?.flyTo(point.lon, point.lat, def.zoom);
     setScrub(0);
   }, [mode, point.lat, point.lon]);
 
-  // Frame-Stacks: alle relevanten Frames bleiben gemountet → kein Refetch beim Scrubben/Playback.
-  // Wechsel passieren über raster-opacity (Crossfade ~180 ms) statt Source/Layer-Recreate.
   useEffect(() => {
     const m = mapRef.current;
     if (!m) return;
@@ -151,17 +133,10 @@ export function RadarCockpit() {
     m.setFrameStack("radar-wn", wnEntries, activeWn, MODE_DEFS[mode].opacity);
   }, [mode, ryFrames, wnFrames, showWnNowcast, activeFrame, activeLayer]);
 
-  // Fokusringe an aktuellen Ort koppeln.
   useEffect(() => {
     mapRef.current?.setFocusRings(showRings ? { lat: point.lat, lon: point.lon } : null);
   }, [showRings, point.lat, point.lon]);
 
-  // Blitze in die Karte syncen
-  useEffect(() => {
-    mapRef.current?.setLightning(showLightning ? lightning.strikes : []);
-  }, [lightning.strikes, showLightning]);
-
-  // Playback — Frames sind vorgeladen, daher Schritte über reine Opacity-Toggles. ~350 ms wirkt flüssig.
   useEffect(() => {
     if (!playing) return;
     const id = window.setInterval(() => {
@@ -178,39 +153,16 @@ export function RadarCockpit() {
   const minScrub = -Math.max(0, ryFrames.length - 1);
   const maxScrub = wnFrames.length;
 
-  // Diagnose-Eingaben
   const hourlyLive = useMemo(
     () => (forecastQ.data ? liveHourly(forecastQ.data.hourly, now) : []),
     [forecastQ.data, now],
   );
   const nowHour = hourlyLive[0];
-  const lightningInsight = analyseLightning(lightning.strikes, point);
-  const lightning15min = useMemo(() => {
-    const cutoff = Date.now() - 15 * 60_000;
-    return lightning.strikes.filter((s) => s.time >= cutoff).length;
-  }, [lightning.strikes]);
   const ryLagMs = ryQ.data?.lagMs ?? null;
   const ryFreshAndWet =
     ryLagMs != null && ryLagMs <= 15 * 60_000 && (nowHour?.precipitationMm ?? 0) >= 0.3;
 
-  const trig = triggerLight({ nowHour, lightning5min: lightningInsight.last5, ryLagMs });
-  const radarLight = blitzVsRadar({
-    strikes: lightning.strikes,
-    ry: ryQ.data,
-    nowHourPrecipMm: nowHour?.precipitationMm ?? null,
-  });
-  const modelObs = modelVsObservation({ nowHour, lightning15min, ryFreshAndWet });
-  const track = cellTracking({
-    strikes: lightning.strikes,
-    focus: { lat: point.lat, lon: point.lon },
-  });
-
-  // Stormtrack-Geometrie in die Karte schreiben.
-  useEffect(() => {
-    mapRef.current?.setCellTrack(track);
-  }, [track]);
-
-  /* ---------- Stormtracking (Snapshot vom globalen Background-Service) ---------- */
+  /* ---------- Stormtracking ---------- */
   const favorites = useSavedLocations();
   const [settings] = useSettings();
   const stormEnabled = settings.storm.enabled;
@@ -227,11 +179,28 @@ export function RadarCockpit() {
     thresholds: stormThresholds,
   });
 
+  const radarTopDbz = useMemo(
+    () => storm.cells.reduce((m, c) => Math.max(m, c.topDbz), 0) || null,
+    [storm.cells],
+  );
+
+  const trig = triggerLight({ nowHour, radarTopDbz, ryLagMs });
+  const modelObs = modelVsObservation({ nowHour, radarTopDbz, ryFreshAndWet });
+  const snapHealth = assessSnapshot({
+    snapshotStatus: storm.snapshotStatus,
+    cellCount: storm.cells.length,
+    lastFrameTime: storm.lastFrameTime,
+    lastRun: storm.lastRun,
+  });
+
   useEffect(() => {
     mapRef.current?.setStormCells(settings.storm.showLayer ? storm.cells : []);
   }, [storm.cells, settings.storm.showLayer]);
 
-  // Benannte Ziele (aktiver Ort + Favoriten) für ETA-Berechnung in den Zell-Labels.
+  useEffect(() => {
+    mapRef.current?.setHailCores(settings.storm.showHailCores ? storm.cells : []);
+  }, [storm.cells, settings.storm.showHailCores]);
+
   useEffect(() => {
     const targets = [
       { name: point.name, lat: point.lat, lon: point.lon },
@@ -242,7 +211,7 @@ export function RadarCockpit() {
     mapRef.current?.setNamedTargets(targets);
   }, [point.lat, point.lon, point.name, favorites]);
 
-  /* ---------- Hazard-Engine (Hagel, Sturzflut, Blitz-Jump) ---------- */
+  /* ---------- Hazards ---------- */
   const hazardThresholds = useMemo(
     () => ({
       ...DEFAULT_HAZARD_THRESHOLDS,
@@ -252,7 +221,6 @@ export function RadarCockpit() {
       hitKm: settings.hazards.hitKm,
       enableHail: settings.hazards.enableHail,
       enableFlood: settings.hazards.enableFlood,
-      enableLightning: settings.hazards.enableLightning,
     }),
     [
       settings.hazards.minLevel,
@@ -261,7 +229,6 @@ export function RadarCockpit() {
       settings.hazards.hitKm,
       settings.hazards.enableHail,
       settings.hazards.enableFlood,
-      settings.hazards.enableLightning,
     ],
   );
   const hazards = useHazards({
@@ -291,15 +258,10 @@ export function RadarCockpit() {
           : "Layer aus",
     },
     {
-      key: "blitz",
-      label: "Blitz-Stream",
-      state:
-        lightning.status === "open"
-          ? "good"
-          : lightning.status === "connecting"
-            ? "limited"
-            : "missing",
-      detail: `${lightning.status} · ${lightning.strikes.length} im 60-min-Puffer · Einzeleinschläge können falsch lokalisiert sein`,
+      key: "storm",
+      label: snapHealth.label,
+      state: snapHealth.status === "ok" ? "good" : snapHealth.status,
+      detail: snapHealth.detail,
     },
     {
       key: "model",
@@ -330,13 +292,8 @@ export function RadarCockpit() {
           pi={piQ.data ? assessTimeline("PI", piQ.data, WMS_LAYERS.pi.stepMinutes) : null}
         />
         <div className="relative h-[60vh] min-h-[440px] w-full overflow-hidden rounded-xl border border-border bg-muted md:h-[68vh]">
-          <RadarMap
-            ref={mapRef}
-            initialCenter={point}
-            initialZoom={MODE_DEFS[mode].zoom}
-            onBboxChange={setBbox}
-          />
-          <Legend layer={activeLayer} showLightning={showLightning} />
+          <RadarMap ref={mapRef} initialCenter={point} initialZoom={MODE_DEFS[mode].zoom} />
+          <Legend layer={activeLayer} />
           <FrameBadge frame={activeFrame} scrub={scrub} />
         </div>
         <TimeScrubber
@@ -358,8 +315,6 @@ export function RadarCockpit() {
           disabled={ryFrames.length === 0}
         />
         <LayerToolbar
-          showLightning={showLightning}
-          onToggleLightning={() => setShowLightning((v) => !v)}
           showWn={showWnNowcast}
           onToggleWn={() => {
             setShowWnNowcast((v) => {
@@ -369,7 +324,6 @@ export function RadarCockpit() {
           }}
           showRings={showRings}
           onToggleRings={() => setShowRings((v) => !v)}
-          lightningStatus={lightning.status}
         />
       </div>
 
@@ -378,20 +332,16 @@ export function RadarCockpit() {
           cells={storm.cells}
           alerts={storm.alerts}
           activeEta={storm.activeEta}
-          lightningOpen={lightning.status === "open"}
+          snapshotOk={storm.snapshotStatus === "ok"}
           hazardReports={hazards.reports}
         />
         <TriggerLightCard t={trig} />
-        <BlitzRadarCard c={radarLight} />
         <ModelObsCard c={modelObs} />
-        <CellTrackCard t={track} />
         <SourceConfidenceGrid items={sourceConfidence} />
       </aside>
     </div>
   );
 }
-
-/* ------------------------------ Topbar ------------------------------ */
 
 function TopBar({
   mode,
@@ -402,9 +352,9 @@ function TopBar({
 }: {
   mode: Mode;
   onModeChange: (m: Mode) => void;
-  ry: ReturnType<typeof assessTimeline>;
-  wn: ReturnType<typeof assessTimeline> | null;
-  pi: ReturnType<typeof assessTimeline> | null;
+  ry: { label: string; confidence: Confidence; detail: string };
+  wn: { label: string; confidence: Confidence; detail: string } | null;
+  pi: { label: string; confidence: Confidence; detail: string } | null;
 }) {
   return (
     <div className="grid grid-cols-1 items-center gap-2 rounded-xl border border-border bg-card p-2 md:grid-cols-[auto_1fr_auto]">
@@ -429,7 +379,7 @@ function TopBar({
         })}
       </div>
       <div className="hidden text-[11px] text-muted-foreground md:block">
-        Quelle: DWD GeoServer · Karte OSM
+        Quelle: DWD GeoServer · Stormtrack aus RY-Reflektivität
       </div>
       <div className="flex flex-wrap items-center gap-1">
         <HealthPill h={ry} />
@@ -462,8 +412,6 @@ function HealthPill({ h }: { h: { label: string; confidence: Confidence; detail:
   );
 }
 
-/* ------------------------------ Legend + Badge ------------------------------ */
-
 function FrameBadge({ frame, scrub }: { frame: string | null; scrub: number }) {
   const tag = scrub === 0 ? "Jetzt" : scrub < 0 ? "Verlauf" : "Nowcast";
   const tone =
@@ -491,7 +439,7 @@ function FrameBadge({ frame, scrub }: { frame: string | null; scrub: number }) {
   );
 }
 
-function Legend({ layer, showLightning }: { layer: WmsLayerKey; showLightning: boolean }) {
+function Legend({ layer }: { layer: WmsLayerKey }) {
   return (
     <div className="pointer-events-none absolute bottom-3 right-3 rounded-md border border-border bg-background/90 px-2.5 py-1.5 text-[10px] backdrop-blur">
       <div className="mb-1 font-semibold uppercase tracking-wide text-muted-foreground">
@@ -502,29 +450,9 @@ function Legend({ layer, showLightning }: { layer: WmsLayerKey; showLightning: b
           <span key={c} className="h-2.5 w-5 rounded-sm" style={{ backgroundColor: c }} />
         ))}
       </div>
-      {showLightning && (
-        <div className="mt-1.5 flex items-center gap-2 text-muted-foreground">
-          <Zap className="h-3 w-3" />
-          <span className="inline-flex items-center gap-1">
-            <Dot color="#facc15" /> 0–5
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <Dot color="#f59e0b" /> 5–15
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <Dot color="#9ca3af" /> 15–30 min
-          </span>
-        </div>
-      )}
     </div>
   );
 }
-
-function Dot({ color }: { color: string }) {
-  return <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: color }} />;
-}
-
-/* ------------------------------ Time Scrubber ------------------------------ */
 
 function TimeScrubber({
   value,
@@ -606,36 +534,21 @@ function TimeScrubber({
   );
 }
 
-/* ------------------------------ Layer Toolbar ------------------------------ */
-
 function LayerToolbar({
-  showLightning,
-  onToggleLightning,
   showWn,
   onToggleWn,
   showRings,
   onToggleRings,
-  lightningStatus,
 }: {
-  showLightning: boolean;
-  onToggleLightning: () => void;
   showWn: boolean;
   onToggleWn: () => void;
   showRings: boolean;
   onToggleRings: () => void;
-  lightningStatus: string;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-2">
       <LayerChip active={true} label="RY" hint="Beobachtung 5 min" />
       <LayerChip active={showWn} onClick={onToggleWn} label="WN" hint="Nowcast +2 h" />
-      <LayerChip
-        active={showLightning}
-        onClick={onToggleLightning}
-        label="Blitze"
-        icon={<Zap className="h-3 w-3" />}
-        hint={`Blitzortung · ${lightningStatus}`}
-      />
       <LayerChip
         active={showRings}
         onClick={onToggleRings}
@@ -644,7 +557,7 @@ function LayerToolbar({
         hint="10 · 25 · 50 · 100 km"
       />
       <div className="ml-auto inline-flex items-center gap-1 rounded-md bg-muted/50 px-2 py-1 text-[10px] text-muted-foreground">
-        <Activity className="h-3 w-3" /> Animation lädt nur bei Play
+        <Activity className="h-3 w-3" /> Stormtrack 60-s-Polling
       </div>
     </div>
   );
@@ -681,146 +594,4 @@ function LayerChip({
       <span className="hidden text-[10px] opacity-80 md:inline">{hint}</span>
     </button>
   );
-}
-
-/* ------------------------------ Analysis Rail ------------------------------ */
-
-function AnalysisRail({
-  ry,
-  wn,
-  pi,
-  mode,
-  lightning,
-  lightningStatus,
-}: {
-  ry: ReturnType<typeof useQuery<any>>["data"];
-  wn: ReturnType<typeof useQuery<any>>["data"];
-  pi: ReturnType<typeof useQuery<any>>["data"];
-  mode: Mode;
-  lightning: ReturnType<typeof analyseLightning>;
-  lightningStatus: string;
-}) {
-  const ryAge = ry?.latest
-    ? Math.round((Date.now() - new Date(ry.latest).getTime()) / 60000)
-    : null;
-  const wnAvailable = wn?.frames?.length ?? 0;
-
-  return (
-    <aside className="flex flex-col gap-3">
-      <RailCard title="Jetzt" tone="primary">
-        {ryAge != null ? (
-          <Line label="Radar RY" value={`vor ${ryAge} min aktualisiert`} />
-        ) : (
-          <Line label="Radar RY" value="lädt…" />
-        )}
-        <Line label="Blitze (5 min)" value={lightning.last5 > 0 ? `${lightning.last5}` : "keine"} />
-        {lightning.bearingFromUser && lightning.last5 > 0 && (
-          <Line label="Schwerpunkt" value={`Richtung ${lightning.bearingFromUser}`} />
-        )}
-      </RailCard>
-
-      <RailCard title="Nächste 30 min">
-        {wnAvailable > 0 ? (
-          <>
-            <Line label="Nowcast WN" value={`${Math.min(6, wnAvailable)} Frames geladen`} />
-            <Line label="Blitztrend" value={trendLabel(lightning.trend)} />
-          </>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            Nowcast laden, indem WN im Zeitregler aktiviert wird.
-          </p>
-        )}
-      </RailCard>
-
-      <RailCard title="Nächste 2 h">
-        {wnAvailable > 0 ? (
-          <Line label="Reichweite" value={`+${wnAvailable * 5} min Nowcast verfügbar`} />
-        ) : (
-          <p className="text-xs text-muted-foreground">Aktiviere WN für Kurzfristausblick.</p>
-        )}
-        {mode === "europe" && pi?.latest && (
-          <Line
-            label="PI Composite"
-            value={`Frame ${new Date(pi.latest).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}`}
-          />
-        )}
-      </RailCard>
-
-      <RailCard title="Datenvertrauen" tone="muted">
-        <Line label="RY" value={confidenceLabel(ry)} />
-        <Line label="WN" value={confidenceLabel(wn)} />
-        {mode === "europe" && <Line label="PI" value={confidenceLabel(pi)} />}
-        <Line label="Blitz-Stream" value={lightningStatusLabel(lightningStatus)} />
-      </RailCard>
-    </aside>
-  );
-}
-
-function RailCard({
-  title,
-  children,
-  tone = "default",
-}: {
-  title: string;
-  children: React.ReactNode;
-  tone?: "default" | "primary" | "muted";
-}) {
-  const toneClass =
-    tone === "primary"
-      ? "border-primary/40 bg-primary/5"
-      : tone === "muted"
-        ? "bg-muted/40"
-        : "bg-card";
-  return (
-    <section className={cn("rounded-xl border border-border p-3", toneClass)}>
-      <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-        {title}
-      </h3>
-      <div className="grid gap-1.5">{children}</div>
-    </section>
-  );
-}
-
-function Line({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-2 text-[12px]">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="truncate text-right font-mono text-foreground">{value}</span>
-    </div>
-  );
-}
-
-function trendLabel(t: ReturnType<typeof analyseLightning>["trend"]) {
-  switch (t) {
-    case "rising":
-      return "steigend";
-    case "falling":
-      return "fallend";
-    case "steady":
-      return "stabil";
-    default:
-      return "keine Aktivität";
-  }
-}
-
-function confidenceLabel(t: any): string {
-  if (!t || !t.latest) return "keine Daten";
-  const lag = Math.round((Date.now() - new Date(t.latest).getTime()) / 60000);
-  const gap = t.gaps > 0 ? ` · ${t.gaps} Lücke(n)` : "";
-  return `${lag} min alt${gap}`;
-}
-
-function lightningStatusLabel(s: string) {
-  switch (s) {
-    case "open":
-      return "live";
-    case "connecting":
-      return "verbinde…";
-    case "closed":
-      return "getrennt";
-    case "error":
-      return "Fehler";
-    default:
-      return "aus";
-  }
 }

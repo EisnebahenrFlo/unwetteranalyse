@@ -1,6 +1,5 @@
 /**
  * 24-Stunden-Bewertung mit Stunden-Auflösung.
- * Gewichtung Tag: Konvektion + Gewitter > Wind/Regen.
  */
 
 import type { HourlyPoint } from "../types";
@@ -54,7 +53,6 @@ export interface TodayInput {
   hourly: HourlyPoint[];
   liveObsAgeMinutes?: number | null;
   radarAgeMinutes?: number | null;
-  lightningConnected?: boolean;
   modelObsConsistent?: boolean | null;
 }
 
@@ -78,9 +76,7 @@ export function buildToday(input: TodayInput): TodayResult {
     };
   });
 
-  // Peak: maximaler Stundenscore
   const peak = hours.reduce((b, h) => (h.total > b.total ? h : b), hours[0]);
-  // Peak-Fenster: zusammenhängender Bereich um den Peak, in dem Score ≥ 75 % des Peaks
   let peakWindow: TodayResult["peakWindow"] = null;
   if (peak && peak.total >= 20) {
     const thresh = Math.max(20, peak.total * 0.75);
@@ -104,7 +100,6 @@ export function buildToday(input: TodayInput): TodayResult {
     hasConvective: horizon.some((h) => h.cape != null || h.liftedIndex != null),
     liveObsAgeMinutes: input.liveObsAgeMinutes ?? null,
     radarAgeMinutes: input.radarAgeMinutes ?? null,
-    lightningConnected: input.lightningConnected ?? false,
     modelObsConsistent: input.modelObsConsistent ?? null,
   };
   const data = dataConfidence(ctx);

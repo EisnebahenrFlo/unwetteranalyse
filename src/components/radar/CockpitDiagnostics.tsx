@@ -11,13 +11,9 @@ import {
 import { cn } from "@/lib/utils";
 import type {
   TriggerLight,
-  RadarLightningCheck,
   ModelObsCheck,
-  CellTrack,
   Verdict,
 } from "@/lib/weather/analysis/cockpit-diagnostics";
-
-/* -------------------- Trigger-Ampel -------------------- */
 
 export function TriggerLightCard({ t }: { t: TriggerLight }) {
   const rows: { key: keyof TriggerLight; label: string; icon: typeof Droplets }[] = [
@@ -25,7 +21,7 @@ export function TriggerLightCard({ t }: { t: TriggerLight }) {
     { key: "instability", label: "Instabilität", icon: Flame },
     { key: "lift", label: "Hebung / Trigger", icon: MoveUpRight },
     { key: "precipSignal", label: "Niederschlag", icon: Radio },
-    { key: "liveConfirm", label: "Live-Signal", icon: Zap },
+    { key: "liveConfirm", label: "Radar-Echo", icon: Zap },
   ];
   return (
     <section className="rounded-xl border border-border bg-card p-3">
@@ -36,7 +32,7 @@ export function TriggerLightCard({ t }: { t: TriggerLight }) {
           const Icon = r.icon;
           return (
             <li
-              key={r.key}
+              key={String(r.key)}
               className="grid grid-cols-[16px_1fr_auto] items-center gap-2 text-[12px]"
             >
               <Icon className="h-3.5 w-3.5 text-muted-foreground" />
@@ -47,8 +43,8 @@ export function TriggerLightCard({ t }: { t: TriggerLight }) {
         })}
       </ul>
       <p className="mt-2 text-[10px] text-muted-foreground">
-        Schwellen: CAPE ≥ 500/1500, LI ≤ −2/−4, Spread T–Td ≤ 6/3 K, Böen ≥ 12/18 m/s, Blitze ≥ 1/5
-        in 5 min.
+        Schwellen: CAPE ≥ 500/1500, LI ≤ −2/−4, Spread T–Td ≤ 6/3 K, Böen ≥ 12/18 m/s, Radar ≥
+        40/50 dBZ.
       </p>
     </section>
   );
@@ -87,40 +83,6 @@ function VerdictPill({ v }: { v: Verdict }) {
   );
 }
 
-/* -------------------- Blitz vs Radar -------------------- */
-
-export function BlitzRadarCard({ c }: { c: RadarLightningCheck }) {
-  const tone =
-    c.state === "consistent"
-      ? "border-rose-500/40 bg-rose-500/5"
-      : c.state === "lightning_no_echo"
-        ? "border-amber-500/40 bg-amber-500/5"
-        : c.state === "echo_no_lightning"
-          ? "border-sky-500/40 bg-sky-500/5"
-          : c.state === "quiet"
-            ? "border-emerald-500/30 bg-emerald-500/5"
-            : "border-border bg-card";
-  const stateLabel: Record<RadarLightningCheck["state"], string> = {
-    consistent: "Konsistent",
-    echo_no_lightning: "Echo ohne Blitz",
-    lightning_no_echo: "Blitz ohne Echo",
-    quiet: "Ruhig",
-    unknown: "Unklar",
-  };
-  return (
-    <section className={cn("rounded-xl border p-3", tone)}>
-      <Header title="Blitz ↔ Radar" subtitle={stateLabel[c.state]} />
-      <p className="mt-1 text-[12px] text-foreground">{c.detail}</p>
-      <div className="mt-2 grid grid-cols-2 gap-1 font-mono text-[11px] text-muted-foreground">
-        <Line label="Blitze 15 min" value={`${c.lightning15min}`} />
-        <Line label="RY-Alter" value={c.ryLagMin != null ? `${c.ryLagMin} min` : "—"} />
-      </div>
-    </section>
-  );
-}
-
-/* -------------------- Modell vs Beobachtung -------------------- */
-
 export function ModelObsCard({ c }: { c: ModelObsCheck }) {
   const tone =
     c.state === "match"
@@ -131,14 +93,14 @@ export function ModelObsCard({ c }: { c: ModelObsCheck }) {
           ? "border-rose-500/40 bg-rose-500/5"
           : "border-border bg-card";
   const label: Record<ModelObsCheck["state"], string> = {
-    match: "Modell und Beobachtung passen",
+    match: "Modell und Radar passen",
     model_overcalls: "Modell überschätzt",
     model_underestimates: "Modell unterschätzt",
     unknown: "Keine Aussage möglich",
   };
   return (
     <section className={cn("rounded-xl border p-3", tone)}>
-      <Header title="Modell ↔ Beobachtung" subtitle={label[c.state]} />
+      <Header title="Modell ↔ Radar" subtitle={label[c.state]} />
       <p className="mt-1 text-[12px] text-foreground">{c.detail}</p>
       <div className="mt-2 grid grid-cols-2 gap-1 font-mono text-[11px] text-muted-foreground">
         <Line label="Modell erwartet" value={c.modelExpectsConvection ? "Konvektion" : "—"} />
@@ -147,48 +109,6 @@ export function ModelObsCard({ c }: { c: ModelObsCheck }) {
     </section>
   );
 }
-
-/* -------------------- Cell-Tracking Light -------------------- */
-
-export function CellTrackCard({ t }: { t: CellTrack }) {
-  return (
-    <section className="rounded-xl border border-border bg-card p-3">
-      <Header
-        title="Zell-Tracking"
-        subtitle={
-          t.hasTrack ? "Bewegungsschätzung aus Blitzschwerpunkten" : "Wartet auf genügend Blitze"
-        }
-      />
-      {t.hasTrack ? (
-        <div className="mt-1 grid gap-1 font-mono text-[12px]">
-          <Line
-            label="Richtung"
-            value={`${t.bearingCompass} (${Math.round(t.bearingDeg ?? 0)}°)`}
-          />
-          <Line
-            label="Geschwindigkeit"
-            value={t.speedKmh != null ? `${t.speedKmh.toFixed(0)} km/h` : "—"}
-          />
-          <Line
-            label="Abstand Fokus"
-            value={t.distanceKm != null ? `${t.distanceKm.toFixed(0)} km` : "—"}
-          />
-          <Line
-            label="Annäherung"
-            value={t.approachingFocus ? `ja · ETA ${t.etaMinutes ?? "—"} min` : "nein"}
-          />
-        </div>
-      ) : (
-        <p className="mt-1 text-[12px] text-muted-foreground">{t.detail}</p>
-      )}
-      <p className="mt-2 text-[10px] text-muted-foreground">
-        Vereinfachte Heuristik aus Blitzortung. Kein vollwertiges Nowcasting.
-      </p>
-    </section>
-  );
-}
-
-/* -------------------- Confidence by Source -------------------- */
 
 export interface SourceConfidence {
   key: string;
@@ -228,8 +148,6 @@ export function SourceConfidenceGrid({ items }: { items: SourceConfidence[] }) {
     </section>
   );
 }
-
-/* -------------------- shared -------------------- */
 
 function Header({ title, subtitle }: { title: string; subtitle: string }) {
   return (
