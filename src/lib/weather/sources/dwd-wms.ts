@@ -5,6 +5,7 @@
  */
 const DWD_OWS = "https://maps.dwd.de/geoserver/dwd/ows";
 const DWD_WMS = "https://maps.dwd.de/geoserver/dwd/wms";
+import { parseWmsTimeDimension } from "./wms-capabilities";
 
 export type WmsLayerKey = "ry" | "wn" | "pi";
 
@@ -73,10 +74,8 @@ export async function fetchWmsTimeline(layer: WmsLayerKey): Promise<WmsTimeline>
   if (!res.ok) throw new Error(`DWD WMS HTTP ${res.status}`);
   const xml = await res.text();
 
-  const escapedName = def.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(`<Name>${escapedName}</Name>[\\s\\S]*?<Dimension name="time"[^>]*>([^<]+)</Dimension>`);
-  const m = xml.match(re);
-  const frames = m ? expandTime(m[1]).slice(-def.maxFrames) : [];
+  const raw = parseWmsTimeDimension(xml, def.name);
+  const frames = raw ? expandTime(raw).slice(-def.maxFrames) : [];
 
   const stepMs = def.stepMinutes * 60_000;
   const latest = frames[frames.length - 1] ?? null;
