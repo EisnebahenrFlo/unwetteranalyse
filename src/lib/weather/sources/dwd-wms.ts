@@ -111,6 +111,10 @@ export function wmsTileUrl(layer: WmsLayerKey, time?: string | null) {
   url.searchParams.set("FORMAT", "image/png");
   url.searchParams.set("TRANSPARENT", "true");
   url.searchParams.set("LAYERS", def.name);
+  // STYLES leer = GeoServer-Default-Style. Die Farbskala-Annahme in
+  // src/lib/weather/radar/palette.ts hängt davon ab. TODO: echte Farbskala
+  // via WMS GetCapabilities / GetLegendGraphic verifizieren:
+  //   https://maps.dwd.de/geoserver/dwd/ows?service=WMS&request=GetCapabilities
   url.searchParams.set("STYLES", "");
   url.searchParams.set("SRS", "EPSG:3857");
   url.searchParams.set("WIDTH", "256");
