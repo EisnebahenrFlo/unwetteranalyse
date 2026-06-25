@@ -689,6 +689,7 @@ function firstOverlayLayer(map: MlMap): string | undefined {
     "storm-labels",
     "hail-core-halo",
     "hail-core-dot",
+    "focus-rings-casing",
     "focus-rings-line",
     "focus-labels",
     "focus-center",
