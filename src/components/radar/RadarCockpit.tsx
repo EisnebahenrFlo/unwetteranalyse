@@ -288,7 +288,7 @@ export function RadarCockpit() {
 /* ------------------------------ Topbar ------------------------------ */
 
 function TopBar({
-  mode, onModeChange, ry, wn, pi, qy,
+  mode, onModeChange, ry, wn, pi,
 }: {
   mode: Mode;
   onModeChange: (m: Mode) => void;
