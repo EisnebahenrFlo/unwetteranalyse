@@ -135,7 +135,7 @@ function Dashboard() {
   ];
 
   return (
-    <div className="flex flex-col gap-4 md:gap-6">
+    <div className="flex flex-col gap-6 md:gap-10">
       <DataFreshnessStrip
         entries={[
           { label: "Modell", updatedAt: bundle.meta.updatedAt, warnAfterMin: 120 },
@@ -162,7 +162,7 @@ function Dashboard() {
       <StickySubnav items={SECTIONS} />
 
       {/* 1. Lage */}
-      <section className="flex flex-col gap-3">
+      <section className="flex flex-col gap-4">
         <SectionHeader
           id="lage"
           eyebrow="01 · Lage"
@@ -172,51 +172,50 @@ function Dashboard() {
         <SituationHeadline bundle={bundle} officialAlerts={officialAlerts} />
       </section>
 
-      {/* 2. Gefahren */}
-      <section className="flex flex-col gap-3">
-        <SectionHeader
-          id="gefahren"
-          eyebrow="02 · Gefahren"
-          title="Gefahrenbewertung"
-          question="Welche Risiken sind priorisiert relevant, mit welcher Konfidenz?"
-        />
-        <HazardPriorityList bundle={bundle} officialAlerts={officialAlerts} />
-      </section>
+      {/* 2.–5. Sekundärbereich: zweispaltig ab lg, ruhig und gedämpft */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
+        <section className="flex flex-col gap-3">
+          <SectionHeader
+            id="gefahren"
+            eyebrow="02 · Gefahren"
+            title="Gefahrenbewertung"
+            question="Welche Risiken sind priorisiert relevant, mit welcher Konfidenz?"
+          />
+          <HazardPriorityList bundle={bundle} officialAlerts={officialAlerts} />
+        </section>
 
-      {/* 3. Kurzfrist */}
-      <section className="flex flex-col gap-3">
-        <SectionHeader
-          id="nowcast"
-          eyebrow="03 · Nowcast"
-          title="Kurzfrist 0–2 Stunden"
-          question="Verschärft sich die Lage, entspannt sie sich, verlagert sie sich?"
-        />
-        <ShortTermPanel bundle={bundle} />
-      </section>
+        <section className="flex flex-col gap-3">
+          <SectionHeader
+            id="nowcast"
+            eyebrow="03 · Nowcast"
+            title="Kurzfrist 0–2 Stunden"
+            question="Verschärft sich die Lage, entspannt sie sich, verlagert sie sich?"
+          />
+          <ShortTermPanel bundle={bundle} />
+        </section>
 
-      {/* 4. Live */}
-      <section className="flex flex-col gap-3">
-        <SectionHeader
-          id="live"
-          eyebrow="04 · Live"
-          title="Live-Signale"
-          question="Was bestätigen Radar und Beobachtung gerade?"
-        />
-        <LiveSignals point={point} bundle={bundle} bsCurrent={bsCurrent.data} bsMeta={bsMeta} />
-      </section>
+        <section className="flex flex-col gap-3">
+          <SectionHeader
+            id="live"
+            eyebrow="04 · Live"
+            title="Live-Signale"
+            question="Was bestätigen Radar und Beobachtung gerade?"
+          />
+          <LiveSignals point={point} bundle={bundle} bsCurrent={bsCurrent.data} bsMeta={bsMeta} />
+        </section>
 
-      {/* 5. Trend */}
-      <section className="flex flex-col gap-3">
-        <SectionHeader
-          id="trend"
-          eyebrow="05 · Trend"
-          title="Trend & Ausblick"
-          question="Wie entwickelt sich die Lage über die nächsten Stunden und Tage?"
-        />
-        <TrendStrip bundle={bundle} />
-      </section>
+        <section className="flex flex-col gap-3">
+          <SectionHeader
+            id="trend"
+            eyebrow="05 · Trend"
+            title="Trend & Ausblick"
+            question="Wie entwickelt sich die Lage über die nächsten Stunden und Tage?"
+          />
+          <TrendStrip bundle={bundle} />
+        </section>
+      </div>
 
-      {/* 6. System */}
+      {/* 6. System spannt volle Breite */}
       <section className="flex flex-col gap-3">
         <SectionHeader
           id="system"

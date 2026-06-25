@@ -96,15 +96,18 @@ function AnalysisPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-3 md:gap-4">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight">Analyse</h1>
-          <p className="text-xs text-muted-foreground">
-            Nowcast 0–2 h · Heute 0–24 h · Parameter — jeder Score ist nachvollziehbar.
-          </p>
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 md:gap-8">
+      <header className="flex flex-col gap-1">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          Analyse
         </div>
-      </div>
+        <h1 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">
+          Bewertung in drei Ebenen
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Nowcast 0–2 h · Heute 0–24 h · Parameter. Jeder Score ist nachvollziehbar.
+        </p>
+      </header>
 
       <SegmentedTabs<"nowcast" | "today" | "params">
         value={tab}

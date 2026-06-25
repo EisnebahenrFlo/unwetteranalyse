@@ -17,15 +17,7 @@ export const Route = createFileRoute("/map")({
 
 function MapPage() {
   return (
-    <div className="flex flex-col gap-3">
-      <header className="flex items-baseline justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="truncate text-lg font-semibold tracking-tight">Radar-Cockpit</h1>
-          <p className="truncate text-xs text-muted-foreground">
-            DWD RY · WN-Nowcast · PI Mitteleuropa · Stormtrack aus echter Reflektivität.
-          </p>
-        </div>
-      </header>
+    <div className="flex flex-col">
       <RadarCockpit />
     </div>
   );

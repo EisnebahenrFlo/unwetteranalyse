@@ -70,13 +70,18 @@ function SettingsPage() {
   const saved = useSavedLocations();
 
   return (
-    <div className="flex flex-col gap-3">
-      <div>
-        <h1 className="text-lg font-semibold tracking-tight">Einstellungen</h1>
-        <p className="text-xs text-muted-foreground">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
+      <header className="flex flex-col gap-1">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          Einstellungen
+        </div>
+        <h1 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">
+          Konfiguration
+        </h1>
+        <p className="text-sm text-muted-foreground">
           Alles lokal in deinem Browser, kein Login, kein Sync.
         </p>
-      </div>
+      </header>
 
       <DataCard title="Einheiten">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

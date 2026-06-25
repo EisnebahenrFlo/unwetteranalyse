@@ -24,7 +24,7 @@ export function TriggerLightCard({ t }: { t: TriggerLight }) {
     { key: "liveConfirm", label: "Radar-Echo", icon: Zap },
   ];
   return (
-    <section className="rounded-xl border border-border bg-card p-3">
+    <section className="rounded-xl border border-border/60 bg-card/75 p-3 shadow-elegant backdrop-blur-xl">
       <Header title="Auslöser-Ampel" subtitle={t.summary} />
       <ul className="mt-2 grid gap-1.5">
         {rows.map((r) => {
@@ -86,12 +86,12 @@ function VerdictPill({ v }: { v: Verdict }) {
 export function ModelObsCard({ c }: { c: ModelObsCheck }) {
   const tone =
     c.state === "match"
-      ? "border-emerald-500/30 bg-emerald-500/5"
+      ? "border-emerald-500/30 bg-emerald-500/10"
       : c.state === "model_overcalls"
-        ? "border-amber-500/40 bg-amber-500/5"
+        ? "border-amber-500/40 bg-amber-500/10"
         : c.state === "model_underestimates"
-          ? "border-rose-500/40 bg-rose-500/5"
-          : "border-border bg-card";
+          ? "border-rose-500/40 bg-rose-500/10"
+          : "border-border/60 bg-card/75";
   const label: Record<ModelObsCheck["state"], string> = {
     match: "Modell und Radar passen",
     model_overcalls: "Modell überschätzt",
@@ -99,7 +99,7 @@ export function ModelObsCard({ c }: { c: ModelObsCheck }) {
     unknown: "Keine Aussage möglich",
   };
   return (
-    <section className={cn("rounded-xl border p-3", tone)}>
+    <section className={cn("rounded-xl border p-3 shadow-elegant backdrop-blur-xl", tone)}>
       <Header title="Modell ↔ Radar" subtitle={label[c.state]} />
       <p className="mt-1 text-[12px] text-foreground">{c.detail}</p>
       <div className="mt-2 grid grid-cols-2 gap-1 font-mono text-[11px] text-muted-foreground">
@@ -119,7 +119,7 @@ export interface SourceConfidence {
 
 export function SourceConfidenceGrid({ items }: { items: SourceConfidence[] }) {
   return (
-    <section className="rounded-xl border border-border bg-card p-3">
+    <section className="rounded-xl border border-border/60 bg-card/75 p-3 shadow-elegant backdrop-blur-xl">
       <Header title="Vertrauen je Quelle" subtitle="Pro Datenstrom separat bewertet." />
       <ul className="mt-2 grid gap-1">
         {items.map((it) => {

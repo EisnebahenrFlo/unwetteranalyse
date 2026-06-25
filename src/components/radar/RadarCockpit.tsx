@@ -276,58 +276,91 @@ export function RadarCockpit() {
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="flex min-w-0 flex-col gap-2">
-        {storm.alerts.length > 0 && <StormAlertBanner alerts={storm.alerts} />}
-        {hazards.alerts.length > 0 && <HazardAlertBanner alerts={hazards.alerts} />}
-        <TopBar
-          mode={mode}
-          onModeChange={setMode}
-          ry={
-            ryQ.data
-              ? assessTimeline("RY", ryQ.data, WMS_LAYERS.ry.stepMinutes)
-              : { label: "RY", confidence: "missing", detail: "lädt…" }
-          }
-          wn={wnQ.data ? assessTimeline("WN", wnQ.data, WMS_LAYERS.wn.stepMinutes) : null}
-          pi={piQ.data ? assessTimeline("PI", piQ.data, WMS_LAYERS.pi.stepMinutes) : null}
-        />
-        <div className="relative h-[60vh] min-h-[440px] w-full overflow-hidden rounded-xl border border-border bg-muted md:h-[68vh]">
-          <RadarMap ref={mapRef} initialCenter={point} initialZoom={MODE_DEFS[mode].zoom} />
-          <Legend layer={activeLayer} />
-          <FrameBadge frame={activeFrame} scrub={scrub} />
+    <div className="relative -mx-3 md:-mx-6">
+      {/* Vollflächige Karte als Bühne; Panels schweben als Glas-Karten darüber. */}
+      <div className="relative h-[calc(100vh-12rem)] min-h-[520px] w-full overflow-hidden bg-muted md:h-[calc(100vh-10rem)]">
+        <RadarMap ref={mapRef} initialCenter={point} initialZoom={MODE_DEFS[mode].zoom} />
+
+        {/* Top-Banner für Alerts (über der Karte, kompakt) */}
+        {(storm.alerts.length > 0 || hazards.alerts.length > 0) && (
+          <div className="pointer-events-none absolute inset-x-3 top-3 z-20 flex flex-col gap-2 md:inset-x-6">
+            <div className="pointer-events-auto">
+              {storm.alerts.length > 0 && <StormAlertBanner alerts={storm.alerts} />}
+            </div>
+            <div className="pointer-events-auto">
+              {hazards.alerts.length > 0 && <HazardAlertBanner alerts={hazards.alerts} />}
+            </div>
+          </div>
+        )}
+
+        {/* TopBar als schwebende Glas-Karte */}
+        <div className="pointer-events-auto absolute left-3 right-3 top-3 z-10 md:left-6 md:right-auto md:max-w-[640px]">
+          <TopBar
+            mode={mode}
+            onModeChange={setMode}
+            ry={
+              ryQ.data
+                ? assessTimeline("RY", ryQ.data, WMS_LAYERS.ry.stepMinutes)
+                : { label: "RY", confidence: "missing", detail: "lädt…" }
+            }
+            wn={wnQ.data ? assessTimeline("WN", wnQ.data, WMS_LAYERS.wn.stepMinutes) : null}
+            pi={piQ.data ? assessTimeline("PI", piQ.data, WMS_LAYERS.pi.stepMinutes) : null}
+          />
         </div>
-        <TimeScrubber
-          value={scrub}
-          min={minScrub}
-          max={maxScrub}
-          stepMinutes={5}
-          playing={playing}
-          onChange={(v) => {
-            setPlaying(false);
-            setScrub(v);
-            if (v > 0) setShowWnNowcast(true);
-          }}
-          onPlay={() => setPlaying((p) => !p)}
-          onJumpNow={() => {
-            setPlaying(false);
-            setScrub(0);
-          }}
-          disabled={ryFrames.length === 0}
-        />
-        <LayerToolbar
-          showWn={showWnNowcast}
-          onToggleWn={() => {
-            setShowWnNowcast((v) => {
-              if (v) setScrub(0);
-              return !v;
-            });
-          }}
-          showRings={showRings}
-          onToggleRings={() => setShowRings((v) => !v)}
-        />
+
+        <Legend layer={activeLayer} />
+        <FrameBadge frame={activeFrame} scrub={scrub} />
+
+        {/* Bedienleiste unten: Scrubber + Layer */}
+        <div className="pointer-events-auto absolute inset-x-3 bottom-3 z-10 flex flex-col gap-2 md:inset-x-6 md:right-[360px]">
+          <TimeScrubber
+            value={scrub}
+            min={minScrub}
+            max={maxScrub}
+            stepMinutes={5}
+            playing={playing}
+            onChange={(v) => {
+              setPlaying(false);
+              setScrub(v);
+              if (v > 0) setShowWnNowcast(true);
+            }}
+            onPlay={() => setPlaying((p) => !p)}
+            onJumpNow={() => {
+              setPlaying(false);
+              setScrub(0);
+            }}
+            disabled={ryFrames.length === 0}
+          />
+          <LayerToolbar
+            showWn={showWnNowcast}
+            onToggleWn={() => {
+              setShowWnNowcast((v) => {
+                if (v) setScrub(0);
+                return !v;
+              });
+            }}
+            showRings={showRings}
+            onToggleRings={() => setShowRings((v) => !v)}
+          />
+        </div>
+
+        {/* Aside als schwebende Glas-Spalte rechts; auf Mobile unter der Karte */}
+        <aside className="pointer-events-auto absolute right-3 top-20 z-10 hidden max-h-[calc(100%-9rem)] w-[340px] flex-col gap-3 overflow-y-auto pb-32 md:right-6 lg:flex">
+          <StormPanel
+            cells={storm.cells}
+            alerts={storm.alerts}
+            activeEta={storm.activeEta}
+            snapshotOk={storm.snapshotStatus === "ok"}
+            hazardReports={hazards.reports}
+          />
+          <TriggerLightCard t={trig} />
+          <ModelObsCard c={modelObs} />
+          <SourceConfidenceGrid items={sourceConfidence} />
+        </aside>
       </div>
 
-      <aside className="flex flex-col gap-3">
+      {/* Mobile / Tablet: Panels gestapelt unter der Karte */}
+      <div className="flex flex-col gap-3 px-3 py-3 md:px-6 lg:hidden">
         <StormPanel
           cells={storm.cells}
           alerts={storm.alerts}
@@ -338,7 +371,7 @@ export function RadarCockpit() {
         <TriggerLightCard t={trig} />
         <ModelObsCard c={modelObs} />
         <SourceConfidenceGrid items={sourceConfidence} />
-      </aside>
+      </div>
     </div>
   );
 }
@@ -357,7 +390,7 @@ function TopBar({
   pi: { label: string; confidence: Confidence; detail: string } | null;
 }) {
   return (
-    <div className="grid grid-cols-1 items-center gap-2 rounded-xl border border-border bg-card p-2 md:grid-cols-[auto_1fr_auto]">
+    <div className="grid grid-cols-1 items-center gap-2 rounded-xl border border-border/60 bg-card/70 p-2 shadow-elegant backdrop-blur-xl md:grid-cols-[auto_1fr_auto]">
       <div className="flex gap-1">
         {(Object.keys(MODE_DEFS) as Mode[]).map((m) => {
           const Icon = MODE_DEFS[m].icon;
@@ -478,7 +511,7 @@ function TimeScrubber({
   const offsetMin = value * stepMinutes;
   const label = offsetMin === 0 ? "Jetzt" : `${offsetMin > 0 ? "+" : ""}${offsetMin} min`;
   return (
-    <div className="grid grid-cols-[auto_auto_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-xl border border-border bg-card px-2 py-2">
+    <div className="grid grid-cols-[auto_auto_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-xl border border-border/60 bg-card/70 px-2 py-2 shadow-elegant backdrop-blur-xl">
       <Button
         size="icon"
         variant="ghost"
@@ -546,7 +579,7 @@ function LayerToolbar({
   onToggleRings: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-2">
+    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-card/70 p-2 shadow-elegant backdrop-blur-xl">
       <LayerChip active={true} label="RY" hint="Beobachtung 5 min" />
       <LayerChip active={showWn} onClick={onToggleWn} label="WN" hint="Nowcast +2 h" />
       <LayerChip
