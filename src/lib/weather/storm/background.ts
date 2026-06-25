@@ -160,7 +160,11 @@ class StormBackgroundService {
 
     const cells = baseCells.map((cell) => {
       const sample = this.cellEnv.get(gridKey(cell.centroid.lat, cell.centroid.lon));
-      if (!sample || (sample.cape == null && sample.liftedIndex == null)) return cell;
+      if (
+        !sample ||
+        (sample.cape == null && sample.liftedIndex == null && sample.windGustMs == null)
+      )
+        return cell;
       const env: StormEnvironment = {
         cape: sample.cape ?? this.config.environment.cape,
         liftedIndex: sample.liftedIndex ?? this.config.environment.liftedIndex,
