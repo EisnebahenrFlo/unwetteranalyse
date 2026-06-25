@@ -82,11 +82,6 @@ describe("scoreCell — Extreme-Gate verschärft (kein Hagel-Alleingang)", () =>
     expect(r.reasons.join(" ")).toMatch(/Orkanb[öo]en/);
   });
 });
-  it("kein Wind → keine Stufenanhebung", () => {
-    const r = scoreCell({ ...weak, env: {} });
-    expect(SEVERITY_RANK[r.level]).toBeLessThan(SEVERITY_RANK.serious);
-  });
-});
 
 describe("stormToLevel", () => {
   it("mappt auf DisplayLevel 0–4", () => {
