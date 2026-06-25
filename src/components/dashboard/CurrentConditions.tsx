@@ -85,25 +85,25 @@ function Hero({
 }) {
   const tempNum = formatTemp(current.temperatureC, tempUnit).split(" ")[0];
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex min-w-0 items-center gap-3">
       <MeteoconIcon
         code={current.weatherCode}
         isNight={night}
         label={condition}
-        className="h-20 w-20 shrink-0 md:h-24 md:w-24"
+        className="h-16 w-16 shrink-0 md:h-20 md:w-20"
       />
       <div className="min-w-0 flex-1">
-        <div className="flex items-baseline gap-1.5">
+        <div className="flex min-w-0 items-baseline gap-1.5">
           <span
-            className="font-mono text-5xl font-semibold leading-none tracking-tight tabular-nums text-foreground md:text-6xl"
+            className="truncate font-mono text-4xl font-semibold leading-none tracking-tight tabular-nums text-foreground sm:text-5xl md:text-6xl"
             style={{ fontFamily: "var(--font-mono)" }}
           >
             {tempNum}
           </span>
-          <span className="text-base text-muted-foreground">°{tempUnit}</span>
+          <span className="shrink-0 text-sm text-muted-foreground md:text-base">°{tempUnit}</span>
         </div>
         {current.apparentTemperatureC != null && (
-          <div className="mt-1 text-xs text-muted-foreground">
+          <div className="mt-1 truncate text-xs text-muted-foreground">
             gefühlt {formatTemp(current.apparentTemperatureC, tempUnit)}
           </div>
         )}
@@ -122,7 +122,7 @@ function TempSection({ current, unit }: { current: CC; unit: "C" | "F" }) {
         : "schwül"
       : null;
   return (
-    <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-3">
+    <div className="grid grid-cols-2 gap-x-4 gap-y-3 xl:grid-cols-3">
       <Field label="Aktuell" value={formatTemp(current.temperatureC, unit)} />
       <Field label="Gefühlt" value={formatTemp(current.apparentTemperatureC, unit)} />
       <Field
@@ -143,7 +143,7 @@ function WindSection({ current, unit }: { current: CC; unit: "kmh" | "ms" | "bft
   const dir = current.windDirectionDeg;
   const dirLabel = dir != null ? windDirectionLabel(dir) : null;
   return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 md:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)]">
+    <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 xl:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)]">
       <Compass deg={dir ?? null} />
       <Field
         label="Mittlerer Wind"
@@ -173,7 +173,7 @@ function PrecipSection({ current, hourly }: { current: CC; hourly?: HourlyPoint[
     .find((h) => h.precipitationProbability != null)?.precipitationProbability;
   const next6Sum = hourly?.slice(0, 6).reduce((s, h) => s + (h.precipitationMm ?? 0), 0);
   return (
-    <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-3">
+    <div className="grid grid-cols-2 gap-x-4 gap-y-3 xl:grid-cols-3">
       <Field
         label="Letzte 10 min"
         value={formatPrecip(current.precipitationMm)}
@@ -209,7 +209,7 @@ function PressureSection({ current, hourly }: { current: CC; hourly?: HourlyPoin
   const trend =
     delta == null ? null : delta >= 0.7 ? "steigend" : delta <= -0.7 ? "fallend" : "stabil";
   return (
-    <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-3">
+    <div className="grid grid-cols-2 gap-x-4 gap-y-3 xl:grid-cols-3">
       <Field
         label="Luftdruck"
         value={formatPressure(current.pressureHpa)}
@@ -244,17 +244,17 @@ function Field({
 }) {
   return (
     <div className="min-w-0">
-      <div className="mb-1 flex items-center gap-1 text-[11px] uppercase tracking-wide text-muted-foreground">
-        {label}
+      <div className="mb-1 flex min-w-0 items-center gap-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+        <span className="truncate">{label}</span>
         {info && <InfoPopover title={info.title}>{info.text}</InfoPopover>}
       </div>
       <div
-        className="font-mono text-2xl font-semibold leading-none tabular-nums text-foreground"
+        className="truncate font-mono text-xl font-semibold leading-none tabular-nums text-foreground md:text-2xl"
         style={{ fontFamily: "var(--font-mono)" }}
       >
         {value}
       </div>
-      {hint && <div className="mt-1 text-[11px] text-muted-foreground">{hint}</div>}
+      {hint && <div className="mt-1 truncate text-[11px] text-muted-foreground">{hint}</div>}
     </div>
   );
 }

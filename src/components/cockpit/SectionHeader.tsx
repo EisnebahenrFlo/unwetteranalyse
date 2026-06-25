@@ -19,7 +19,7 @@ export function SectionHeader({ id, eyebrow, title, question, action, className 
     <header
       id={id}
       className={cn(
-        "scroll-mt-28 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 border-b border-border/70 pb-2",
+        "scroll-mt-40 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 border-b border-border/70 pb-2",
         className,
       )}
     >

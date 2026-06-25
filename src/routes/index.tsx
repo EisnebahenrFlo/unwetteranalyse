@@ -172,9 +172,9 @@ function Dashboard() {
         <SituationHeadline bundle={bundle} officialAlerts={officialAlerts} />
       </section>
 
-      {/* 2.–5. Sekundärbereich: zweispaltig ab lg, ruhig und gedämpft */}
+      {/* 2./3. Gefahren + Nowcast zweispaltig (kompakte Karten) */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
-        <section className="flex flex-col gap-3">
+        <section className="flex min-w-0 flex-col gap-3">
           <SectionHeader
             id="gefahren"
             eyebrow="02 · Gefahren"
@@ -184,7 +184,7 @@ function Dashboard() {
           <HazardPriorityList bundle={bundle} officialAlerts={officialAlerts} />
         </section>
 
-        <section className="flex flex-col gap-3">
+        <section className="flex min-w-0 flex-col gap-3">
           <SectionHeader
             id="nowcast"
             eyebrow="03 · Nowcast"
@@ -193,30 +193,32 @@ function Dashboard() {
           />
           <ShortTermPanel bundle={bundle} />
         </section>
-
-        <section className="flex flex-col gap-3">
-          <SectionHeader
-            id="live"
-            eyebrow="04 · Live"
-            title="Live-Signale"
-            question="Was bestätigen Radar und Beobachtung gerade?"
-          />
-          <LiveSignals point={point} bundle={bundle} bsCurrent={bsCurrent.data} bsMeta={bsMeta} />
-        </section>
-
-        <section className="flex flex-col gap-3">
-          <SectionHeader
-            id="trend"
-            eyebrow="05 · Trend"
-            title="Trend & Ausblick"
-            question="Wie entwickelt sich die Lage über die nächsten Stunden und Tage?"
-          />
-          <TrendStrip bundle={bundle} />
-        </section>
       </div>
 
+      {/* 4. Live: braucht volle Breite (Radar + Kennzahl-Spalte) */}
+      <section className="flex min-w-0 flex-col gap-3">
+        <SectionHeader
+          id="live"
+          eyebrow="04 · Live"
+          title="Live-Signale"
+          question="Was bestätigen Radar und Beobachtung gerade?"
+        />
+        <LiveSignals point={point} bundle={bundle} bsCurrent={bsCurrent.data} bsMeta={bsMeta} />
+      </section>
+
+      {/* 5. Trend: braucht volle Breite (24 h-Strip + 7-Tage) */}
+      <section className="flex min-w-0 flex-col gap-3">
+        <SectionHeader
+          id="trend"
+          eyebrow="05 · Trend"
+          title="Trend & Ausblick"
+          question="Wie entwickelt sich die Lage über die nächsten Stunden und Tage?"
+        />
+        <TrendStrip bundle={bundle} />
+      </section>
+
       {/* 6. System spannt volle Breite */}
-      <section className="flex flex-col gap-3">
+      <section className="flex min-w-0 flex-col gap-3">
         <SectionHeader
           id="system"
           eyebrow="06 · System"

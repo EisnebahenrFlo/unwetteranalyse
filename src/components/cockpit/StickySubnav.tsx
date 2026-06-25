@@ -49,7 +49,7 @@ export function StickySubnav({ items, scrollOffset = 96 }: Props) {
   };
 
   return (
-    <nav className="sticky top-[57px] z-20 -mx-3 border-b border-border/80 bg-background/85 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/70 md:-mx-6 md:px-6">
+    <nav className="sticky top-[57px] z-30 -mx-3 border-b border-border bg-background/95 px-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/85 md:-mx-6 md:px-6">
       <ul className="scroll-snap-x flex min-w-0 gap-1 overflow-x-auto py-1.5 md:gap-2">
         {items.map((it, idx) => {
           const isActive = active === it.id;
