@@ -511,7 +511,7 @@ function TimeScrubber({
   const offsetMin = value * stepMinutes;
   const label = offsetMin === 0 ? "Jetzt" : `${offsetMin > 0 ? "+" : ""}${offsetMin} min`;
   return (
-    <div className="grid grid-cols-[auto_auto_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-xl border border-border bg-card px-2 py-2">
+    <div className="grid grid-cols-[auto_auto_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-xl border border-border/60 bg-card/70 px-2 py-2 shadow-elegant backdrop-blur-xl">
       <Button
         size="icon"
         variant="ghost"
@@ -579,7 +579,7 @@ function LayerToolbar({
   onToggleRings: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-2">
+    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-card/70 p-2 shadow-elegant backdrop-blur-xl">
       <LayerChip active={true} label="RY" hint="Beobachtung 5 min" />
       <LayerChip active={showWn} onClick={onToggleWn} label="WN" hint="Nowcast +2 h" />
       <LayerChip
