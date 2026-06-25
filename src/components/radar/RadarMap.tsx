@@ -755,28 +755,31 @@ function renderStormCells(map: MlMap, cells: StormCell[], targets: NamedTarget[]
             properties: { color, bearing },
           });
         }
-        // Mehrzeiliges Label: ID + Severity / Reflektivität & Top / Motion / ETA.
-        const lines: string[] = [];
-        lines.push(`${cell.id} · ${SEVERITY_BADGE[cell.severity.level]}`);
-        const dbz = estimateReflectivityDbz(cell);
-        const top = estimateEchoTopKm(cell);
-        lines.push(`~${dbz} dBZ · Top ${top.toFixed(1)} km`);
-        if (cell.motion && cell.motion.speedKmh > 1) {
-          lines.push(`${Math.round(cell.motion.speedKmh)} km/h → ${cell.motion.bearingCompass}`);
-        }
+        // Zoom-abhängige Labels: kurz / mittel / lang.
+        const name = cell.displayName ?? cell.id;
+        const badge = SEVERITY_BADGE[cell.severity.level];
+        const labelShort = `${name} · ${badge}`;
+        const motionLine = cell.motion && cell.motion.speedKmh > 1
+          ? `${Math.round(cell.motion.speedKmh)} km/h → ${cell.motion.bearingCompass}`
+          : null;
+        const labelMid = motionLine ? `${labelShort}\n${motionLine}` : labelShort;
         const eta = etaToNearestTarget(cell, targets);
-        if (eta) {
-          lines.push(`ETA ${eta.target.name}: ${eta.minutes} min`);
-        }
+        const etaLine = eta ? `→ ${eta.target.name} ${eta.minutes} min` : null;
+        const labelFull = [labelShort, motionLine, etaLine].filter(Boolean).join("\n");
         centroids.push({
           type: "Feature",
           geometry: { type: "Point", coordinates: [cell.centroid.lon, cell.centroid.lat] },
           properties: {
             color,
             id: cell.id,
-            label: lines.join("\n"),
+            labelShort,
+            labelMid,
+            labelFull,
             textColor: cell.severity.level === "severe" ? "#7f1d1d" : "#0f172a",
+            // Höchste Severity zuerst platzieren (großer sort-key = höhere Priorität bei Kollision).
             rank: SEV_RANK[cell.severity.level] ?? 0,
+            // Negativer Sort-Key, damit MapLibre die wichtigsten zuerst rendert.
+            sortKey: -(SEV_RANK[cell.severity.level] ?? 0),
           },
         });
       }
