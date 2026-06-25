@@ -43,11 +43,24 @@ export interface Nowcast2h {
   confidence: "niedrig" | "mittel" | "hoch";
 }
 
-const SEVERITY_ORDER: Array<AlertSeverity | "none"> = ["none", "minor", "moderate", "severe", "extreme"];
+const SEVERITY_ORDER: Array<AlertSeverity | "none"> = [
+  "none",
+  "minor",
+  "moderate",
+  "severe",
+  "extreme",
+];
 
-export function buildNowcast2h(hourly: HourlyPoint[], minutely: MinutelyPoint[] | undefined, now: Date): Nowcast2h {
+export function buildNowcast2h(
+  hourly: HourlyPoint[],
+  minutely: MinutelyPoint[] | undefined,
+  now: Date,
+): Nowcast2h {
   const t0 = floorTo(now, STEP_MINUTES);
-  const minutelySorted = (minutely ?? []).filter((m) => m.time).slice().sort((a, b) => a.time.localeCompare(b.time));
+  const minutelySorted = (minutely ?? [])
+    .filter((m) => m.time)
+    .slice()
+    .sort((a, b) => a.time.localeCompare(b.time));
   const hourlySorted = hourly.slice().sort((a, b) => a.time.localeCompare(b.time));
 
   const steps: NowcastStep[] = [];
@@ -88,15 +101,22 @@ export function buildNowcast2h(hourly: HourlyPoint[], minutely: MinutelyPoint[] 
     });
   }
 
-  const peak = steps.reduce<NowcastStep | null>((best, s) => !best || s.severeScore > best.severeScore ? s : best, null);
+  const peak = steps.reduce<NowcastStep | null>(
+    (best, s) => (!best || s.severeScore > best.severeScore ? s : best),
+    null,
+  );
   const thunderProbMax = Math.max(0, ...steps.map((s) => s.thunderProb));
-  const hailMax = steps.reduce<AlertSeverity | "none">((worst, s) => SEVERITY_ORDER.indexOf(s.hail) > SEVERITY_ORDER.indexOf(worst) ? s.hail : worst, "none");
+  const hailMax = steps.reduce<AlertSeverity | "none">(
+    (worst, s) => (SEVERITY_ORDER.indexOf(s.hail) > SEVERITY_ORDER.indexOf(worst) ? s.hail : worst),
+    "none",
+  );
   const precipMaxMmPerH = Math.max(0, ...steps.map((s) => s.precipMmPerH));
   const precipSumMm = steps.reduce((sum, s) => sum + s.precipMmPerH * (STEP_MINUTES / 60), 0);
 
   const hasMinutely = minutelySorted.length > 0;
   const hasConvective = hourlySorted.some((h) => h.cape != null || h.liftedIndex != null);
-  const confidence = hasMinutely && hasConvective ? "hoch" : hasMinutely || hasConvective ? "mittel" : "niedrig";
+  const confidence =
+    hasMinutely && hasConvective ? "hoch" : hasMinutely || hasConvective ? "mittel" : "niedrig";
 
   return {
     steps,
@@ -140,7 +160,10 @@ function interpolateHourly(points: HourlyPoint[], t: Date): HourlyPoint | null {
   for (const p of points) {
     const ms = new Date(p.time).getTime();
     if (ms <= tMs) a = p;
-    if (ms >= tMs && !b) { b = p; break; }
+    if (ms >= tMs && !b) {
+      b = p;
+      break;
+    }
   }
   if (!a && b) return b;
   if (a && !b) return a;
@@ -148,7 +171,7 @@ function interpolateHourly(points: HourlyPoint[], t: Date): HourlyPoint | null {
   const aMs = new Date(a.time).getTime();
   const bMs = new Date(b.time).getTime();
   const frac = (tMs - aMs) / Math.max(1, bMs - aMs);
-  const lerp = (x?: number, y?: number) => x == null || y == null ? (x ?? y) : x + (y - x) * frac;
+  const lerp = (x?: number, y?: number) => (x == null || y == null ? (x ?? y) : x + (y - x) * frac);
   return {
     ...a,
     time: t.toISOString(),
@@ -169,9 +192,15 @@ function interpolateHourly(points: HourlyPoint[], t: Date): HourlyPoint | null {
   };
 }
 
-function headlineFor(level: AlertSeverity | "none", thunderProb: number, rainMmPerH: number, hail: AlertSeverity | "none"): string {
+function headlineFor(
+  level: AlertSeverity | "none",
+  thunderProb: number,
+  rainMmPerH: number,
+  hail: AlertSeverity | "none",
+): string {
   if (level === "extreme") return "Extremes Unwetter im Anmarsch";
-  if (hail !== "none" && SEVERITY_ORDER.indexOf(hail) >= 3) return "Hagelgefahr in den nächsten 2 Stunden";
+  if (hail !== "none" && SEVERITY_ORDER.indexOf(hail) >= 3)
+    return "Hagelgefahr in den nächsten 2 Stunden";
   if (level === "severe") return "Schweres Unwetter in den nächsten 2 Stunden möglich";
   if (level === "moderate") return "Unwettersignal im 2-Stunden-Nowcast";
   if (thunderProb >= 0.5) return "Gewitter im 2-Stunden-Nowcast wahrscheinlich";
@@ -182,7 +211,8 @@ function headlineFor(level: AlertSeverity | "none", thunderProb: number, rainMmP
 
 export function dailySeverity(hourly: HourlyPoint[], date: string) {
   const dayPoints = hourly.filter((p) => p.time.slice(0, 10) === date);
-  if (dayPoints.length === 0) return { level: "none" as AlertSeverity | "none", score: 0, reasons: [] as string[] };
+  if (dayPoints.length === 0)
+    return { level: "none" as AlertSeverity | "none", score: 0, reasons: [] as string[] };
   let best = { level: "none" as AlertSeverity | "none", score: 0, reasons: [] as string[] };
   for (const p of dayPoints) {
     const s = severeScore(p);

@@ -7,7 +7,13 @@
  * reicht und ist synchron-einfach.
  */
 
-import { HAZARD_RANK, type HazardAlert, type HazardHistoryEvent, type HazardKind, type HazardLevel } from "./types";
+import {
+  HAZARD_RANK,
+  type HazardAlert,
+  type HazardHistoryEvent,
+  type HazardKind,
+  type HazardLevel,
+} from "./types";
 
 const STORAGE_KEY = "meteoflo.hazard-history.v1";
 const LAST_LEVEL_KEY = "meteoflo.hazard-last-level.v1";

@@ -122,7 +122,11 @@ export function wmsTileUrl(layer: WmsLayerKey, time?: string | null) {
 
 /** Expand WMS time dimension (comma list or ISO start/end/PTxM). */
 function expandTime(raw: string): string[] {
-  if (raw.includes(",")) return raw.split(",").map((v) => v.trim()).filter(Boolean);
+  if (raw.includes(","))
+    return raw
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
   const [startRaw, endRaw, stepRaw] = raw.split("/");
   const start = new Date(startRaw).getTime();
   const end = new Date(endRaw).getTime();

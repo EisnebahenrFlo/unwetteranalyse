@@ -3,7 +3,9 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 export function ScoreExplainPanel({
-  subs, data, reasons,
+  subs,
+  data,
+  reasons,
 }: {
   subs: { rain: Subscore; wind: Subscore; thunder: Subscore; convection: Subscore };
   data: Subscore;
@@ -18,7 +20,9 @@ export function ScoreExplainPanel({
         className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-semibold tracking-wide text-foreground"
       >
         <span>Wie kommt der Score zustande?</span>
-        <span className="text-[10px] text-muted-foreground">{open ? "▴ schließen" : "▾ öffnen"}</span>
+        <span className="text-[10px] text-muted-foreground">
+          {open ? "▴ schließen" : "▾ öffnen"}
+        </span>
       </button>
       {!open && reasons.length > 0 && (
         <div className="border-t border-border px-3 py-2 text-[11px] text-muted-foreground">
@@ -44,16 +48,30 @@ function Block({ label, sub, className }: { label: string; sub: Subscore; classN
   return (
     <div className={cn("rounded-md border border-border/60 bg-background/40 p-2", className)}>
       <div className="flex items-baseline justify-between">
-        <div className="text-[11px] font-semibold uppercase tracking-wide text-foreground">{label}</div>
-        <div className="font-mono text-xs font-semibold tabular-nums text-foreground" style={{ fontFamily: "var(--font-mono)" }}>{sub.value}/100</div>
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-foreground">
+          {label}
+        </div>
+        <div
+          className="font-mono text-xs font-semibold tabular-nums text-foreground"
+          style={{ fontFamily: "var(--font-mono)" }}
+        >
+          {sub.value}/100
+        </div>
       </div>
       <ul className="mt-1.5 space-y-0.5 text-[11px] text-muted-foreground">
         {sub.contributors.length === 0 && <li>keine Beiträge über Schwelle</li>}
         {sub.contributors.map((c) => (
-          <li key={c.label} className="flex justify-between gap-2 font-mono" style={{ fontFamily: "var(--font-mono)" }}>
-            <span className="truncate"><span className="text-foreground/80">{c.label}</span> · {c.raw}</span>
+          <li
+            key={c.label}
+            className="flex justify-between gap-2 font-mono"
+            style={{ fontFamily: "var(--font-mono)" }}
+          >
+            <span className="truncate">
+              <span className="text-foreground/80">{c.label}</span> · {c.raw}
+            </span>
             <span className={c.points >= 0 ? "text-foreground/80" : "text-rose-500"}>
-              {c.points >= 0 ? "+" : ""}{c.points.toFixed(0)}
+              {c.points >= 0 ? "+" : ""}
+              {c.points.toFixed(0)}
             </span>
           </li>
         ))}

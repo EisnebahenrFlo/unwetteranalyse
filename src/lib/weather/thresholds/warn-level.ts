@@ -30,10 +30,14 @@ export const WARN_DISPLAY: Record<DisplayLevel, { name: string; color: string }>
 /** CAP-Severity (DWD/MeteoAlarm) → DWD-Stufe. */
 export function capSeverityToLevel(s?: string): WarnLevel {
   switch ((s ?? "").toLowerCase()) {
-    case "extreme": return 4;
-    case "severe": return 3;
-    case "moderate": return 2;
-    default: return 1;
+    case "extreme":
+      return 4;
+    case "severe":
+      return 3;
+    case "moderate":
+      return 2;
+    default:
+      return 1;
   }
 }
 
@@ -43,9 +47,13 @@ export function severityToLevel(s: AlertSeverity): WarnLevel {
 
 export function capSeverityToAlert(s?: string): AlertSeverity {
   switch ((s ?? "").toLowerCase()) {
-    case "extreme": return "extreme";
-    case "severe": return "severe";
-    case "moderate": return "moderate";
-    default: return "minor";
+    case "extreme":
+      return "extreme";
+    case "severe":
+      return "severe";
+    case "moderate":
+      return "moderate";
+    default:
+      return "minor";
   }
 }

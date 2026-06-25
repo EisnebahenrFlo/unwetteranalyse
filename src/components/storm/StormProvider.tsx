@@ -26,17 +26,23 @@ export function StormProvider() {
     return liveHourly(forecast.data.hourly, now)[0] ?? null;
   }, [forecast.data, now]);
 
-  const thresholds = useMemo(() => ({
-    ...DEFAULT_STORM_THRESHOLDS,
-    alertEtaMin: settings.storm.alertEtaMin,
-    alertLevel: settings.storm.alertLevel,
-  }), [settings.storm.alertEtaMin, settings.storm.alertLevel]);
+  const thresholds = useMemo(
+    () => ({
+      ...DEFAULT_STORM_THRESHOLDS,
+      alertEtaMin: settings.storm.alertEtaMin,
+      alertLevel: settings.storm.alertLevel,
+    }),
+    [settings.storm.alertEtaMin, settings.storm.alertLevel],
+  );
 
-  const environment = useMemo(() => ({
-    cape: nowHour?.cape,
-    liftedIndex: nowHour?.liftedIndex,
-    validFor: nowHour?.time,
-  }), [nowHour?.cape, nowHour?.liftedIndex, nowHour?.time]);
+  const environment = useMemo(
+    () => ({
+      cape: nowHour?.cape,
+      liftedIndex: nowHour?.liftedIndex,
+      validFor: nowHour?.time,
+    }),
+    [nowHour?.cape, nowHour?.liftedIndex, nowHour?.time],
+  );
 
   useEffect(() => {
     stormBackground.configure({

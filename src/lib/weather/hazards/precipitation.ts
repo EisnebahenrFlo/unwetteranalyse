@@ -93,7 +93,15 @@ async function fetchBatch(keys: string[]) {
     const times: string[] = hourly.time ?? [];
     const idx = pickCurrentHourIdx(times, now);
     if (idx < 0) {
-      cache.set(key, { rrH1: null, rrH3: null, rrH6: null, rrH24: null, freezingLevelM: null, validFor: null, fetchedAt: now });
+      cache.set(key, {
+        rrH1: null,
+        rrH3: null,
+        rrH6: null,
+        rrH24: null,
+        freezingLevelM: null,
+        validFor: null,
+        fetchedAt: now,
+      });
       return;
     }
     const precip = hourly.precipitation as number[] | undefined;
@@ -123,17 +131,27 @@ export async function loadCellPrecipitation(
 
   for (let i = 0; i < toFetch.length; i += MAX_BATCH) {
     const slice = toFetch.slice(i, i + MAX_BATCH);
-    const promise = fetchBatch(slice).catch((err) => {
-      console.warn("[hazards] precip fetch failed", err);
-      const now2 = Date.now();
-      slice.forEach((k) => {
-        if (!cache.has(k)) {
-          cache.set(k, { rrH1: null, rrH3: null, rrH6: null, rrH24: null, freezingLevelM: null, validFor: null, fetchedAt: now2 });
-        }
+    const promise = fetchBatch(slice)
+      .catch((err) => {
+        console.warn("[hazards] precip fetch failed", err);
+        const now2 = Date.now();
+        slice.forEach((k) => {
+          if (!cache.has(k)) {
+            cache.set(k, {
+              rrH1: null,
+              rrH3: null,
+              rrH6: null,
+              rrH24: null,
+              freezingLevelM: null,
+              validFor: null,
+              fetchedAt: now2,
+            });
+          }
+        });
+      })
+      .finally(() => {
+        slice.forEach((k) => inflight.delete(k));
       });
-    }).finally(() => {
-      slice.forEach((k) => inflight.delete(k));
-    });
     slice.forEach((k) => inflight.set(k, promise));
   }
 

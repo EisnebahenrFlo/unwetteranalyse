@@ -6,11 +6,16 @@
 import type { HourlyPoint } from "../types";
 import { bandFromScore, type Band, confidenceLabel } from "./labels";
 import {
-  convectionSubscore, dataConfidence, type DataContextInput,
-  rainSubscore, thunderSubscore, windSubscore, type Subscore,
+  convectionSubscore,
+  dataConfidence,
+  type DataContextInput,
+  rainSubscore,
+  thunderSubscore,
+  windSubscore,
+  type Subscore,
 } from "./subscores";
 
-const W = { rain: 0.22, wind: 0.20, thunder: 0.30, convection: 0.28 };
+const W = { rain: 0.22, wind: 0.2, thunder: 0.3, convection: 0.28 };
 
 function combine(rain: number, wind: number, thunder: number, convection: number): number {
   const linear = rain * W.rain + wind * W.wind + thunder * W.thunder + convection * W.convection;
@@ -21,8 +26,12 @@ function combine(rain: number, wind: number, thunder: number, convection: number
 export interface HourScore {
   time: string;
   point: HourlyPoint;
-  rain: Subscore; wind: Subscore; thunder: Subscore; convection: Subscore;
-  total: number; band: Band;
+  rain: Subscore;
+  wind: Subscore;
+  thunder: Subscore;
+  convection: Subscore;
+  total: number;
+  band: Band;
 }
 
 export interface TodayResult {
@@ -38,7 +47,7 @@ export interface TodayResult {
 }
 
 function maxSub(arr: Subscore[]): Subscore {
-  return arr.reduce((b, s) => s.value > b.value ? s : b, arr[0]);
+  return arr.reduce((b, s) => (s.value > b.value ? s : b), arr[0]);
 }
 
 export interface TodayInput {
@@ -57,17 +66,27 @@ export function buildToday(input: TodayInput): TodayResult {
     const t = thunderSubscore(p);
     const c = convectionSubscore(p);
     const total = combine(r.value, w.value, t.value, c.value);
-    return { time: p.time, point: p, rain: r, wind: w, thunder: t, convection: c, total, band: bandFromScore(total) };
+    return {
+      time: p.time,
+      point: p,
+      rain: r,
+      wind: w,
+      thunder: t,
+      convection: c,
+      total,
+      band: bandFromScore(total),
+    };
   });
 
   // Peak: maximaler Stundenscore
-  const peak = hours.reduce((b, h) => h.total > b.total ? h : b, hours[0]);
+  const peak = hours.reduce((b, h) => (h.total > b.total ? h : b), hours[0]);
   // Peak-Fenster: zusammenhängender Bereich um den Peak, in dem Score ≥ 75 % des Peaks
   let peakWindow: TodayResult["peakWindow"] = null;
   if (peak && peak.total >= 20) {
     const thresh = Math.max(20, peak.total * 0.75);
     const idx = hours.indexOf(peak);
-    let s = idx, e = idx;
+    let s = idx,
+      e = idx;
     while (s > 0 && hours[s - 1].total >= thresh) s--;
     while (e < hours.length - 1 && hours[e + 1].total >= thresh) e++;
     peakWindow = { startAt: hours[s].time, endAt: hours[e].time };

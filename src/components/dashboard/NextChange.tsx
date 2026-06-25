@@ -1,5 +1,5 @@
 import { DataCard } from "@/components/common/DataCard";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight } from "@/components/icons";
 import { formatHour, formatRelative } from "@/lib/weather/format";
 import type { ForecastBundle } from "@/lib/weather/types";
 import { findNextChange } from "@/lib/weather/analysis/situation";
@@ -21,7 +21,9 @@ export function NextChange({ bundle }: { bundle: ForecastBundle }) {
           </div>
         </div>
       ) : (
-        <div className="text-sm text-muted-foreground">In den nächsten 24 Stunden keine markante Änderung erkennbar.</div>
+        <div className="text-sm text-muted-foreground">
+          In den nächsten 24 Stunden keine markante Änderung erkennbar.
+        </div>
       )}
     </DataCard>
   );

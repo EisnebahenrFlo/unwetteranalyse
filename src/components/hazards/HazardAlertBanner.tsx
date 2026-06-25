@@ -1,4 +1,4 @@
-import { AlertTriangle, CloudHail, CloudRain, Zap } from "lucide-react";
+import { AlertTriangle, CloudHail, CloudRain, Zap } from "@/components/icons";
 import type { HazardAlert, HazardKind } from "@/lib/weather/hazards/types";
 import { HAZARD_KIND_LABEL, HAZARD_LEVEL_TONE } from "./hazard-tokens";
 import { cn } from "@/lib/utils";
@@ -27,8 +27,16 @@ export function HazardAlertBanner({ alerts }: { alerts: HazardAlert[] }) {
         {top.map((a) => {
           const Icon = ICONS[a.kind];
           return (
-            <li key={a.id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 text-xs">
-              <span className={cn("flex h-6 w-6 items-center justify-center rounded-md", HAZARD_LEVEL_TONE[a.level])}>
+            <li
+              key={a.id}
+              className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 text-xs"
+            >
+              <span
+                className={cn(
+                  "flex h-6 w-6 items-center justify-center rounded-md",
+                  HAZARD_LEVEL_TONE[a.level],
+                )}
+              >
                 <Icon className="h-3.5 w-3.5" />
               </span>
               <div className="min-w-0">

@@ -6,10 +6,7 @@ import { classifyAge } from "@/lib/weather/sources/blitzortung";
 import type { CellTrack } from "@/lib/weather/analysis/cockpit-diagnostics";
 import type { StormCell } from "@/lib/weather/storm/types";
 import { SEVERITY_COLOR, SEVERITY_BADGE } from "@/components/storm/severity-tokens";
-import {
-  etaToNearestTarget,
-  type NamedTarget,
-} from "@/lib/weather/storm/estimate";
+import { etaToNearestTarget, type NamedTarget } from "@/lib/weather/storm/estimate";
 
 /** 64-Punkt-Approximation eines Kreises in Lon/Lat um (lat, lon) mit Radius in km. */
 function ringCoords(lat: number, lon: number, km: number, steps = 64): [number, number][] {
@@ -65,7 +62,9 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
   const mapRef = useRef<MlMap | null>(null);
   const readyRef = useRef(false);
   /** Aktive Frame-Stacks: key → Liste der gemounteten (sourceId, layerId, time, url). */
-  const stacksRef = useRef<Map<string, { sourceId: string; layerId: string; time: string; url: string }[]>>(new Map());
+  const stacksRef = useRef<
+    Map<string, { sourceId: string; layerId: string; time: string; url: string }[]>
+  >(new Map());
   /** Letzte bekannte Zellen + Ziele, damit Label-Refreshes ohne neuen setStormCells funktionieren. */
   const cellsRef = useRef<StormCell[]>([]);
   const targetsRef = useRef<NamedTarget[]>([]);
@@ -92,7 +91,12 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         },
         layers: [
           { id: "bg", type: "background", paint: { "background-color": "#e6ecf2" } },
-          { id: "osm", type: "raster", source: "osm", paint: { "raster-saturation": -0.4, "raster-brightness-max": 0.95 } },
+          {
+            id: "osm",
+            type: "raster",
+            source: "osm",
+            paint: { "raster-saturation": -0.4, "raster-brightness-max": 0.95 },
+          },
         ],
       },
       center: [initialCenter.lon, initialCenter.lat],
@@ -112,21 +116,35 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
       map.resize();
       emitBbox();
       // Leerer Lightning-Source initialisieren.
-      map.addSource("lightning-src", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addSource("lightning-src", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
       map.addLayer({
         id: "lightning-layer",
         type: "circle",
         source: "lightning-src",
         paint: {
           "circle-radius": ["match", ["get", "age"], "fresh", 5, "recent", 4, 3],
-          "circle-color": ["match", ["get", "age"], "fresh", "#facc15", "recent", "#f59e0b", "#9ca3af"],
+          "circle-color": [
+            "match",
+            ["get", "age"],
+            "fresh",
+            "#facc15",
+            "recent",
+            "#f59e0b",
+            "#9ca3af",
+          ],
           "circle-stroke-width": 1,
           "circle-stroke-color": "#1f2937",
           "circle-opacity": ["match", ["get", "age"], "fresh", 0.95, "recent", 0.7, 0.4],
         },
       });
       // Fokusringe (Relevanzradius) als geojson polygon + labels.
-      map.addSource("focus-rings-src", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addSource("focus-rings-src", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
       map.addLayer({
         id: "focus-rings-line",
         type: "line",
@@ -138,7 +156,10 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
           "line-opacity": 0.75,
         },
       });
-      map.addSource("focus-labels-src", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addSource("focus-labels-src", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
       map.addLayer({
         id: "focus-labels",
         type: "symbol",
@@ -156,7 +177,10 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
           "text-halo-width": 1.2,
         },
       });
-      map.addSource("focus-center-src", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addSource("focus-center-src", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
       map.addLayer({
         id: "focus-center",
         type: "circle",
@@ -201,7 +225,15 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         source: "track-points-src",
         paint: {
           "circle-radius": ["match", ["get", "kind"], "fresh", 6, "forecast", 5, 4],
-          "circle-color": ["match", ["get", "kind"], "fresh", "#ef4444", "forecast", "#fff", "#fca5a5"],
+          "circle-color": [
+            "match",
+            ["get", "kind"],
+            "fresh",
+            "#ef4444",
+            "forecast",
+            "#fff",
+            "#fca5a5",
+          ],
           "circle-stroke-color": "#ef4444",
           "circle-stroke-width": 2,
         },
@@ -233,7 +265,7 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         source: "storm-cone-src",
         paint: {
           "fill-color": ["get", "color"],
-          "fill-opacity": 0.10,
+          "fill-opacity": 0.1,
           "fill-outline-color": ["get", "color"],
         },
       });
@@ -373,10 +405,13 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         source: "storm-centroid-src",
         layout: {
           "text-field": [
-            "step", ["zoom"],
+            "step",
+            ["zoom"],
             ["get", "labelShort"],
-            7, ["get", "labelMid"],
-            9, ["get", "labelFull"],
+            7,
+            ["get", "labelMid"],
+            9,
+            ["get", "labelFull"],
           ],
           "text-size": ["interpolate", ["linear"], ["zoom"], 5, 10, 7, 11, 10, 13],
           "text-anchor": "top-left",
@@ -398,7 +433,10 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
     });
 
     map.on("movestart", () => onInteractionChange?.(true));
-    map.on("moveend", () => { onInteractionChange?.(false); emitBbox(); });
+    map.on("moveend", () => {
+      onInteractionChange?.(false);
+      emitBbox();
+    });
     map.on("zoomend", emitBbox);
 
     const ro = new ResizeObserver(() => map.resize());
@@ -426,7 +464,12 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         if (map.getSource(sourceId)) map.removeSource(sourceId);
         if (!tileUrl) return;
         // tileSize 512 halbiert die Anzahl der Requests gegenüber 256 bei gleichem Viewport.
-        map.addSource(sourceId, { type: "raster", tiles: [tileUrl], tileSize: 512, attribution: "© Deutscher Wetterdienst" });
+        map.addSource(sourceId, {
+          type: "raster",
+          tiles: [tileUrl],
+          tileSize: 512,
+          attribution: "© Deutscher Wetterdienst",
+        });
         // Unter Lightning einfügen, damit Blitze sichtbar bleiben.
         const before = firstOverlayLayer(map);
         map.addLayer(
@@ -456,7 +499,9 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
             if (map.getSource(e.sourceId)) map.removeSource(e.sourceId);
           }
         }
-        const keep = new Map(existing.filter((e) => incomingTimes.has(e.time)).map((e) => [e.time, e]));
+        const keep = new Map(
+          existing.filter((e) => incomingTimes.has(e.time)).map((e) => [e.time, e]),
+        );
         const next: { sourceId: string; layerId: string; time: string; url: string }[] = [];
         for (const f of frames) {
           let entry = keep.get(f.time);
@@ -527,7 +572,9 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
       if (!pastSrc || !fcSrc || !ptsSrc) return;
       const empty = { type: "FeatureCollection" as const, features: [] };
       if (!track || !track.freshCentroid) {
-        pastSrc.setData(empty); fcSrc.setData(empty); ptsSrc.setData(empty);
+        pastSrc.setData(empty);
+        fcSrc.setData(empty);
+        ptsSrc.setData(empty);
         return;
       }
       type Feat = {
@@ -538,33 +585,42 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
       const features: Feat[] = [
         {
           type: "Feature",
-          geometry: { type: "Point", coordinates: [track.freshCentroid.lon, track.freshCentroid.lat] },
+          geometry: {
+            type: "Point",
+            coordinates: [track.freshCentroid.lon, track.freshCentroid.lat],
+          },
           properties: {
             kind: "fresh",
-            label: track.speedKmh != null && track.bearingCompass
-              ? `${Math.round(track.speedKmh)} km/h ${track.bearingCompass}`
-              : "Zelle",
+            label:
+              track.speedKmh != null && track.bearingCompass
+                ? `${Math.round(track.speedKmh)} km/h ${track.bearingCompass}`
+                : "Zelle",
           },
         },
       ];
       if (track.olderCentroid && track.hasTrack) {
         pastSrc.setData({
           type: "FeatureCollection",
-          features: [{
-            type: "Feature",
-            geometry: {
-              type: "LineString",
-              coordinates: [
-                [track.olderCentroid.lon, track.olderCentroid.lat],
-                [track.freshCentroid.lon, track.freshCentroid.lat],
-              ],
+          features: [
+            {
+              type: "Feature",
+              geometry: {
+                type: "LineString",
+                coordinates: [
+                  [track.olderCentroid.lon, track.olderCentroid.lat],
+                  [track.freshCentroid.lon, track.freshCentroid.lat],
+                ],
+              },
+              properties: {},
             },
-            properties: {},
-          }],
+          ],
         });
         features.push({
           type: "Feature",
-          geometry: { type: "Point", coordinates: [track.olderCentroid.lon, track.olderCentroid.lat] },
+          geometry: {
+            type: "Point",
+            coordinates: [track.olderCentroid.lon, track.olderCentroid.lat],
+          },
           properties: { kind: "older" },
         });
       } else {
@@ -573,21 +629,26 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
       if (track.forecastPosition) {
         fcSrc.setData({
           type: "FeatureCollection",
-          features: [{
-            type: "Feature",
-            geometry: {
-              type: "LineString",
-              coordinates: [
-                [track.freshCentroid.lon, track.freshCentroid.lat],
-                [track.forecastPosition.lon, track.forecastPosition.lat],
-              ],
+          features: [
+            {
+              type: "Feature",
+              geometry: {
+                type: "LineString",
+                coordinates: [
+                  [track.freshCentroid.lon, track.freshCentroid.lat],
+                  [track.forecastPosition.lon, track.forecastPosition.lat],
+                ],
+              },
+              properties: {},
             },
-            properties: {},
-          }],
+          ],
         });
         features.push({
           type: "Feature",
-          geometry: { type: "Point", coordinates: [track.forecastPosition.lon, track.forecastPosition.lat] },
+          geometry: {
+            type: "Point",
+            coordinates: [track.forecastPosition.lon, track.forecastPosition.lat],
+          },
           properties: { kind: "forecast", label: `+${track.forecastPosition.offsetMinutes} min` },
         });
       } else {
@@ -604,24 +665,41 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
       if (!ringsSrc || !labelsSrc || !centerSrc) return;
       if (!center) {
         const empty = { type: "FeatureCollection" as const, features: [] };
-        ringsSrc.setData(empty); labelsSrc.setData(empty); centerSrc.setData(empty);
+        ringsSrc.setData(empty);
+        labelsSrc.setData(empty);
+        centerSrc.setData(empty);
         return;
       }
       const ringFeatures = kmRadii.map((km) => ({
         type: "Feature" as const,
-        geometry: { type: "Polygon" as const, coordinates: [ringCoords(center.lat, center.lon, km)] },
+        geometry: {
+          type: "Polygon" as const,
+          coordinates: [ringCoords(center.lat, center.lon, km)],
+        },
         properties: { km },
       }));
       const labelFeatures = kmRadii.map((km) => ({
         type: "Feature" as const,
-        geometry: { type: "Point" as const, coordinates: [center.lon + (km / 111.32) / Math.cos((center.lat * Math.PI) / 180), center.lat] },
+        geometry: {
+          type: "Point" as const,
+          coordinates: [
+            center.lon + km / 111.32 / Math.cos((center.lat * Math.PI) / 180),
+            center.lat,
+          ],
+        },
         properties: { label: `${km} km` },
       }));
       ringsSrc.setData({ type: "FeatureCollection", features: ringFeatures });
       labelsSrc.setData({ type: "FeatureCollection", features: labelFeatures });
       centerSrc.setData({
         type: "FeatureCollection",
-        features: [{ type: "Feature", geometry: { type: "Point", coordinates: [center.lon, center.lat] }, properties: {} }],
+        features: [
+          {
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [center.lon, center.lat] },
+            properties: {},
+          },
+        ],
       });
     },
     setStormCells(cells) {
@@ -643,7 +721,11 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
       return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
     },
     flyTo(lon, lat, zoom) {
-      mapRef.current?.flyTo({ center: [lon, lat], zoom: zoom ?? mapRef.current.getZoom(), duration: 700 });
+      mapRef.current?.flyTo({
+        center: [lon, lat],
+        zoom: zoom ?? mapRef.current.getZoom(),
+        duration: 700,
+      });
     },
   }));
 
@@ -652,153 +734,174 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
 
 /** Schreibt Storm-Cell-Geometrien + Labels in alle storm-* GeoJSON-Sources. */
 function renderStormCells(map: MlMap, cells: StormCell[], targets: NamedTarget[]) {
-      const coneSrc = map.getSource("storm-cone-src") as maplibregl.GeoJSONSource | undefined;
-      const polySrc = map.getSource("storm-poly-src") as maplibregl.GeoJSONSource | undefined;
-      const fcSrc = map.getSource("storm-fc-line-src") as maplibregl.GeoJSONSource | undefined;
-      const cenSrc = map.getSource("storm-centroid-src") as maplibregl.GeoJSONSource | undefined;
-      const pastSrc = map.getSource("storm-past-src") as maplibregl.GeoJSONSource | undefined;
-      const pastHaloSrc = map.getSource("storm-past-halo-src") as maplibregl.GeoJSONSource | undefined;
-      const pastPtsSrc = map.getSource("storm-past-pts-src") as maplibregl.GeoJSONSource | undefined;
-      const etaSrc = map.getSource("storm-eta-src") as maplibregl.GeoJSONSource | undefined;
-      const arrowSrc = map.getSource("storm-fc-arrow-src") as maplibregl.GeoJSONSource | undefined;
-      if (!coneSrc || !polySrc || !fcSrc || !cenSrc || !pastSrc || !pastHaloSrc || !pastPtsSrc || !etaSrc || !arrowSrc) return;
-      const empty = { type: "FeatureCollection" as const, features: [] };
-      if (cells.length === 0) {
-        coneSrc.setData(empty); polySrc.setData(empty); fcSrc.setData(empty); cenSrc.setData(empty);
-        pastSrc.setData(empty); pastHaloSrc.setData(empty); pastPtsSrc.setData(empty);
-        etaSrc.setData(empty); arrowSrc.setData(empty);
-        return;
-      }
-      type AnyFeature = {
-        type: "Feature";
-        geometry:
-          | { type: "Polygon"; coordinates: number[][][] }
-          | { type: "LineString"; coordinates: number[][] }
-          | { type: "Point"; coordinates: number[] };
-        properties: Record<string, unknown>;
-      };
-      const cones: AnyFeature[] = [];
-      const polys: AnyFeature[] = [];
-      const fcLines: AnyFeature[] = [];
-      const centroids: AnyFeature[] = [];
-      const pastLines: AnyFeature[] = [];
-      const pastHalos: AnyFeature[] = [];
-      const pastPts: AnyFeature[] = [];
-      const etaPts: AnyFeature[] = [];
-      const arrows: AnyFeature[] = [];
-      const ETA_OFFSETS = [15, 30, 60];
-      const SEV_RANK: Record<string, number> = { calm: 0, watch: 1, serious: 2, severe: 3 };
+  const coneSrc = map.getSource("storm-cone-src") as maplibregl.GeoJSONSource | undefined;
+  const polySrc = map.getSource("storm-poly-src") as maplibregl.GeoJSONSource | undefined;
+  const fcSrc = map.getSource("storm-fc-line-src") as maplibregl.GeoJSONSource | undefined;
+  const cenSrc = map.getSource("storm-centroid-src") as maplibregl.GeoJSONSource | undefined;
+  const pastSrc = map.getSource("storm-past-src") as maplibregl.GeoJSONSource | undefined;
+  const pastHaloSrc = map.getSource("storm-past-halo-src") as maplibregl.GeoJSONSource | undefined;
+  const pastPtsSrc = map.getSource("storm-past-pts-src") as maplibregl.GeoJSONSource | undefined;
+  const etaSrc = map.getSource("storm-eta-src") as maplibregl.GeoJSONSource | undefined;
+  const arrowSrc = map.getSource("storm-fc-arrow-src") as maplibregl.GeoJSONSource | undefined;
+  if (
+    !coneSrc ||
+    !polySrc ||
+    !fcSrc ||
+    !cenSrc ||
+    !pastSrc ||
+    !pastHaloSrc ||
+    !pastPtsSrc ||
+    !etaSrc ||
+    !arrowSrc
+  )
+    return;
+  const empty = { type: "FeatureCollection" as const, features: [] };
+  if (cells.length === 0) {
+    coneSrc.setData(empty);
+    polySrc.setData(empty);
+    fcSrc.setData(empty);
+    cenSrc.setData(empty);
+    pastSrc.setData(empty);
+    pastHaloSrc.setData(empty);
+    pastPtsSrc.setData(empty);
+    etaSrc.setData(empty);
+    arrowSrc.setData(empty);
+    return;
+  }
+  type AnyFeature = {
+    type: "Feature";
+    geometry:
+      | { type: "Polygon"; coordinates: number[][][] }
+      | { type: "LineString"; coordinates: number[][] }
+      | { type: "Point"; coordinates: number[] };
+    properties: Record<string, unknown>;
+  };
+  const cones: AnyFeature[] = [];
+  const polys: AnyFeature[] = [];
+  const fcLines: AnyFeature[] = [];
+  const centroids: AnyFeature[] = [];
+  const pastLines: AnyFeature[] = [];
+  const pastHalos: AnyFeature[] = [];
+  const pastPts: AnyFeature[] = [];
+  const etaPts: AnyFeature[] = [];
+  const arrows: AnyFeature[] = [];
+  const ETA_OFFSETS = [15, 30, 60];
+  const SEV_RANK: Record<string, number> = { calm: 0, watch: 1, serious: 2, severe: 3 };
 
-      for (const cell of cells) {
-        const color = SEVERITY_COLOR[cell.severity.level];
-        if (cell.cone.length >= 4) {
-          cones.push({
-            type: "Feature",
-            geometry: { type: "Polygon", coordinates: [cell.cone] },
-            properties: { color, id: cell.id },
-          });
-        }
-        if (cell.polygon.length >= 3) {
-          const ring = [...cell.polygon, cell.polygon[0]];
-          polys.push({
-            type: "Feature",
-            geometry: { type: "Polygon", coordinates: [ring] },
-            properties: { color, id: cell.id },
-          });
-        }
-        // Zugbahn: history (älteste → neueste) + aktueller Centroid.
-        if (cell.history.length >= 2) {
-          const coords: [number, number][] = cell.history.map((h) => [h.lon, h.lat]);
-          pastHalos.push({
-            type: "Feature",
-            geometry: { type: "LineString", coordinates: coords },
-            properties: { id: cell.id },
-          });
-          pastLines.push({
-            type: "Feature",
-            geometry: { type: "LineString", coordinates: coords },
-            properties: { color, id: cell.id },
-          });
-          // Nur jeden 2. Punkt rendern, älteste deutlich verblasst.
-          const n = cell.history.length;
-          cell.history.forEach((h, i) => {
-            if (i % 2 !== 0 && i !== n - 1) return;
-            const fade = 0.2 + 0.55 * (i / Math.max(1, n - 1));
-            pastPts.push({
-              type: "Feature",
-              geometry: { type: "Point", coordinates: [h.lon, h.lat] },
-              properties: { color, fade },
-            });
-          });
-        }
-        if (cell.forecast.length > 0) {
-          fcLines.push({
-            type: "Feature",
-            geometry: {
-              type: "LineString",
-              coordinates: [
-                [cell.centroid.lon, cell.centroid.lat],
-                ...cell.forecast.map((f) => [f.lon, f.lat] as [number, number]),
-              ],
-            },
-            properties: { color, id: cell.id },
-          });
-          for (const off of ETA_OFFSETS) {
-            const fp = cell.forecast.find((f) => f.offsetMin === off);
-            if (!fp) continue;
-            etaPts.push({
-              type: "Feature",
-              geometry: { type: "Point", coordinates: [fp.lon, fp.lat] },
-              properties: { color, label: `+${off} min` },
-            });
-          }
-          // Pfeilspitze am Ende der Forecast-Linie, Rotation aus Bewegungsrichtung.
-          const tip = cell.forecast[cell.forecast.length - 1];
-          const bearing = cell.motion?.bearingDeg ?? 0;
-          arrows.push({
-            type: "Feature",
-            geometry: { type: "Point", coordinates: [tip.lon, tip.lat] },
-            properties: { color, bearing },
-          });
-        }
-        // Zoom-abhängige Labels: kurz / mittel / lang.
-        const name = cell.displayName ?? cell.id;
-        const badge = SEVERITY_BADGE[cell.severity.level];
-        const labelShort = `${name} · ${badge}`;
-        const motionLine = cell.motion && cell.motion.speedKmh > 1
-          ? `${Math.round(cell.motion.speedKmh)} km/h → ${cell.motion.bearingCompass}`
-          : null;
-        const labelMid = motionLine ? `${labelShort}\n${motionLine}` : labelShort;
-        const eta = etaToNearestTarget(cell, targets);
-        const etaLine = eta ? `→ ${eta.target.name} ${eta.minutes} min` : null;
-        const labelFull = [labelShort, motionLine, etaLine].filter(Boolean).join("\n");
-        centroids.push({
+  for (const cell of cells) {
+    const color = SEVERITY_COLOR[cell.severity.level];
+    if (cell.cone.length >= 4) {
+      cones.push({
+        type: "Feature",
+        geometry: { type: "Polygon", coordinates: [cell.cone] },
+        properties: { color, id: cell.id },
+      });
+    }
+    if (cell.polygon.length >= 3) {
+      const ring = [...cell.polygon, cell.polygon[0]];
+      polys.push({
+        type: "Feature",
+        geometry: { type: "Polygon", coordinates: [ring] },
+        properties: { color, id: cell.id },
+      });
+    }
+    // Zugbahn: history (älteste → neueste) + aktueller Centroid.
+    if (cell.history.length >= 2) {
+      const coords: [number, number][] = cell.history.map((h) => [h.lon, h.lat]);
+      pastHalos.push({
+        type: "Feature",
+        geometry: { type: "LineString", coordinates: coords },
+        properties: { id: cell.id },
+      });
+      pastLines.push({
+        type: "Feature",
+        geometry: { type: "LineString", coordinates: coords },
+        properties: { color, id: cell.id },
+      });
+      // Nur jeden 2. Punkt rendern, älteste deutlich verblasst.
+      const n = cell.history.length;
+      cell.history.forEach((h, i) => {
+        if (i % 2 !== 0 && i !== n - 1) return;
+        const fade = 0.2 + 0.55 * (i / Math.max(1, n - 1));
+        pastPts.push({
           type: "Feature",
-          geometry: { type: "Point", coordinates: [cell.centroid.lon, cell.centroid.lat] },
-          properties: {
-            color,
-            id: cell.id,
-            labelShort,
-            labelMid,
-            labelFull,
-            textColor: cell.severity.level === "severe" || cell.severity.level === "extreme" ? "#7f1d1d" : "#0f172a",
-            // Höchste Severity zuerst platzieren (großer sort-key = höhere Priorität bei Kollision).
-            rank: SEV_RANK[cell.severity.level] ?? 0,
-            // Negativer Sort-Key, damit MapLibre die wichtigsten zuerst rendert.
-            sortKey: -(SEV_RANK[cell.severity.level] ?? 0),
-          },
+          geometry: { type: "Point", coordinates: [h.lon, h.lat] },
+          properties: { color, fade },
+        });
+      });
+    }
+    if (cell.forecast.length > 0) {
+      fcLines.push({
+        type: "Feature",
+        geometry: {
+          type: "LineString",
+          coordinates: [
+            [cell.centroid.lon, cell.centroid.lat],
+            ...cell.forecast.map((f) => [f.lon, f.lat] as [number, number]),
+          ],
+        },
+        properties: { color, id: cell.id },
+      });
+      for (const off of ETA_OFFSETS) {
+        const fp = cell.forecast.find((f) => f.offsetMin === off);
+        if (!fp) continue;
+        etaPts.push({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [fp.lon, fp.lat] },
+          properties: { color, label: `+${off} min` },
         });
       }
+      // Pfeilspitze am Ende der Forecast-Linie, Rotation aus Bewegungsrichtung.
+      const tip = cell.forecast[cell.forecast.length - 1];
+      const bearing = cell.motion?.bearingDeg ?? 0;
+      arrows.push({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [tip.lon, tip.lat] },
+        properties: { color, bearing },
+      });
+    }
+    // Zoom-abhängige Labels: kurz / mittel / lang.
+    const name = cell.displayName ?? cell.id;
+    const badge = SEVERITY_BADGE[cell.severity.level];
+    const labelShort = `${name} · ${badge}`;
+    const motionLine =
+      cell.motion && cell.motion.speedKmh > 1
+        ? `${Math.round(cell.motion.speedKmh)} km/h → ${cell.motion.bearingCompass}`
+        : null;
+    const labelMid = motionLine ? `${labelShort}\n${motionLine}` : labelShort;
+    const eta = etaToNearestTarget(cell, targets);
+    const etaLine = eta ? `→ ${eta.target.name} ${eta.minutes} min` : null;
+    const labelFull = [labelShort, motionLine, etaLine].filter(Boolean).join("\n");
+    centroids.push({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [cell.centroid.lon, cell.centroid.lat] },
+      properties: {
+        color,
+        id: cell.id,
+        labelShort,
+        labelMid,
+        labelFull,
+        textColor:
+          cell.severity.level === "severe" || cell.severity.level === "extreme"
+            ? "#7f1d1d"
+            : "#0f172a",
+        // Höchste Severity zuerst platzieren (großer sort-key = höhere Priorität bei Kollision).
+        rank: SEV_RANK[cell.severity.level] ?? 0,
+        // Negativer Sort-Key, damit MapLibre die wichtigsten zuerst rendert.
+        sortKey: -(SEV_RANK[cell.severity.level] ?? 0),
+      },
+    });
+  }
 
-      coneSrc.setData({ type: "FeatureCollection", features: cones as unknown as never[] });
-      polySrc.setData({ type: "FeatureCollection", features: polys as unknown as never[] });
-      fcSrc.setData({ type: "FeatureCollection", features: fcLines as unknown as never[] });
-      cenSrc.setData({ type: "FeatureCollection", features: centroids as unknown as never[] });
-      pastSrc.setData({ type: "FeatureCollection", features: pastLines as unknown as never[] });
-      pastHaloSrc.setData({ type: "FeatureCollection", features: pastHalos as unknown as never[] });
-      pastPtsSrc.setData({ type: "FeatureCollection", features: pastPts as unknown as never[] });
-      etaSrc.setData({ type: "FeatureCollection", features: etaPts as unknown as never[] });
-      arrowSrc.setData({ type: "FeatureCollection", features: arrows as unknown as never[] });
+  coneSrc.setData({ type: "FeatureCollection", features: cones as unknown as never[] });
+  polySrc.setData({ type: "FeatureCollection", features: polys as unknown as never[] });
+  fcSrc.setData({ type: "FeatureCollection", features: fcLines as unknown as never[] });
+  cenSrc.setData({ type: "FeatureCollection", features: centroids as unknown as never[] });
+  pastSrc.setData({ type: "FeatureCollection", features: pastLines as unknown as never[] });
+  pastHaloSrc.setData({ type: "FeatureCollection", features: pastHalos as unknown as never[] });
+  pastPtsSrc.setData({ type: "FeatureCollection", features: pastPts as unknown as never[] });
+  etaSrc.setData({ type: "FeatureCollection", features: etaPts as unknown as never[] });
+  arrowSrc.setData({ type: "FeatureCollection", features: arrows as unknown as never[] });
 }
 
 /**
@@ -807,10 +910,26 @@ function renderStormCells(map: MlMap, cells: StormCell[], targets: NamedTarget[]
  */
 function firstOverlayLayer(map: MlMap): string | undefined {
   for (const id of [
-    "storm-cone", "storm-past-halo", "storm-past-line", "storm-past-pts", "storm-poly-fill", "storm-poly-line",
-    "storm-fc-line", "storm-fc-arrow", "storm-eta-pts", "storm-eta-labels", "storm-centroid", "storm-labels",
-    "track-past", "track-forecast", "track-points", "track-labels",
-    "lightning-layer", "focus-rings-line", "focus-labels", "focus-center",
+    "storm-cone",
+    "storm-past-halo",
+    "storm-past-line",
+    "storm-past-pts",
+    "storm-poly-fill",
+    "storm-poly-line",
+    "storm-fc-line",
+    "storm-fc-arrow",
+    "storm-eta-pts",
+    "storm-eta-labels",
+    "storm-centroid",
+    "storm-labels",
+    "track-past",
+    "track-forecast",
+    "track-points",
+    "track-labels",
+    "lightning-layer",
+    "focus-rings-line",
+    "focus-labels",
+    "focus-center",
   ]) {
     if (map.getLayer(id)) return id;
   }

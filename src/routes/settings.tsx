@@ -4,8 +4,14 @@ import { useSettings } from "@/hooks/use-settings";
 import { useSavedLocations } from "@/hooks/use-saved-locations";
 import { removeSavedLocation } from "@/lib/storage/saved-locations";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
-import type { ThemeMode, TempUnit, WindUnit, StormAlertLevel, HazardMinLevel } from "@/lib/storage/settings";
+import { Trash2 } from "@/components/icons";
+import type {
+  ThemeMode,
+  TempUnit,
+  WindUnit,
+  StormAlertLevel,
+  HazardMinLevel,
+} from "@/lib/storage/settings";
 import { HazardHistoryList } from "@/components/hazards/HazardHistoryList";
 import { clearHazardHistory } from "@/lib/weather/hazards/history";
 
@@ -20,13 +26,18 @@ export const Route = createFileRoute("/settings")({
 });
 
 const TEMP_UNITS: { value: TempUnit; label: string }[] = [
-  { value: "C", label: "°C" }, { value: "F", label: "°F" },
+  { value: "C", label: "°C" },
+  { value: "F", label: "°F" },
 ];
 const WIND_UNITS: { value: WindUnit; label: string }[] = [
-  { value: "kmh", label: "km/h" }, { value: "ms", label: "m/s" }, { value: "bft", label: "Bft" },
+  { value: "kmh", label: "km/h" },
+  { value: "ms", label: "m/s" },
+  { value: "bft", label: "Bft" },
 ];
 const THEMES: { value: ThemeMode; label: string }[] = [
-  { value: "light", label: "Hell" }, { value: "dark", label: "Dunkel" }, { value: "system", label: "System" },
+  { value: "light", label: "Hell" },
+  { value: "dark", label: "Dunkel" },
+  { value: "system", label: "System" },
 ];
 
 const ETA_OPTIONS: { value: number; label: string }[] = [
@@ -62,27 +73,44 @@ function SettingsPage() {
     <div className="flex flex-col gap-3">
       <div>
         <h1 className="text-lg font-semibold tracking-tight">Einstellungen</h1>
-        <p className="text-xs text-muted-foreground">Alles lokal in deinem Browser, kein Login, kein Sync.</p>
+        <p className="text-xs text-muted-foreground">
+          Alles lokal in deinem Browser, kein Login, kein Sync.
+        </p>
       </div>
 
       <DataCard title="Einheiten">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Group label="Temperatur">
             {TEMP_UNITS.map((u) => (
-              <Choice key={u.value} active={settings.tempUnit === u.value}
-                onClick={() => setSettings({ ...settings, tempUnit: u.value })}>{u.label}</Choice>
+              <Choice
+                key={u.value}
+                active={settings.tempUnit === u.value}
+                onClick={() => setSettings({ ...settings, tempUnit: u.value })}
+              >
+                {u.label}
+              </Choice>
             ))}
           </Group>
           <Group label="Wind">
             {WIND_UNITS.map((u) => (
-              <Choice key={u.value} active={settings.windUnit === u.value}
-                onClick={() => setSettings({ ...settings, windUnit: u.value })}>{u.label}</Choice>
+              <Choice
+                key={u.value}
+                active={settings.windUnit === u.value}
+                onClick={() => setSettings({ ...settings, windUnit: u.value })}
+              >
+                {u.label}
+              </Choice>
             ))}
           </Group>
           <Group label="Theme">
             {THEMES.map((t) => (
-              <Choice key={t.value} active={settings.theme === t.value}
-                onClick={() => setSettings({ ...settings, theme: t.value })}>{t.label}</Choice>
+              <Choice
+                key={t.value}
+                active={settings.theme === t.value}
+                onClick={() => setSettings({ ...settings, theme: t.value })}
+              >
+                {t.label}
+              </Choice>
             ))}
           </Group>
         </div>
@@ -91,114 +119,211 @@ function SettingsPage() {
       <DataCard title="Gespeicherte Orte" subtitle={`${saved.length} Orte`}>
         <ul className="flex flex-col">
           {saved.map((l) => (
-            <li key={l.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border/50 py-2 last:border-0">
+            <li
+              key={l.id}
+              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border/50 py-2 last:border-0"
+            >
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium">{l.name}</div>
                 <div className="truncate text-[11px] text-muted-foreground">
-                  {l.admin ? `${l.admin}, ` : ""}{l.country} · {l.lat.toFixed(3)}, {l.lon.toFixed(3)}
+                  {l.admin ? `${l.admin}, ` : ""}
+                  {l.country} · {l.lat.toFixed(3)}, {l.lon.toFixed(3)}
                 </div>
               </div>
               {!l.id.startsWith("default-") && (
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => removeSavedLocation(l.id)}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8"
+                  onClick={() => removeSavedLocation(l.id)}
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               )}
             </li>
           ))}
         </ul>
-        <p className="mt-2 text-[11px] text-muted-foreground">Standard-Orte (Berlin, Wien, Zürich, Bozen) lassen sich nicht löschen, neue über den Ortswechsler oben hinzufügen.</p>
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          Standard-Orte (Berlin, Wien, Zürich, Bozen) lassen sich nicht löschen, neue über den
+          Ortswechsler oben hinzufügen.
+        </p>
       </DataCard>
 
       <DataCard title="Stormtracking" subtitle="Detection aus Blitz-Clustern, Forecast +60 min">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Group label="Status">
-            <Choice active={settings.storm.enabled} onClick={() => setSettings({ ...settings, storm: { ...settings.storm, enabled: !settings.storm.enabled } })}>
+            <Choice
+              active={settings.storm.enabled}
+              onClick={() =>
+                setSettings({
+                  ...settings,
+                  storm: { ...settings.storm, enabled: !settings.storm.enabled },
+                })
+              }
+            >
               {settings.storm.enabled ? "Aktiv" : "Aus"}
             </Choice>
-            <Choice active={settings.storm.showLayer} onClick={() => setSettings({ ...settings, storm: { ...settings.storm, showLayer: !settings.storm.showLayer } })}>
+            <Choice
+              active={settings.storm.showLayer}
+              onClick={() =>
+                setSettings({
+                  ...settings,
+                  storm: { ...settings.storm, showLayer: !settings.storm.showLayer },
+                })
+              }
+            >
               Karten-Layer
             </Choice>
           </Group>
           <Group label="Alert ETA-Schwelle">
             {ETA_OPTIONS.map((o) => (
-              <Choice key={o.value} active={settings.storm.alertEtaMin === o.value}
-                onClick={() => setSettings({ ...settings, storm: { ...settings.storm, alertEtaMin: o.value } })}>
+              <Choice
+                key={o.value}
+                active={settings.storm.alertEtaMin === o.value}
+                onClick={() =>
+                  setSettings({ ...settings, storm: { ...settings.storm, alertEtaMin: o.value } })
+                }
+              >
                 {o.label}
               </Choice>
             ))}
           </Group>
           <Group label="Alert-Severity">
             {ALERT_LEVELS.map((o) => (
-              <Choice key={o.value} active={settings.storm.alertLevel === o.value}
-                onClick={() => setSettings({ ...settings, storm: { ...settings.storm, alertLevel: o.value } })}>
+              <Choice
+                key={o.value}
+                active={settings.storm.alertLevel === o.value}
+                onClick={() =>
+                  setSettings({ ...settings, storm: { ...settings.storm, alertLevel: o.value } })
+                }
+              >
                 {o.label}
               </Choice>
             ))}
           </Group>
         </div>
         <p className="mt-3 text-[11px] text-muted-foreground">
-          Alerts werden ausgelöst, wenn der Forecast-Cone einen Favoriten innerhalb der ETA-Schwelle streift
-          und die Severity mindestens dem gewählten Niveau entspricht. Cooldown 10 min pro Zelle und Favorit.
+          Alerts werden ausgelöst, wenn der Forecast-Cone einen Favoriten innerhalb der ETA-Schwelle
+          streift und die Severity mindestens dem gewählten Niveau entspricht. Cooldown 10 min pro
+          Zelle und Favorit.
         </p>
       </DataCard>
 
       <DataCard title="Hazard-Engine" subtitle="Hagel, Sturzflut und Blitz-Jump pro Storm-Zelle">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Group label="Status">
-            <Choice active={settings.hazards.enabled}
-              onClick={() => setSettings({ ...settings, hazards: { ...settings.hazards, enabled: !settings.hazards.enabled } })}>
+            <Choice
+              active={settings.hazards.enabled}
+              onClick={() =>
+                setSettings({
+                  ...settings,
+                  hazards: { ...settings.hazards, enabled: !settings.hazards.enabled },
+                })
+              }
+            >
               {settings.hazards.enabled ? "Aktiv" : "Aus"}
             </Choice>
           </Group>
           <Group label="Hazards">
-            <Choice active={settings.hazards.enableHail}
-              onClick={() => setSettings({ ...settings, hazards: { ...settings.hazards, enableHail: !settings.hazards.enableHail } })}>
+            <Choice
+              active={settings.hazards.enableHail}
+              onClick={() =>
+                setSettings({
+                  ...settings,
+                  hazards: { ...settings.hazards, enableHail: !settings.hazards.enableHail },
+                })
+              }
+            >
               Hagel
             </Choice>
-            <Choice active={settings.hazards.enableFlood}
-              onClick={() => setSettings({ ...settings, hazards: { ...settings.hazards, enableFlood: !settings.hazards.enableFlood } })}>
+            <Choice
+              active={settings.hazards.enableFlood}
+              onClick={() =>
+                setSettings({
+                  ...settings,
+                  hazards: { ...settings.hazards, enableFlood: !settings.hazards.enableFlood },
+                })
+              }
+            >
               Sturzflut
             </Choice>
-            <Choice active={settings.hazards.enableLightning}
-              onClick={() => setSettings({ ...settings, hazards: { ...settings.hazards, enableLightning: !settings.hazards.enableLightning } })}>
+            <Choice
+              active={settings.hazards.enableLightning}
+              onClick={() =>
+                setSettings({
+                  ...settings,
+                  hazards: {
+                    ...settings.hazards,
+                    enableLightning: !settings.hazards.enableLightning,
+                  },
+                })
+              }
+            >
               Blitz-Jump
             </Choice>
           </Group>
           <Group label="Mindeststufe für Alerts">
             {HAZARD_MIN_LEVELS.map((o) => (
-              <Choice key={o.value} active={settings.hazards.minLevel === o.value}
-                onClick={() => setSettings({ ...settings, hazards: { ...settings.hazards, minLevel: o.value } })}>
+              <Choice
+                key={o.value}
+                active={settings.hazards.minLevel === o.value}
+                onClick={() =>
+                  setSettings({ ...settings, hazards: { ...settings.hazards, minLevel: o.value } })
+                }
+              >
                 {o.label}
               </Choice>
             ))}
           </Group>
           <Group label="ETA-Schwelle">
             {ETA_OPTIONS.map((o) => (
-              <Choice key={o.value} active={settings.hazards.alertEtaMin === o.value}
-                onClick={() => setSettings({ ...settings, hazards: { ...settings.hazards, alertEtaMin: o.value } })}>
+              <Choice
+                key={o.value}
+                active={settings.hazards.alertEtaMin === o.value}
+                onClick={() =>
+                  setSettings({
+                    ...settings,
+                    hazards: { ...settings.hazards, alertEtaMin: o.value },
+                  })
+                }
+              >
                 {o.label}
               </Choice>
             ))}
           </Group>
           <Group label="Verlauf">
             {HAZARD_RETENTION.map((o) => (
-              <Choice key={o.value} active={settings.hazards.retentionDays === o.value}
-                onClick={() => setSettings({ ...settings, hazards: { ...settings.hazards, retentionDays: o.value } })}>
+              <Choice
+                key={o.value}
+                active={settings.hazards.retentionDays === o.value}
+                onClick={() =>
+                  setSettings({
+                    ...settings,
+                    hazards: { ...settings.hazards, retentionDays: o.value },
+                  })
+                }
+              >
                 {o.label}
               </Choice>
             ))}
-            <Button size="sm" variant="ghost" onClick={() => clearHazardHistory()}>Verlauf leeren</Button>
+            <Button size="sm" variant="ghost" onClick={() => clearHazardHistory()}>
+              Verlauf leeren
+            </Button>
           </Group>
         </div>
         <p className="mt-3 text-[11px] text-muted-foreground">
-          Hagel-POH/MESHS aus CAPE, Lifted Index und Freezing Level (Open-Meteo) plus Reflektivitäts-Proxy aus Blitzdichte.
-          Sturzflut aus Open-Meteo-Niederschlag (1 h / 3 h / 6 h / 24 h) gegen KOSTRA-DWD-Schwellen.
-          Blitz-Jump nach Schultz (σ-Anstieg über 10-min-Baseline). Alles deterministisch, lokal berechnet.
+          Hagel-POH/MESHS aus CAPE, Lifted Index und Freezing Level (Open-Meteo) plus
+          Reflektivitäts-Proxy aus Blitzdichte. Sturzflut aus Open-Meteo-Niederschlag (1 h / 3 h / 6
+          h / 24 h) gegen KOSTRA-DWD-Schwellen. Blitz-Jump nach Schultz (σ-Anstieg über
+          10-min-Baseline). Alles deterministisch, lokal berechnet.
         </p>
       </DataCard>
 
       {saved.length > 0 && (
-        <DataCard title="Hazard-Verlauf" subtitle={`Letzte ${settings.hazards.retentionDays} Tage pro Favorit`}>
+        <DataCard
+          title="Hazard-Verlauf"
+          subtitle={`Letzte ${settings.hazards.retentionDays} Tage pro Favorit`}
+        >
           <div className="flex flex-col gap-4">
             {saved.map((l) => (
               <div key={l.id}>
@@ -221,10 +346,21 @@ function SettingsPage() {
 
       <DataCard title="Datenquellen">
         <ul className="space-y-2 text-xs text-muted-foreground">
-          <li><strong className="text-foreground">Open-Meteo</strong> · Forecast, Modellvergleich, abgeleitete Werte. Kostenlos, ohne Key, freie nicht-kommerzielle Nutzung.</li>
-          <li><strong className="text-foreground">Bright Sky / DWD Open Data</strong> · Stationsbeobachtungen und offizielle Warnungen für DACH.</li>
-          <li><strong className="text-foreground">DWD Radar</strong> · Niederschlagsradar als WMS-Layer für Deutschland und angrenzende Bereiche.</li>
-          <li><strong className="text-foreground">OpenStreetMap</strong> · Karten-Basislayer.</li>
+          <li>
+            <strong className="text-foreground">Open-Meteo</strong> · Forecast, Modellvergleich,
+            abgeleitete Werte. Kostenlos, ohne Key, freie nicht-kommerzielle Nutzung.
+          </li>
+          <li>
+            <strong className="text-foreground">Bright Sky / DWD Open Data</strong> ·
+            Stationsbeobachtungen und offizielle Warnungen für DACH.
+          </li>
+          <li>
+            <strong className="text-foreground">DWD Radar</strong> · Niederschlagsradar als
+            WMS-Layer für Deutschland und angrenzende Bereiche.
+          </li>
+          <li>
+            <strong className="text-foreground">OpenStreetMap</strong> · Karten-Basislayer.
+          </li>
         </ul>
       </DataCard>
     </div>
@@ -234,14 +370,26 @@ function SettingsPage() {
 function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
+        {label}
+      </div>
       <div className="flex flex-wrap gap-1">{children}</div>
     </div>
   );
 }
 
-function Choice({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function Choice({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
-    <Button size="sm" variant={active ? "default" : "outline"} onClick={onClick}>{children}</Button>
+    <Button size="sm" variant={active ? "default" : "outline"} onClick={onClick}>
+      {children}
+    </Button>
   );
 }

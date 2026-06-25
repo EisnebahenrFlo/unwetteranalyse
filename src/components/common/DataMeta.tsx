@@ -5,7 +5,7 @@ import { useLiveNow } from "@/hooks/use-live-now";
 const SOURCE_LABEL: Record<DataMetaT["source"], string> = {
   "open-meteo": "Open-Meteo",
   "bright-sky": "Bright Sky / DWD",
-  "dwd": "DWD-Schwellen",
+  dwd: "DWD-Schwellen",
 };
 
 export function DataMeta({ meta }: { meta: DataMetaT }) {

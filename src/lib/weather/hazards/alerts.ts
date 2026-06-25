@@ -20,7 +20,9 @@ import {
 
 const STORAGE_KEY = "meteoflo.hazard-alerts.v1";
 
-interface StoredMeta { lastFiredAt: number }
+interface StoredMeta {
+  lastFiredAt: number;
+}
 
 function loadMeta(): Record<string, StoredMeta> {
   if (typeof window === "undefined") return {};
@@ -39,7 +41,8 @@ function saveMeta(meta: Record<string, StoredMeta>) {
 function headlineFor(kind: HazardKind, report: HazardCellReport): string {
   if (kind === "hail") {
     const h = report.hail;
-    if (h.meshsCm >= 2) return `Hagel bis ~${h.meshsCm.toFixed(1)} cm möglich (POH ${h.pohPercent}%)`;
+    if (h.meshsCm >= 2)
+      return `Hagel bis ~${h.meshsCm.toFixed(1)} cm möglich (POH ${h.pohPercent}%)`;
     return `Hagelrisiko erhöht (POH ${h.pohPercent}%)`;
   }
   if (kind === "flood") {
@@ -48,7 +51,8 @@ function headlineFor(kind: HazardKind, report: HazardCellReport): string {
     return `Starkregen ${Math.round(Math.max(f.rrMm.h1, f.rrMm.h3))} mm in kurzer Zeit${ret}`;
   }
   const l = report.lightning;
-  if (l.jumpActive) return `Lightning Jump aktiv — Eskalation wahrscheinlich (${l.ratePerMin.toFixed(1)}/min)`;
+  if (l.jumpActive)
+    return `Lightning Jump aktiv — Eskalation wahrscheinlich (${l.ratePerMin.toFixed(1)}/min)`;
   return `Hohe Blitzaktivität ${l.ratePerMin.toFixed(1)}/min`;
 }
 

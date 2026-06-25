@@ -1,9 +1,17 @@
 import { queryOptions } from "@tanstack/react-query";
 import { fetchOpenMeteoForecast, fetchOpenMeteoSingleModel } from "./sources/open-meteo";
-import { fetchBrightSkyCurrent, fetchBrightSkyAlerts, fetchBrightSkyStations } from "./sources/bright-sky";
+import {
+  fetchBrightSkyCurrent,
+  fetchBrightSkyAlerts,
+  fetchBrightSkyStations,
+} from "./sources/bright-sky";
 import { fetchDwdRadarFrames } from "./sources/dwd-radar";
 import { mapForecastBundle, mapModelSeries } from "./mappers/open-meteo";
-import { mapBrightSkyCurrent, mapBrightSkyStations, mapBrightSkyAlerts } from "./mappers/bright-sky";
+import {
+  mapBrightSkyCurrent,
+  mapBrightSkyStations,
+  mapBrightSkyAlerts,
+} from "./mappers/bright-sky";
 import { WEATHER_MODELS } from "./models";
 import { searchLocations } from "@/lib/geo/geocoding";
 import type { GeoPoint } from "./types";
@@ -84,16 +92,21 @@ export function modelComparisonQuery(point: GeoPoint) {
   return queryOptions({
     queryKey: ["model-compare", point.lat, point.lon],
     queryFn: async () => {
-      const results = await Promise.all(WEATHER_MODELS.map(async (info) => {
-        try {
-          const raw = await fetchOpenMeteoSingleModel({
-              lat: point.lat, lon: point.lon, model: info.id, forecastDays: 5,
-          });
-          return mapModelSeries(raw, info.id, info.label, info.resolutionKm);
-        } catch {
-          return mapModelSeries({}, info.id, info.label, info.resolutionKm);
-        }
-      }));
+      const results = await Promise.all(
+        WEATHER_MODELS.map(async (info) => {
+          try {
+            const raw = await fetchOpenMeteoSingleModel({
+              lat: point.lat,
+              lon: point.lon,
+              model: info.id,
+              forecastDays: 5,
+            });
+            return mapModelSeries(raw, info.id, info.label, info.resolutionKm);
+          } catch {
+            return mapModelSeries({}, info.id, info.label, info.resolutionKm);
+          }
+        }),
+      );
       return results;
     },
     staleTime: STALE,

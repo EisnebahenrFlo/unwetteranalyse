@@ -31,10 +31,13 @@ export interface FloodInput {
  * Mittel-Europa-Tiefland. Steillagen werden über topoFactor angehoben.
  * Quelle der Größenordnungen: KOSTRA-DWD 2020 Aggregat (publiziert).
  */
-const THRESHOLDS_MM: Record<"h1" | "h3" | "h6" | "h24", { t1: number; t10: number; t30: number; t100: number }> = {
-  h1:  { t1: 15, t10: 30, t30: 40, t100: 55 },
-  h3:  { t1: 22, t10: 45, t30: 60, t100: 80 },
-  h6:  { t1: 30, t10: 55, t30: 75, t100: 100 },
+const THRESHOLDS_MM: Record<
+  "h1" | "h3" | "h6" | "h24",
+  { t1: number; t10: number; t30: number; t100: number }
+> = {
+  h1: { t1: 15, t10: 30, t30: 40, t100: 55 },
+  h3: { t1: 22, t10: 45, t30: 60, t100: 80 },
+  h6: { t1: 30, t10: 55, t30: 75, t100: 100 },
   h24: { t1: 45, t10: 80, t30: 110, t100: 150 },
 };
 
@@ -95,10 +98,14 @@ export function diagnoseFlood(input: FloodInput): FloodDiagnosis {
   const level = levelFor(ffi, returnYears);
 
   const reasons: string[] = [];
-  if (h1 >= THRESHOLDS_MM.h1.t1) reasons.push(`1 h ${h1.toFixed(1)} mm (T≈${returnYearsFor(h1, "h1")}a)`);
-  if (h3 >= THRESHOLDS_MM.h3.t1) reasons.push(`3 h ${h3.toFixed(1)} mm (T≈${returnYearsFor(h3, "h3")}a)`);
-  if (h6 >= THRESHOLDS_MM.h6.t1) reasons.push(`6 h ${h6.toFixed(1)} mm (T≈${returnYearsFor(h6, "h6")}a)`);
-  if (h24 >= THRESHOLDS_MM.h24.t1) reasons.push(`24 h ${h24.toFixed(1)} mm (T≈${returnYearsFor(h24, "h24")}a)`);
+  if (h1 >= THRESHOLDS_MM.h1.t1)
+    reasons.push(`1 h ${h1.toFixed(1)} mm (T≈${returnYearsFor(h1, "h1")}a)`);
+  if (h3 >= THRESHOLDS_MM.h3.t1)
+    reasons.push(`3 h ${h3.toFixed(1)} mm (T≈${returnYearsFor(h3, "h3")}a)`);
+  if (h6 >= THRESHOLDS_MM.h6.t1)
+    reasons.push(`6 h ${h6.toFixed(1)} mm (T≈${returnYearsFor(h6, "h6")}a)`);
+  if (h24 >= THRESHOLDS_MM.h24.t1)
+    reasons.push(`24 h ${h24.toFixed(1)} mm (T≈${returnYearsFor(h24, "h24")}a)`);
   if (topo > 1) reasons.push(`Topo-Faktor ×${topo.toFixed(2)} berücksichtigt`);
   if (reasons.length === 0) reasons.push("Niederschlag unter T=1a-Schwelle");
 

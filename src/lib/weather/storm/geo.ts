@@ -32,17 +32,23 @@ export function bearingDeg(a: { lat: number; lon: number }, b: { lat: number; lo
 
 export function bearingCompass(deg: number) {
   const dirs = ["N", "NO", "O", "SO", "S", "SW", "W", "NW"];
-  return dirs[Math.round(((deg % 360) / 45)) % 8];
+  return dirs[Math.round((deg % 360) / 45) % 8];
 }
 
 /** Bewegt einen Punkt um distance km in Richtung bearing. */
-export function destination(a: { lat: number; lon: number }, distanceKm: number, bearingDegVal: number) {
+export function destination(
+  a: { lat: number; lon: number },
+  distanceKm: number,
+  bearingDegVal: number,
+) {
   const δ = distanceKm / R;
   const θ = toRad(bearingDegVal);
   const φ1 = toRad(a.lat);
   const λ1 = toRad(a.lon);
   const φ2 = Math.asin(Math.sin(φ1) * Math.cos(δ) + Math.cos(φ1) * Math.sin(δ) * Math.cos(θ));
-  const λ2 = λ1 + Math.atan2(Math.sin(θ) * Math.sin(δ) * Math.cos(φ1), Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2));
+  const λ2 =
+    λ1 +
+    Math.atan2(Math.sin(θ) * Math.sin(δ) * Math.cos(φ1), Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2));
   return { lat: toDeg(φ2), lon: ((toDeg(λ2) + 540) % 360) - 180 };
 }
 
@@ -60,13 +66,15 @@ export function convexHull(points: { lat: number; lon: number }[]): [number, num
     (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
   const lower: [number, number][] = [];
   for (const p of pts) {
-    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0)
+      lower.pop();
     lower.push(p);
   }
   const upper: [number, number][] = [];
   for (let i = pts.length - 1; i >= 0; i--) {
     const p = pts[i];
-    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0)
+      upper.pop();
     upper.push(p);
   }
   upper.pop();
@@ -85,7 +93,10 @@ export function centroidOf(points: { lat: number; lon: number }[]) {
 }
 
 /** Maximale Distanz von Centroid zu Cluster-Punkten in km. */
-export function radiusKm(centroid: { lat: number; lon: number }, points: { lat: number; lon: number }[]) {
+export function radiusKm(
+  centroid: { lat: number; lon: number },
+  points: { lat: number; lon: number }[],
+) {
   let max = 0;
   for (const p of points) {
     const d = distanceKm(centroid, p);

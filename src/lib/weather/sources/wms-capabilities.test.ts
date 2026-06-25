@@ -10,8 +10,9 @@ const xml = `<WMS_Capabilities><Capability><Layer>
 
 describe("parseWmsTimeDimension", () => {
   it("findet die time-Dimension am richtigen Layer", () => {
-    expect(parseWmsTimeDimension(xml, "RADOLAN-RY"))
-      .toBe("2026-06-25T10:00:00Z/2026-06-25T10:30:00Z/PT5M");
+    expect(parseWmsTimeDimension(xml, "RADOLAN-RY")).toBe(
+      "2026-06-25T10:00:00Z/2026-06-25T10:30:00Z/PT5M",
+    );
   });
   it("greift NICHT die Zeit eines fremden Layers (kein Cross-Leak)", () => {
     expect(parseWmsTimeDimension(xml, "OhneZeit")).toBeNull();

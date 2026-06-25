@@ -5,11 +5,11 @@ import type { StormSeverity } from "@/lib/weather/storm/types";
  * Kein dramatisches Pink/Magenta.
  */
 export const SEVERITY_COLOR: Record<StormSeverity, string> = {
-  calm: "#64748b",      // slate-500
-  watch: "#f59e0b",     // amber-500
-  serious: "#f97316",   // orange-500
-  severe: "#dc2626",    // red-600
-  extreme: "#7c3aed",   // violet-600
+  calm: "#64748b", // slate-500
+  watch: "#f59e0b", // amber-500
+  serious: "#f97316", // orange-500
+  severe: "#dc2626", // red-600
+  extreme: "#7c3aed", // violet-600
 };
 
 export const SEVERITY_LABEL: Record<StormSeverity, string> = {

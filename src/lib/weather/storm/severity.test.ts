@@ -16,8 +16,22 @@ describe("scoreCell — Extrem-Gating", () => {
   });
   it("Region-Proxy ist nie strenger als Zellort (höheres Gate)", () => {
     const env = { cape: 2500, liftedIndex: -4 };
-    const cell = scoreCell({ ...base, strikeRatePerMin: 4, strikeRateTrend: 1.5, strikeCount: 20, radiusKm: 5, env: { ...env, source: "cell" as const } }).level;
-    const region = scoreCell({ ...base, strikeRatePerMin: 4, strikeRateTrend: 1.5, strikeCount: 20, radiusKm: 5, env: { ...env, source: "region" as const } }).level;
+    const cell = scoreCell({
+      ...base,
+      strikeRatePerMin: 4,
+      strikeRateTrend: 1.5,
+      strikeCount: 20,
+      radiusKm: 5,
+      env: { ...env, source: "cell" as const },
+    }).level;
+    const region = scoreCell({
+      ...base,
+      strikeRatePerMin: 4,
+      strikeRateTrend: 1.5,
+      strikeCount: 20,
+      radiusKm: 5,
+      env: { ...env, source: "region" as const },
+    }).level;
     expect(SEVERITY_RANK[cell]).toBeGreaterThanOrEqual(SEVERITY_RANK[region]);
   });
 });

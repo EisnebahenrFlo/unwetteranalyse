@@ -6,8 +6,16 @@
 import type { HourlyPoint } from "../types";
 import { bandFromScore, type Band } from "./labels";
 import {
-  cinDamping, clamp, normCape, normGustKmh, normKIndex, normLiftedIndex,
-  normRainMmH, normThunderProb, normTotalTotals, normWindKmh,
+  cinDamping,
+  clamp,
+  normCape,
+  normGustKmh,
+  normKIndex,
+  normLiftedIndex,
+  normRainMmH,
+  normThunderProb,
+  normTotalTotals,
+  normWindKmh,
 } from "./normalize";
 import { kIndex, thunderProbability, totalTotals } from "./derived";
 
@@ -42,7 +50,8 @@ export function rainSubscore(p: HourlyPoint): Subscore {
   if (rPts > 0) c.push({ label: "Niederschlagsrate", raw: `${mm.toFixed(1)} mm/h`, points: rPts });
   // Wahrscheinlichkeit als sanfter Modulator (max +12)
   const probPts = (prob / 100) * 12 * (mm < 0.5 ? 1 : 0.4);
-  if (probPts > 0.5) c.push({ label: "Niederschlagswahrscheinl.", raw: `${prob.toFixed(0)} %`, points: probPts });
+  if (probPts > 0.5)
+    c.push({ label: "Niederschlagswahrscheinl.", raw: `${prob.toFixed(0)} %`, points: probPts });
   const total = c.reduce((s, x) => s + x.points, 0);
   return build(total, pickTop(c), p.precipitationMm != null ? 85 : 50);
 }
@@ -65,7 +74,8 @@ export function thunderSubscore(p: HourlyPoint, opts?: { lightning5min?: number 
   const c: Contributor[] = [];
   const tp = thunderProbability(p);
   const tpPts = normThunderProb(tp) * 0.6;
-  if (tpPts > 0.5) c.push({ label: "Gewitterwahrscheinl.", raw: `${Math.round(tp * 100)} %`, points: tpPts });
+  if (tpPts > 0.5)
+    c.push({ label: "Gewitterwahrscheinl.", raw: `${Math.round(tp * 100)} %`, points: tpPts });
   if (p.weatherCode != null && p.weatherCode >= 95) {
     c.push({ label: "Modell meldet Gewitter", raw: `Code ${p.weatherCode}`, points: 15 });
   }
@@ -74,8 +84,11 @@ export function thunderSubscore(p: HourlyPoint, opts?: { lightning5min?: number 
     c.push({ label: "Live-Blitze (5 min)", raw: `${opts.lightning5min} Strikes`, points: lPts });
   }
   const total = c.reduce((s, x) => s + x.points, 0);
-  const conf = (p.cape != null ? 30 : 0) + (p.liftedIndex != null ? 25 : 0)
-    + (opts?.lightning5min != null ? 30 : 0) + 15;
+  const conf =
+    (p.cape != null ? 30 : 0) +
+    (p.liftedIndex != null ? 25 : 0) +
+    (opts?.lightning5min != null ? 30 : 0) +
+    15;
   return build(total, pickTop(c), Math.min(100, conf));
 }
 
@@ -124,27 +137,52 @@ export interface DataContextInput {
 export function dataConfidence(input: DataContextInput): Subscore {
   const c: Contributor[] = [];
   let score = 30;
-  if (input.hasConvective) { score += 15; c.push({ label: "Konvektive Felder", raw: "CAPE/LI", points: 15 }); }
-  if (input.hasUpperLevels) { score += 12; c.push({ label: "Höhenwerte", raw: "850/700/500 hPa", points: 12 }); }
-  if (input.hasMinutely) { score += 12; c.push({ label: "Minutendaten", raw: "15-min Raster", points: 12 }); }
+  if (input.hasConvective) {
+    score += 15;
+    c.push({ label: "Konvektive Felder", raw: "CAPE/LI", points: 15 });
+  }
+  if (input.hasUpperLevels) {
+    score += 12;
+    c.push({ label: "Höhenwerte", raw: "850/700/500 hPa", points: 12 });
+  }
+  if (input.hasMinutely) {
+    score += 12;
+    c.push({ label: "Minutendaten", raw: "15-min Raster", points: 12 });
+  }
   if (input.liveObsAgeMinutes != null) {
     const pts = input.liveObsAgeMinutes <= 30 ? 12 : input.liveObsAgeMinutes <= 90 ? 6 : 0;
     score += pts;
-    c.push({ label: "Live-Beobachtung", raw: `${Math.round(input.liveObsAgeMinutes)} min alt`, points: pts });
+    c.push({
+      label: "Live-Beobachtung",
+      raw: `${Math.round(input.liveObsAgeMinutes)} min alt`,
+      points: pts,
+    });
   } else {
     c.push({ label: "Live-Beobachtung", raw: "fehlt", points: 0 });
   }
   if (input.radarAgeMinutes != null) {
     const pts = input.radarAgeMinutes <= 10 ? 10 : input.radarAgeMinutes <= 25 ? 5 : 0;
     score += pts;
-    c.push({ label: "DWD-Radar", raw: `${Math.round(input.radarAgeMinutes)} min alt`, points: pts });
+    c.push({
+      label: "DWD-Radar",
+      raw: `${Math.round(input.radarAgeMinutes)} min alt`,
+      points: pts,
+    });
   } else {
     c.push({ label: "DWD-Radar", raw: "keine Frische bekannt", points: 0 });
   }
-  if (input.lightningConnected) { score += 8; c.push({ label: "Blitz-Stream", raw: "verbunden", points: 8 }); }
-  else c.push({ label: "Blitz-Stream", raw: "offline", points: 0 });
-  if (input.modelObsConsistent === false) { score -= 15; c.push({ label: "Modell ↔ Live", raw: "abweichend", points: -15 }); }
-  if (input.modelObsConsistent === true) { score += 5; c.push({ label: "Modell ↔ Live", raw: "konsistent", points: 5 }); }
+  if (input.lightningConnected) {
+    score += 8;
+    c.push({ label: "Blitz-Stream", raw: "verbunden", points: 8 });
+  } else c.push({ label: "Blitz-Stream", raw: "offline", points: 0 });
+  if (input.modelObsConsistent === false) {
+    score -= 15;
+    c.push({ label: "Modell ↔ Live", raw: "abweichend", points: -15 });
+  }
+  if (input.modelObsConsistent === true) {
+    score += 5;
+    c.push({ label: "Modell ↔ Live", raw: "konsistent", points: 5 });
+  }
   score = Math.max(0, Math.min(100, score));
   return { value: Math.round(score), band: bandFromScore(score), contributors: c, confidence: 100 };
 }

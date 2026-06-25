@@ -6,8 +6,13 @@
 import type { HourlyPoint, MinutelyPoint } from "../types";
 import { bandFromScore, type Band, confidenceLabel } from "./labels";
 import {
-  convectionSubscore, dataConfidence, type DataContextInput,
-  rainSubscore, thunderSubscore, windSubscore, type Subscore,
+  convectionSubscore,
+  dataConfidence,
+  type DataContextInput,
+  rainSubscore,
+  thunderSubscore,
+  windSubscore,
+  type Subscore,
 } from "./subscores";
 
 const STEP_MINUTES = 10;
@@ -40,7 +45,7 @@ export interface NowcastResult {
 }
 
 // Gewichte für Kurzfrist (Summe ≈ 1.0)
-const W = { rain: 0.35, wind: 0.20, thunder: 0.30, convection: 0.15 };
+const W = { rain: 0.35, wind: 0.2, thunder: 0.3, convection: 0.15 };
 
 function combine(rain: number, wind: number, thunder: number, convection: number): number {
   const linear = rain * W.rain + wind * W.wind + thunder * W.thunder + convection * W.convection;
@@ -71,11 +76,15 @@ function findMinutely(points: MinutelyPoint[], t: Date): MinutelyPoint | null {
 function interpolate(points: HourlyPoint[], t: Date): HourlyPoint | null {
   if (!points.length) return null;
   const tMs = t.getTime();
-  let a: HourlyPoint | null = null, b: HourlyPoint | null = null;
+  let a: HourlyPoint | null = null,
+    b: HourlyPoint | null = null;
   for (const p of points) {
     const ms = new Date(p.time).getTime();
     if (ms <= tMs) a = p;
-    if (ms >= tMs && !b) { b = p; break; }
+    if (ms >= tMs && !b) {
+      b = p;
+      break;
+    }
   }
   if (!a && b) return b;
   if (a && !b) return a;
@@ -83,7 +92,7 @@ function interpolate(points: HourlyPoint[], t: Date): HourlyPoint | null {
   const aMs = new Date(a.time).getTime();
   const bMs = new Date(b.time).getTime();
   const f = (tMs - aMs) / Math.max(1, bMs - aMs);
-  const L = (x?: number, y?: number) => x == null || y == null ? (x ?? y) : x + (y - x) * f;
+  const L = (x?: number, y?: number) => (x == null || y == null ? (x ?? y) : x + (y - x) * f);
   return {
     ...a,
     time: t.toISOString(),
@@ -122,8 +131,8 @@ export interface NowcastInput {
   hourly: HourlyPoint[];
   minutely?: MinutelyPoint[];
   now: Date;
-  lightning5min?: number;          // gesamt
-  lightningPerStep?: number[];     // optional pro 10-min-Step
+  lightning5min?: number; // gesamt
+  lightningPerStep?: number[]; // optional pro 10-min-Step
   liveObsAgeMinutes?: number | null;
   radarAgeMinutes?: number | null;
   lightningConnected?: boolean;
@@ -146,13 +155,16 @@ export function buildNowcast(input: NowcastInput): NowcastResult {
       ...(interp ?? { time: t.toISOString(), temperatureC: Number.NaN }),
       time: t.toISOString(),
       precipitationMm: precipPerH,
-      precipitationProbability: minute?.precipitationProbability ?? interp?.precipitationProbability,
+      precipitationProbability:
+        minute?.precipitationProbability ?? interp?.precipitationProbability,
       weatherCode: code,
     };
     const l5 = input.lightningPerStep?.[i];
     const rain = rainSubscore(point);
     const wind = windSubscore(point);
-    const thunder = thunderSubscore(point, { lightning5min: l5 ?? (i === 0 ? input.lightning5min : undefined) });
+    const thunder = thunderSubscore(point, {
+      lightning5min: l5 ?? (i === 0 ? input.lightning5min : undefined),
+    });
     const conv = convectionSubscore(point);
     const total = combine(rain.value, wind.value, thunder.value, conv.value);
     steps.push({
@@ -160,14 +172,17 @@ export function buildNowcast(input: NowcastInput): NowcastResult {
       minutesFromNow: Math.round((t.getTime() - input.now.getTime()) / 60_000),
       weatherCode: code,
       point,
-      rain, wind, thunder, convection: conv,
+      rain,
+      wind,
+      thunder,
+      convection: conv,
       total,
       band: bandFromScore(total),
       lightning5min: l5,
     });
   }
 
-  const peak = steps.reduce((b, s) => s.total > b.total ? s : b, steps[0]);
+  const peak = steps.reduce((b, s) => (s.total > b.total ? s : b), steps[0]);
   const rainAgg = aggregateSub(steps.map((s) => s.rain));
   const windAgg = aggregateSub(steps.map((s) => s.wind));
   const thunderAgg = aggregateSub(steps.map((s) => s.thunder));

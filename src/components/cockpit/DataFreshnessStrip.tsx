@@ -20,10 +20,16 @@ export function DataFreshnessStrip({ entries }: { entries: Entry[] }) {
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border/70 bg-card/60 px-3 py-1.5 text-[11px] text-muted-foreground">
       <span className="font-semibold uppercase tracking-wider text-foreground/80">Datenstand</span>
       {entries.map((e) => {
-        const ageMin = e.updatedAt ? Math.max(0, Math.round((now.getTime() - new Date(e.updatedAt).getTime()) / 60_000)) : null;
+        const ageMin = e.updatedAt
+          ? Math.max(0, Math.round((now.getTime() - new Date(e.updatedAt).getTime()) / 60_000))
+          : null;
         const warn = e.warnAfterMin ?? 30;
         const state: "ok" | "delayed" | "off" =
-          e.ok === false || !e.updatedAt ? "off" : ageMin != null && ageMin > warn ? "delayed" : "ok";
+          e.ok === false || !e.updatedAt
+            ? "off"
+            : ageMin != null && ageMin > warn
+              ? "delayed"
+              : "ok";
         return (
           <span key={e.label} className="inline-flex items-center gap-1.5">
             <span className={cn("h-1.5 w-1.5 rounded-full", DOT[state])} aria-hidden />

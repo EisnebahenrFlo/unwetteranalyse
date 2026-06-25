@@ -3,8 +3,13 @@ import { thunderProbability, summarizeModelSevere } from "./convection";
 import { liveHourly } from "../live";
 
 export type ConsensusMetric =
-  | "temperatureC" | "dewPointC" | "precipitationMm" | "precipitationProbability"
-  | "windGustMs" | "cape" | "liftedIndex";
+  | "temperatureC"
+  | "dewPointC"
+  | "precipitationMm"
+  | "precipitationProbability"
+  | "windGustMs"
+  | "cape"
+  | "liftedIndex";
 
 export interface CorridorPoint {
   time: string;
@@ -16,7 +21,12 @@ export interface CorridorPoint {
 }
 
 /** Pro Zeitpunkt Median + Spannweite über alle Modelle für ein Feld. */
-export function buildCorridor(series: ModelSeries[], metric: ConsensusMetric, now: Date, hours = 72): CorridorPoint[] {
+export function buildCorridor(
+  series: ModelSeries[],
+  metric: ConsensusMetric,
+  now: Date,
+  hours = 72,
+): CorridorPoint[] {
   const allTimes = new Set<string>();
   for (const s of series) for (const h of liveHourly(s.hourly, now)) allTimes.add(h.time);
   const sorted = Array.from(allTimes).sort().slice(0, hours);
@@ -74,7 +84,11 @@ export function buildConsensus(series: ModelSeries[], now: Date): ConsensusSumma
       if (p) vs.push(thunderProbability(p));
     }
     vs.sort((a, b) => a - b);
-    const m = vs.length ? (vs.length % 2 ? vs[(vs.length - 1) >> 1] : (vs[vs.length / 2 - 1] + vs[vs.length / 2]) / 2) : 0;
+    const m = vs.length
+      ? vs.length % 2
+        ? vs[(vs.length - 1) >> 1]
+        : (vs[vs.length / 2 - 1] + vs[vs.length / 2]) / 2
+      : 0;
     return { t, v: m };
   });
   let window: ConsensusSummary["signalWindow"] = null;
@@ -85,7 +99,10 @@ export function buildConsensus(series: ModelSeries[], now: Date): ConsensusSumma
       let j = i;
       while (j + 1 < medianTp.length && medianTp[j + 1].v > 0.3) j++;
       const len = j - i + 1;
-      if (len > bestLen) { bestLen = len; window = { start: medianTp[i].t, end: medianTp[j].t }; }
+      if (len > bestLen) {
+        bestLen = len;
+        window = { start: medianTp[i].t, end: medianTp[j].t };
+      }
       i = j + 1;
     } else i++;
   }
@@ -97,9 +114,12 @@ export function buildConsensus(series: ModelSeries[], now: Date): ConsensusSumma
   // Kurzfazit
   const ratio = series.length ? signaling / series.length : 0;
   let headline = "Modelle zeigen ruhige Wetterlage ohne markante Signale.";
-  if (riskMax >= 70) headline = `Mehrheit der Modelle signalisiert Unwetterpotenzial${window ? ` im Fenster ${fmtH(window.start)}–${fmtH(window.end)} Uhr` : ""}.`;
-  else if (riskMax >= 45) headline = `Einige Modelle zeigen markantes Gewitter- oder Sturmpotenzial${window ? ` (${fmtH(window.start)}–${fmtH(window.end)} Uhr)` : ""}, Unsicherheit ${uncertaintyLabel(uncertainty)}.`;
-  else if (riskMax >= 20) headline = `Schwache konvektive Signale, ${signaling} von ${series.length} Modellen mit Wetteraktivität.`;
+  if (riskMax >= 70)
+    headline = `Mehrheit der Modelle signalisiert Unwetterpotenzial${window ? ` im Fenster ${fmtH(window.start)}–${fmtH(window.end)} Uhr` : ""}.`;
+  else if (riskMax >= 45)
+    headline = `Einige Modelle zeigen markantes Gewitter- oder Sturmpotenzial${window ? ` (${fmtH(window.start)}–${fmtH(window.end)} Uhr)` : ""}, Unsicherheit ${uncertaintyLabel(uncertainty)}.`;
+  else if (riskMax >= 20)
+    headline = `Schwache konvektive Signale, ${signaling} von ${series.length} Modellen mit Wetteraktivität.`;
 
   return {
     modelCount: series.length,
@@ -137,33 +157,38 @@ export interface ModelRankRow {
 }
 
 export function buildRanking(series: ModelSeries[], now: Date): ModelRankRow[] {
-  return series.map((s) => {
-    const live = liveHourly(s.hourly, now).slice(0, 24);
-    const sum = summarizeModelSevere(live);
-    const drivers: string[] = [];
-    if (sum.capeMax != null && sum.capeMax >= 800) drivers.push("CAPE");
-    if (sum.liMin != null && sum.liMin <= -3) drivers.push("LI");
-    if (sum.gustMaxMs >= 18) drivers.push("Böen");
-    if (sum.precipMaxMm >= 15) drivers.push("Starkregen");
-    if (sum.thunderProbMax >= 0.5) drivers.push("Gewitter");
-    return {
-      model: s.model,
-      label: s.label,
-      resolutionKm: s.meta.resolutionKm,
-      worstScore: sum.worstScore,
-      level: sum.level,
-      capeMax: sum.capeMax,
-      liMin: sum.liMin,
-      gustMaxMs: sum.gustMaxMs,
-      precipMaxMm: sum.precipMaxMm,
-      thunderProbMax: sum.thunderProbMax,
-      drivers,
-      hourly: live,
-    };
-  }).sort((a, b) => b.worstScore - a.worstScore);
+  return series
+    .map((s) => {
+      const live = liveHourly(s.hourly, now).slice(0, 24);
+      const sum = summarizeModelSevere(live);
+      const drivers: string[] = [];
+      if (sum.capeMax != null && sum.capeMax >= 800) drivers.push("CAPE");
+      if (sum.liMin != null && sum.liMin <= -3) drivers.push("LI");
+      if (sum.gustMaxMs >= 18) drivers.push("Böen");
+      if (sum.precipMaxMm >= 15) drivers.push("Starkregen");
+      if (sum.thunderProbMax >= 0.5) drivers.push("Gewitter");
+      return {
+        model: s.model,
+        label: s.label,
+        resolutionKm: s.meta.resolutionKm,
+        worstScore: sum.worstScore,
+        level: sum.level,
+        capeMax: sum.capeMax,
+        liMin: sum.liMin,
+        gustMaxMs: sum.gustMaxMs,
+        precipMaxMm: sum.precipMaxMm,
+        thunderProbMax: sum.thunderProbMax,
+        drivers,
+        hourly: live,
+      };
+    })
+    .sort((a, b) => b.worstScore - a.worstScore);
 }
 
 /** Standard-Kernmodelle für den fokussierten Vergleich. */
 export const CORE_MODEL_IDS: ModelSeries["model"][] = [
-  "icon_d2", "icon_eu", "ecmwf_ifs025", "gfs_seamless",
+  "icon_d2",
+  "icon_eu",
+  "ecmwf_ifs025",
+  "gfs_seamless",
 ];

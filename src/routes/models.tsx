@@ -7,7 +7,11 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/ErrorState";
 import { useLiveNow } from "@/hooks/use-live-now";
-import { buildConsensus, buildRanking, type ConsensusMetric } from "@/lib/weather/analysis/model-consensus";
+import {
+  buildConsensus,
+  buildRanking,
+  type ConsensusMetric,
+} from "@/lib/weather/analysis/model-consensus";
 import { ModelSummaryCard } from "@/components/models/ModelSummaryCard";
 import { ConsensusPanel } from "@/components/models/ConsensusPanel";
 import { ParameterFilterStrip, PARAMETERS } from "@/components/models/ParameterFilterStrip";
@@ -20,7 +24,10 @@ export const Route = createFileRoute("/models")({
   head: () => ({
     meta: [
       { title: "Modellvergleich — ForecastHub" },
-      { name: "description", content: "ICON-D2, ICON-EU, ECMWF, GFS und AROME direkt nebeneinander." },
+      {
+        name: "description",
+        content: "ICON-D2, ICON-EU, ECMWF, GFS und AROME direkt nebeneinander.",
+      },
     ],
   }),
   component: ModelsPage,
@@ -33,7 +40,10 @@ function ModelsPage() {
   const now = useLiveNow();
 
   const series = q.data ?? [];
-  const summary = useMemo(() => (series.length ? buildConsensus(series, now) : null), [series, now]);
+  const summary = useMemo(
+    () => (series.length ? buildConsensus(series, now) : null),
+    [series, now],
+  );
   const ranking = useMemo(() => (series.length ? buildRanking(series, now) : []), [series, now]);
   const activeParam = PARAMETERS.find((p) => p.id === metric)!;
 
@@ -60,20 +70,28 @@ function ModelsPage() {
       {/* Block 4: Fokussierter Modellvergleich */}
       <Card className="flex flex-col gap-3 p-5">
         <div className="flex items-baseline justify-between gap-3">
-        <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold tracking-tight">Vergleich der Kernmodelle</h2>
-            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{activeParam.label} · {activeParam.unit}</p>
+          <div className="min-w-0">
+            <h2 className="truncate text-sm font-semibold tracking-tight">
+              Vergleich der Kernmodelle
+            </h2>
+            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+              {activeParam.label} · {activeParam.unit}
+            </p>
+          </div>
         </div>
-      </div>
         {q.isLoading && <Skeleton className="h-64 w-full" />}
-        {series.length > 0 && <FocusedCompareChart series={series} metric={metric} unitLabel={activeParam.unit} />}
+        {series.length > 0 && (
+          <FocusedCompareChart series={series} metric={metric} unitLabel={activeParam.unit} />
+        )}
       </Card>
 
       {/* Block 5: Gewitter-Ranking */}
       {ranking.length > 0 && (
         <section className="flex flex-col gap-3">
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-sm font-semibold tracking-tight">Gewitter & Unwetter nach Modell</h2>
+            <h2 className="text-sm font-semibold tracking-tight">
+              Gewitter & Unwetter nach Modell
+            </h2>
             <span className="text-[11px] text-muted-foreground">24 h · sortiert nach Score</span>
           </div>
           <ModelRiskRanking rows={ranking} />

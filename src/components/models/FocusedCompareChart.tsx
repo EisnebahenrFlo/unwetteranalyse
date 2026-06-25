@@ -1,11 +1,30 @@
 import { useMemo, useState } from "react";
-import { Area, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
+import {
+  Area,
+  ComposedChart,
+  Line,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from "recharts";
 import type { ModelSeries } from "@/lib/weather/types";
 import { useLiveNow } from "@/hooks/use-live-now";
-import { buildCorridor, CORE_MODEL_IDS, type ConsensusMetric } from "@/lib/weather/analysis/model-consensus";
+import {
+  buildCorridor,
+  CORE_MODEL_IDS,
+  type ConsensusMetric,
+} from "@/lib/weather/analysis/model-consensus";
 import { cn } from "@/lib/utils";
 
-const COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
+const COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+];
 
 interface Props {
   series: ModelSeries[];
@@ -37,7 +56,8 @@ export function FocusedCompareChart({ series, metric, unitLabel }: Props) {
       for (const s of visibleSeries) {
         const p = s.hourly.find((h) => h.time === c.time);
         const v = p?.[metric];
-        row[s.label] = v != null && Number.isFinite(v as number) ? Number((v as number).toFixed(2)) : null;
+        row[s.label] =
+          v != null && Number.isFinite(v as number) ? Number((v as number).toFixed(2)) : null;
       }
       return row;
     });
@@ -52,10 +72,17 @@ export function FocusedCompareChart({ series, metric, unitLabel }: Props) {
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" opacity={0.4} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="currentColor"
+              className="text-border"
+              opacity={0.4}
+            />
             <XAxis
               dataKey="time"
-              tickFormatter={(v: string) => new Date(v).toLocaleTimeString("de-DE", { hour: "2-digit" })}
+              tickFormatter={(v: string) =>
+                new Date(v).toLocaleTimeString("de-DE", { hour: "2-digit" })
+              }
               tick={{ fontSize: 10 }}
               interval={5}
               stroke="currentColor"
@@ -66,14 +93,33 @@ export function FocusedCompareChart({ series, metric, unitLabel }: Props) {
               stroke="currentColor"
               className="text-muted-foreground"
               width={36}
-              label={{ value: unitLabel, angle: -90, position: "insideLeft", fontSize: 10, offset: 12, fill: "currentColor" }}
+              label={{
+                value: unitLabel,
+                angle: -90,
+                position: "insideLeft",
+                fontSize: 10,
+                offset: 12,
+                fill: "currentColor",
+              }}
             />
             <Tooltip
-              labelFormatter={(v) => new Date(v as string).toLocaleString("de-DE", { weekday: "short", hour: "2-digit", minute: "2-digit" })}
-              contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid var(--border)", background: "var(--popover)" }}
+              labelFormatter={(v) =>
+                new Date(v as string).toLocaleString("de-DE", {
+                  weekday: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              }
+              contentStyle={{
+                fontSize: 11,
+                borderRadius: 8,
+                border: "1px solid var(--border)",
+                background: "var(--popover)",
+              }}
               itemSorter={(item) => -(item.value as number)}
               formatter={(value, name) => {
-                if (typeof name === "string" && name.startsWith("_")) return [null as unknown as string, ""];
+                if (typeof name === "string" && name.startsWith("_"))
+                  return [null as unknown as string, ""];
                 return [value as number, name as string];
               }}
             />

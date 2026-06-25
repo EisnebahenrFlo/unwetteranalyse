@@ -25,7 +25,10 @@ export const Route = createFileRoute("/analysis")({
   head: () => ({
     meta: [
       { title: "Analyse — ForecastHub" },
-      { name: "description", content: "Nachvollziehbare Wetterbewertung in drei Ebenen: Nowcast, Tag, Parameter." },
+      {
+        name: "description",
+        content: "Nachvollziehbare Wetterbewertung in drei Ebenen: Nowcast, Tag, Parameter.",
+      },
     ],
   }),
   component: AnalysisPage,
@@ -89,9 +92,20 @@ function AnalysisPage() {
 
   const dataStatus: DataStatus[] = [
     { label: "Forecast", source: "Open-Meteo", ageMinutes: 0, ok: true },
-    { label: "Beobachtung", source: bundle.current ? "Open-Meteo Current" : "—", ageMinutes: liveObsAgeMinutes, ok: liveObsAgeMinutes != null && liveObsAgeMinutes <= 120 },
+    {
+      label: "Beobachtung",
+      source: bundle.current ? "Open-Meteo Current" : "—",
+      ageMinutes: liveObsAgeMinutes,
+      ok: liveObsAgeMinutes != null && liveObsAgeMinutes <= 120,
+    },
     { label: "DWD-Radar", source: "RY", ok: false, note: "kein Frische-Signal" },
-    { label: "Blitz", source: "Blitzortung.org", ok: lightning.status === "open", note: lightning.status === "open" ? `${lightning.strikes.length} im Puffer` : lightning.status },
+    {
+      label: "Blitz",
+      source: "Blitzortung.org",
+      ok: lightning.status === "open",
+      note:
+        lightning.status === "open" ? `${lightning.strikes.length} im Puffer` : lightning.status,
+    },
   ];
 
   return (
@@ -99,7 +113,9 @@ function AnalysisPage() {
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h1 className="text-lg font-semibold tracking-tight">Analyse</h1>
-          <p className="text-xs text-muted-foreground">Nowcast 0–2 h · Heute 0–24 h · Parameter — jeder Score ist nachvollziehbar.</p>
+          <p className="text-xs text-muted-foreground">
+            Nowcast 0–2 h · Heute 0–24 h · Parameter — jeder Score ist nachvollziehbar.
+          </p>
         </div>
       </div>
 
@@ -124,10 +140,16 @@ function AnalysisPage() {
             dataConfidence={nowcast.data.value}
             footer="0–2 h: Niederschlag, Wind, Blitz und Live-Signale haben das höchste Gewicht."
           />
-          <DataCard title="Teilrisiken" subtitle="Vier Bewertungsachsen, je 0–100, mit den stärksten Beiträgen.">
+          <DataCard
+            title="Teilrisiken"
+            subtitle="Vier Bewertungsachsen, je 0–100, mit den stärksten Beiträgen."
+          >
             <SubscoreBars subs={nowcast.subs} />
           </DataCard>
-          <DataCard title="Zeitachse 0–2 h" subtitle="10-Minuten-Schritte mit Blitz, Regen, Wind, Score und Confidence.">
+          <DataCard
+            title="Zeitachse 0–2 h"
+            subtitle="10-Minuten-Schritte mit Blitz, Regen, Wind, Score und Confidence."
+          >
             <NowcastTable steps={nowcast.steps} daily={bundle.daily} />
           </DataCard>
           <ScoreExplainPanel subs={nowcast.subs} data={nowcast.data} reasons={nowcast.reasons} />
@@ -143,12 +165,19 @@ function AnalysisPage() {
             score={today.total}
             band={today.band}
             headline={headlineFor(today.band, today.reasons)}
-            peakLabel={today.peakWindow ? formatWindow(today.peakWindow.startAt, today.peakWindow.endAt) : undefined}
+            peakLabel={
+              today.peakWindow
+                ? formatWindow(today.peakWindow.startAt, today.peakWindow.endAt)
+                : undefined
+            }
             confidence={today.confidence}
             dataConfidence={today.data.value}
             footer="0–24 h: CAPE, LI, Gewitterwahrscheinlichkeit, Niederschlag und Böen haben das höchste Gewicht."
           />
-          <DataCard title="Teilrisiken (Tagesmaximum)" subtitle="Stärkste Stundenbewertung pro Achse.">
+          <DataCard
+            title="Teilrisiken (Tagesmaximum)"
+            subtitle="Stärkste Stundenbewertung pro Achse."
+          >
             <SubscoreBars subs={today.subs} />
           </DataCard>
           <SevereTimeline hourly={hourlyLive} />
@@ -159,9 +188,7 @@ function AnalysisPage() {
         </div>
       )}
 
-      {tab === "params" && (
-        <ParamGrid />
-      )}
+      {tab === "params" && <ParamGrid />}
     </div>
   );
 
@@ -183,7 +210,10 @@ function AnalysisPage() {
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
         <ParamCardPro
           title="Temperatur / Taupunkt"
-          info={{ title: "Taupunkt", text: "Spread T–Td klein → feuchte Luft. Td ≥ 16 °C schwül, ≥ 20 °C drückend." }}
+          info={{
+            title: "Taupunkt",
+            text: "Spread T–Td klein → feuchte Luft. Td ≥ 16 °C schwül, ≥ 20 °C drückend.",
+          }}
           value={`${nowPoint.temperatureC.toFixed(1)} °C`}
           unit={`Td ${nowPoint.dewPointC != null ? nowPoint.dewPointC.toFixed(1) + " °C" : "—"}`}
           derived={{ label: "Spread", value: spreadStr }}
@@ -191,18 +221,31 @@ function AnalysisPage() {
         />
         <ParamCardPro
           title="Wind & Böen"
-          info={{ title: "Böen-Schwellen", text: "≥ 50 km/h markant, ≥ 65 Sturmböen, ≥ 90 schwerer Sturm, ≥ 118 Orkan." }}
+          info={{
+            title: "Böen-Schwellen",
+            text: "≥ 50 km/h markant, ≥ 65 Sturmböen, ≥ 90 schwerer Sturm, ≥ 118 Orkan.",
+          }}
           value={windKmh != null ? windKmh.toFixed(0) : "—"}
           unit="km/h Mittel"
           derived={{ label: "Spitze", value: gustKmh != null ? `${gustKmh.toFixed(0)} km/h` : "—" }}
-          interpretation={d.lowLevelShearMs != null ? `Low-Level-Shear ${d.lowLevelShearMs.toFixed(1)} m/s` : undefined}
+          interpretation={
+            d.lowLevelShearMs != null
+              ? `Low-Level-Shear ${d.lowLevelShearMs.toFixed(1)} m/s`
+              : undefined
+          }
         />
         <ParamCardPro
           title="Niederschlag"
           info={{ title: "Starkregen", text: "DWD: ≥ 15 mm/h markant, ≥ 25 heftig, ≥ 40 extrem." }}
           value={nowPoint.precipitationMm != null ? nowPoint.precipitationMm.toFixed(1) : "—"}
           unit="mm/h jetzt"
-          derived={{ label: "Wahrscheinlichkeit", value: nowPoint.precipitationProbability != null ? `${nowPoint.precipitationProbability.toFixed(0)} %` : "—" }}
+          derived={{
+            label: "Wahrscheinlichkeit",
+            value:
+              nowPoint.precipitationProbability != null
+                ? `${nowPoint.precipitationProbability.toFixed(0)} %`
+                : "—",
+          }}
         />
         <ParamCardPro
           title="Druck"
@@ -212,41 +255,86 @@ function AnalysisPage() {
         />
         <ParamCardPro
           title="CAPE / LI / CIN"
-          info={{ title: "Konvektive Energie", text: "CAPE > 0 = instabil. LI < -2 = Gewitter wahrscheinlich. CIN bremst Auslöse." }}
+          info={{
+            title: "Konvektive Energie",
+            text: "CAPE > 0 = instabil. LI < -2 = Gewitter wahrscheinlich. CIN bremst Auslöse.",
+          }}
           value={cape != null ? cape.toFixed(0) : "—"}
           unit="J/kg CAPE"
-          derived={{ label: "LI / CIN", value: `${li != null ? li.toFixed(1) : "—"} / ${cin != null ? cin.toFixed(0) : "—"}` }}
+          derived={{
+            label: "LI / CIN",
+            value: `${li != null ? li.toFixed(1) : "—"} / ${cin != null ? cin.toFixed(0) : "—"}`,
+          }}
           band={cape != null ? bandFromScore(Math.min(100, cape / 25)) : undefined}
         />
         <ParamCardPro
           title="K-Index"
-          info={{ title: "K-Index", text: "K = (T850-T500) + Td850 - (T700-Td700). ≥20 möglich, ≥30 wahrscheinlich, ≥40 sehr wahrscheinlich." }}
+          info={{
+            title: "K-Index",
+            text: "K = (T850-T500) + Td850 - (T700-Td700). ≥20 möglich, ≥30 wahrscheinlich, ≥40 sehr wahrscheinlich.",
+          }}
           value={k != null ? k.toFixed(1) : "—"}
           unit="°C"
           interpretation={
-            k == null ? "Höhendaten fehlen" :
-            k >= 40 ? "Gewitter sehr wahrscheinlich" :
-            k >= 30 ? "Gewitter wahrscheinlich" :
-            k >= 20 ? "Gewitter möglich" : "kaum Signal"
+            k == null
+              ? "Höhendaten fehlen"
+              : k >= 40
+                ? "Gewitter sehr wahrscheinlich"
+                : k >= 30
+                  ? "Gewitter wahrscheinlich"
+                  : k >= 20
+                    ? "Gewitter möglich"
+                    : "kaum Signal"
           }
-          band={k == null ? undefined : k >= 40 ? "kritisch" : k >= 30 ? "markant" : k >= 20 ? "aufmerksam" : "ruhig"}
+          band={
+            k == null
+              ? undefined
+              : k >= 40
+                ? "kritisch"
+                : k >= 30
+                  ? "markant"
+                  : k >= 20
+                    ? "aufmerksam"
+                    : "ruhig"
+          }
         />
         <ParamCardPro
           title="Total Totals"
-          info={{ title: "Total Totals", text: "TT = T850 + Td850 - 2·T500. ≥44 möglich, ≥50 wahrscheinlich, ≥55 schwere Gewitter." }}
+          info={{
+            title: "Total Totals",
+            text: "TT = T850 + Td850 - 2·T500. ≥44 möglich, ≥50 wahrscheinlich, ≥55 schwere Gewitter.",
+          }}
           value={tt != null ? tt.toFixed(1) : "—"}
           unit="°C"
           interpretation={
-            tt == null ? "Höhendaten fehlen" :
-            tt >= 55 ? "schwere Gewitter möglich" :
-            tt >= 50 ? "Gewitter wahrscheinlich" :
-            tt >= 44 ? "Gewitter möglich" : "kaum Signal"
+            tt == null
+              ? "Höhendaten fehlen"
+              : tt >= 55
+                ? "schwere Gewitter möglich"
+                : tt >= 50
+                  ? "Gewitter wahrscheinlich"
+                  : tt >= 44
+                    ? "Gewitter möglich"
+                    : "kaum Signal"
           }
-          band={tt == null ? undefined : tt >= 55 ? "kritisch" : tt >= 50 ? "markant" : tt >= 44 ? "aufmerksam" : "ruhig"}
+          band={
+            tt == null
+              ? undefined
+              : tt >= 55
+                ? "kritisch"
+                : tt >= 50
+                  ? "markant"
+                  : tt >= 44
+                    ? "aufmerksam"
+                    : "ruhig"
+          }
         />
         <ParamCardPro
           title="Gewitterwahrscheinlichkeit"
-          info={{ title: "Heuristisch", text: "Aus CAPE, LI, K, TT und Modellcode. Nicht Modell-Probability." }}
+          info={{
+            title: "Heuristisch",
+            text: "Aus CAPE, LI, K, TT und Modellcode. Nicht Modell-Probability.",
+          }}
           value={`${Math.round(tp * 100)} %`}
           unit="heuristisch"
         />
@@ -267,15 +355,23 @@ function AnalysisPage() {
 
 function headlineFor(band: ReturnType<typeof bandFromScore>, reasons: string[]): string {
   switch (band) {
-    case "hochkritisch": return "Hochkritische Wetterlage";
-    case "kritisch": return "Kritische Entwicklung";
-    case "markant": return "Markante Signale";
-    case "aufmerksam": return reasons[0] === "keine Signale über Schwelle" ? "Beobachtungslage" : "Aufmerksam beobachten";
-    default: return "Ruhige Lage";
+    case "hochkritisch":
+      return "Hochkritische Wetterlage";
+    case "kritisch":
+      return "Kritische Entwicklung";
+    case "markant":
+      return "Markante Signale";
+    case "aufmerksam":
+      return reasons[0] === "keine Signale über Schwelle"
+        ? "Beobachtungslage"
+        : "Aufmerksam beobachten";
+    default:
+      return "Ruhige Lage";
   }
 }
 
 function formatWindow(a: string, b: string): string {
-  const f = (iso: string) => new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  const f = (iso: string) =>
+    new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
   return `${f(a)}–${f(b)}`;
 }

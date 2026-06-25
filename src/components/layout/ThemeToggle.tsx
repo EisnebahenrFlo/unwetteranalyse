@@ -1,4 +1,4 @@
-import { Moon, Sun, Monitor } from "lucide-react";
+import { Moon, Sun, Monitor } from "@/components/icons";
 import { useEffect } from "react";
 import { useSettings } from "@/hooks/use-settings";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,9 @@ import type { ThemeMode } from "@/lib/storage/settings";
 function applyTheme(mode: ThemeMode) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  const dark = mode === "dark" || (mode === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const dark =
+    mode === "dark" ||
+    (mode === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   root.classList.toggle("dark", dark);
 }
 
@@ -24,7 +26,8 @@ export function ThemeToggle() {
   }, [settings.theme]);
 
   const cycle = () => {
-    const next: ThemeMode = settings.theme === "light" ? "dark" : settings.theme === "dark" ? "system" : "light";
+    const next: ThemeMode =
+      settings.theme === "light" ? "dark" : settings.theme === "dark" ? "system" : "light";
     setSettings({ ...settings, theme: next });
   };
 

@@ -2,14 +2,7 @@ import type { LightningStrike } from "@/lib/weather/sources/blitzortung";
 import { dbscanStrikes } from "./detect";
 import { buildForecast } from "./forecast";
 import { scoreCell } from "./severity";
-import {
-  bearingCompass,
-  bearingDeg,
-  centroidOf,
-  convexHull,
-  distanceKm,
-  radiusKm,
-} from "./geo";
+import { bearingCompass, bearingDeg, centroidOf, convexHull, distanceKm, radiusKm } from "./geo";
 import {
   DEFAULT_STORM_THRESHOLDS,
   type StormCell,
@@ -82,7 +75,9 @@ function estimateMotion(history: StormCentroidPoint[]): StormMotion | null {
 
 function computeRates(strikes: LightningStrike[], now: number) {
   const last5 = strikes.filter((s) => now - s.time <= 5 * 60_000).length;
-  const prev5 = strikes.filter((s) => now - s.time > 5 * 60_000 && now - s.time <= 10 * 60_000).length;
+  const prev5 = strikes.filter(
+    (s) => now - s.time > 5 * 60_000 && now - s.time <= 10 * 60_000,
+  ).length;
   const rate = last5 / 5;
   const trend = prev5 === 0 ? (last5 > 0 ? 2 : 0) : last5 / prev5;
   return { rate, trend };

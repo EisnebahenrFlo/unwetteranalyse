@@ -17,17 +17,22 @@ export interface DerivedParams {
  * K-Index = (T850 - T500) + Td850 - (T700 - Td700)
  */
 export function kIndex(p: HourlyPoint): number | null {
-  const t850 = p.temperature850hPa, t700 = p.temperature700hPa, t500 = p.temperature500hPa;
-  const td850 = p.dewPoint850hPa, td700 = p.dewPoint700hPa;
+  const t850 = p.temperature850hPa,
+    t700 = p.temperature700hPa,
+    t500 = p.temperature500hPa;
+  const td850 = p.dewPoint850hPa,
+    td700 = p.dewPoint700hPa;
   if ([t850, t700, t500, td850, td700].some((v) => v == null)) return null;
-  return (t850! - t500!) + td850! - (t700! - td700!);
+  return t850! - t500! + td850! - (t700! - td700!);
 }
 
 /**
  * Total Totals = T850 + Td850 - 2·T500
  */
 export function totalTotals(p: HourlyPoint): number | null {
-  const t850 = p.temperature850hPa, t500 = p.temperature500hPa, td850 = p.dewPoint850hPa;
+  const t850 = p.temperature850hPa,
+    t500 = p.temperature500hPa,
+    td850 = p.dewPoint850hPa;
   if ([t850, t500, td850].some((v) => v == null)) return null;
   return t850! + td850! - 2 * t500!;
 }
@@ -48,11 +53,12 @@ export function sultrinessFrom(p: HourlyPoint): DerivedParams["sultriness"] {
 
 /** Skalarer Low-Level-Shear-Proxy 10 m ↔ 180 m. */
 export function lowLevelShearMs(p: HourlyPoint): number | null {
-  const a = p.windSpeedMs, b = p.windSpeed180mMs;
+  const a = p.windSpeedMs,
+    b = p.windSpeed180mMs;
   if (a == null || b == null) return null;
   let base = Math.abs(b - a);
   if (p.windDirection80mDeg != null && p.windDirection180mDeg != null) {
-    const diff = Math.abs(((p.windDirection180mDeg - p.windDirection80mDeg) + 540) % 360 - 180);
+    const diff = Math.abs(((p.windDirection180mDeg - p.windDirection80mDeg + 540) % 360) - 180);
     base += (diff / 180) * 3;
   }
   return base;

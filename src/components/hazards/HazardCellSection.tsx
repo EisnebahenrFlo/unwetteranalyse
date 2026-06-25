@@ -1,4 +1,4 @@
-import { CloudHail, CloudRain, Zap } from "lucide-react";
+import { CloudHail, CloudRain, Zap } from "@/components/icons";
 import type { HazardCellReport, HazardDiagnosis, HazardKind } from "@/lib/weather/hazards/types";
 import { cn } from "@/lib/utils";
 import { HAZARD_KIND_LABEL, HAZARD_LEVEL_LABEL, HAZARD_LEVEL_TONE } from "./hazard-tokens";
@@ -24,8 +24,8 @@ export function HazardCellSection({ report }: { report: HazardCellReport | null 
         report.hail.meshsCm > 0
           ? `MESHS ≈ ${report.hail.meshsCm.toFixed(1)} cm`
           : report.hail.pohPercent > 0
-          ? `POH ${report.hail.pohPercent} %`
-          : null,
+            ? `POH ${report.hail.pohPercent} %`
+            : null,
     },
     {
       kind: "flood",
@@ -34,16 +34,15 @@ export function HazardCellSection({ report }: { report: HazardCellReport | null 
         report.flood.returnYears != null
           ? `T≈${report.flood.returnYears}a · ${Math.round(report.flood.rrMm.h3)} mm/3 h`
           : Math.max(report.flood.rrMm.h1, report.flood.rrMm.h3) > 0
-          ? `${Math.round(report.flood.rrMm.h3)} mm/3 h`
-          : null,
+            ? `${Math.round(report.flood.rrMm.h3)} mm/3 h`
+            : null,
     },
     {
       kind: "lightning",
       diag: report.lightning,
-      metric:
-        report.lightning.jumpActive
-          ? `Jump ${report.lightning.jumpSigma} σ`
-          : `${report.lightning.ratePerMin.toFixed(1)} /min`,
+      metric: report.lightning.jumpActive
+        ? `Jump ${report.lightning.jumpSigma} σ`
+        : `${report.lightning.ratePerMin.toFixed(1)} /min`,
     },
   ];
 
@@ -59,8 +58,15 @@ export function HazardCellSection({ report }: { report: HazardCellReport | null 
                 <span>{HAZARD_KIND_LABEL[kind]}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                {metric && <span className="font-mono text-[11px] text-muted-foreground">{metric}</span>}
-                <span className={cn("rounded-md px-1.5 py-0.5 text-[10px] font-medium", HAZARD_LEVEL_TONE[diag.level])}>
+                {metric && (
+                  <span className="font-mono text-[11px] text-muted-foreground">{metric}</span>
+                )}
+                <span
+                  className={cn(
+                    "rounded-md px-1.5 py-0.5 text-[10px] font-medium",
+                    HAZARD_LEVEL_TONE[diag.level],
+                  )}
+                >
                   {HAZARD_LEVEL_LABEL[diag.level]} · {diag.score}
                 </span>
               </div>

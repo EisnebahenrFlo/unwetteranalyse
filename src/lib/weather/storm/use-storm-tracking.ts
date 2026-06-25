@@ -18,7 +18,11 @@ export interface StormTrackingResult {
 }
 
 const SERVER_SNAPSHOT: StormBackgroundSnapshot = {
-  cells: [], alerts: [], strikes: [], lastRun: 0, wsStatus: "idle",
+  cells: [],
+  alerts: [],
+  strikes: [],
+  lastRun: 0,
+  wsStatus: "idle",
 };
 
 /**

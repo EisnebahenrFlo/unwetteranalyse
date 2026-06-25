@@ -1,5 +1,5 @@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Info } from "lucide-react";
+import { Info } from "@/components/icons";
 import type { ReactNode } from "react";
 
 export function InfoPopover({ title, children }: { title: string; children: ReactNode }) {
