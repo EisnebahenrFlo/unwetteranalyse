@@ -1,6 +1,7 @@
 const DWD_WMS_URL = "https://maps.dwd.de/geoserver/dwd/wms";
 const DWD_OWS_URL = "https://maps.dwd.de/geoserver/dwd/ows";
 const DWD_RADAR_LAYER = "Niederschlagsradar";
+import { parseWmsTimeDimension } from "./wms-capabilities";
 
 export interface DwdRadarFrame {
   time: string;
@@ -16,8 +17,8 @@ export async function fetchDwdRadarFrames(): Promise<DwdRadarFrame[]> {
   if (!res.ok) throw new Error(`DWD Radar HTTP ${res.status}`);
 
   const text = await res.text();
-  const match = text.match(/<Name>Niederschlagsradar<\/Name>[\s\S]*?<Dimension name="time"[^>]*>([^<]+)<\/Dimension>/);
-  const times = match ? expandTimeDimension(match[1]) : [];
+  const raw = parseWmsTimeDimension(text, DWD_RADAR_LAYER);
+  const times = raw ? expandTimeDimension(raw) : [];
   return times.slice(-36).map((time) => ({ time }));
 }
 
