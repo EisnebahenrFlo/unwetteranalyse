@@ -6,12 +6,14 @@
  * über Threshold + Connected-Component-Labeling. Anschließend werden Pixel-
  * Koordinaten zurück in Lon/Lat projiziert (EPSG:3857 Mercator).
  *
- * Eine einzige Map-Anfrage pro Tick (~ 1024×1024 px) ersetzt sowohl den
- * Blitzortung-WebSocket als auch das clusterbasierte DBSCAN.
+ * Primärgröße: Niederschlagsrate aus RY-Farbskala (Näherung). dBZ ist daraus
+ * abgeleitet via Z-R (Aniol, a=256, b=1.42) — RADOLAN-RY ist ein
+ * Niederschlagsrate-Produkt, kein dBZ-Composite.
  */
 
 import { wmsTileUrl } from "@/lib/weather/sources/dwd-wms";
-import { classifyPixel, DBZ_FOR_LEVEL } from "./palette";
+import { classifyPixel, RATE_FOR_LEVEL } from "./palette";
+import { rainRateToDbz } from "./zr";
 import { detectCells } from "./cell-detect";
 
 /** Großraum-Detektionsbereich: DACH + Italien, in Lon/Lat. */
@@ -31,7 +33,11 @@ export interface RadarCell {
   polygon: Array<[number, number]>;
   /** Approximative Fläche in km² (Pixel × Pixel-Fläche). */
   areaKm2: number;
-  /** Top-Reflektivität in dBZ (kalibriert via Palette). */
+  /** Repräsentative Niederschlagsrate der Top-Stufe (mm/h). */
+  rainRateMmH: number;
+  /** Mittlere Niederschlagsrate über alle Zellpixel (mm/h). */
+  meanRateMmH: number;
+  /** Aus rainRateMmH abgeleitete äquivalente Top-Reflektivität (dBZ, Z-R Aniol). */
   topDbz: number;
   /** Pixelzahl im Hagelkern (≥57 dBZ). */
   hailCorePixels: number;
@@ -146,11 +152,19 @@ export async function fetchRadarSnapshot(frameTime: string | null = null): Promi
       return [ll.lon, ll.lat] as [number, number];
     });
     const areaKm2 = pc.pixels * pxKm2;
+    const rainRateMmH = RATE_FOR_LEVEL[pc.topLevel];
+    const meanLevel = pc.sumLevel / pc.pixels;
+    const lo = Math.floor(meanLevel) as 0 | 1 | 2 | 3 | 4 | 5 | 6;
+    const hi = Math.min(6, lo + 1) as 0 | 1 | 2 | 3 | 4 | 5 | 6;
+    const frac = meanLevel - lo;
+    const meanRateMmH = RATE_FOR_LEVEL[lo] + (RATE_FOR_LEVEL[hi] - RATE_FOR_LEVEL[lo]) * frac;
     return {
       centroid,
       polygon,
       areaKm2,
-      topDbz: DBZ_FOR_LEVEL[pc.topLevel],
+      rainRateMmH,
+      meanRateMmH,
+      topDbz: rainRateToDbz(rainRateMmH),
       hailCorePixels: pc.hailCorePixels,
       hailCoreAreaKm2: pc.hailCorePixels * pxKm2,
       radiusKm: Math.sqrt(areaKm2 / Math.PI),

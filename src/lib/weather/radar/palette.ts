@@ -1,31 +1,47 @@
 /**
  * Klassifizierung der DWD-WMS-RY-Pixel auf eine 0..6-Intensitätsstufe.
  *
- * Die WMS-Default-Styles färben Niederschlagsraten farblich (blau → grün →
- * gelb → orange → rot → violett). Wir klassifizieren über Hue + Lightness,
- * statt einzelne RGB-Werte exakt zu matchen — das ist robust gegen
- * PNG-Kompression und kleine Style-Variationen.
+ * RADOLAN-RY ist ein NIEDERSCHLAGSRATE-Produkt (mm/5min, also Niederschlags-
+ * menge je 5 min), KEIN dBZ-Reflektivitätscomposite. Die WMS-Default-Styles
+ * färben diese Rate kategorial ein (blau → grün → gelb → orange → rot →
+ * violett). Wir klassifizieren über Hue + Lightness, statt RGB-Werte exakt
+ * zu matchen — robust gegen PNG-Kompression und kleine Style-Variationen.
  *
- * Stufen mapped grob auf:
- *   0 — transparent / Hintergrund
- *   1 — leichter Niederschlag  ~  20–30 dBZ
- *   2 — moderat                ~  30–40 dBZ
- *   3 — kräftig                ~  40–48 dBZ
- *   4 — stark / Gewitter-Kern  ~  48–55 dBZ
- *   5 — Hagelkern              ~  55–60 dBZ
- *   6 — extrem (sehr selten)   ~  >60 dBZ
+ * Stufen sind eine Näherung der DWD-RY-Farbskala. Die mm/h-Repräsentativ-
+ * werte unten sind grobe Stützpunkte für konvektiven Niederschlag — keine
+ * exakte Farbtabelle. Quelle muss perspektivisch via WMS GetLegendGraphic
+ * verifiziert werden.
  */
+import { rainRateToDbz } from "./zr";
+
 export type IntensityLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
-/** dBZ-Approximation für Severity & Anzeige. */
-export const DBZ_FOR_LEVEL: Record<IntensityLevel, number> = {
+/**
+ * Repräsentative Niederschlagsrate (mm/h) je Intensitätsstufe.
+ * Grobe Näherung der DWD-RY-Farbskala (leicht → extrem).
+ */
+export const RATE_FOR_LEVEL: Record<IntensityLevel, number> = {
   0: 0,
-  1: 25,
-  2: 35,
-  3: 42,
-  4: 50,
-  5: 57,
-  6: 62,
+  1: 0.5,
+  2: 2,
+  3: 10,
+  4: 25,
+  5: 50,
+  6: 100,
+};
+
+/**
+ * dBZ je Intensitätsstufe — abgeleitet aus RATE_FOR_LEVEL via Z-R (Aniol).
+ * Nicht direkt pflegen, damit Rate und dBZ konsistent bleiben.
+ */
+export const DBZ_FOR_LEVEL: Record<IntensityLevel, number> = {
+  0: rainRateToDbz(RATE_FOR_LEVEL[0]),
+  1: rainRateToDbz(RATE_FOR_LEVEL[1]),
+  2: rainRateToDbz(RATE_FOR_LEVEL[2]),
+  3: rainRateToDbz(RATE_FOR_LEVEL[3]),
+  4: rainRateToDbz(RATE_FOR_LEVEL[4]),
+  5: rainRateToDbz(RATE_FOR_LEVEL[5]),
+  6: rainRateToDbz(RATE_FOR_LEVEL[6]),
 };
 
 /** Schwellen für die Zell-Detektion. */
