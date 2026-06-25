@@ -37,6 +37,8 @@ export interface StormSeverityBreakdown {
 
 export interface StormCell {
   id: string;
+  /** Kompakter Anzeigename für Karten-Labels & Drawer (z. B. "Zelle DE-A1"). */
+  displayName?: string;
   firstSeen: number;
   lastSeen: number;
   centroid: { lat: number; lon: number };
