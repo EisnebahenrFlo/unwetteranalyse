@@ -6,13 +6,53 @@ function clamp(v: number, min: number, max: number) {
 }
 
 /**
+ * Bft-Stufung der Forecast-Spitzenböe (m/s), analog zu WIND_GUST_RULES:
+ *  0 = unter Schwelle
+ *  1 = ≥14 m/s  (Bft 7, ~50 km/h, markant)
+ *  2 = ≥18 m/s  (Bft 8, Sturmböen)
+ *  3 = ≥25 m/s  (Bft 10, schwerer Sturm)
+ *  4 = ≥33 m/s  (Bft 12, Orkan)
+ */
+function windLevelFromMs(ms: number | null | undefined): 0 | 1 | 2 | 3 | 4 {
+  if (ms == null || !Number.isFinite(ms)) return 0;
+  if (ms >= 33) return 4;
+  if (ms >= 25) return 3;
+  if (ms >= 18) return 2;
+  if (ms >= 14) return 1;
+  return 0;
+}
+
+/** Mappt eine Wind-Bft-Stufe auf die Mindest-Storm-Stufe (DWD-Maximum-Prinzip). */
+function windFloorSeverity(level: 0 | 1 | 2 | 3 | 4): StormSeverity {
+  // 4 → "severe" als Deckel; eine echte „extreme"-Hochstufung verlangt
+  // dieselbe Umgebungs-Stütze wie für CAPE/LI (siehe extreme-Gate unten).
+  if (level === 4) return "severe";
+  if (level === 3) return "severe";
+  if (level === 2) return "serious";
+  if (level === 1) return "watch";
+  return "calm";
+}
+
+const SEVERITY_ORDER: Record<StormSeverity, number> = {
+  calm: 0,
+  watch: 1,
+  serious: 2,
+  severe: 3,
+  extreme: 4,
+};
+function maxSeverity(a: StormSeverity, b: StormSeverity): StormSeverity {
+  return SEVERITY_ORDER[a] >= SEVERITY_ORDER[b] ? a : b;
+}
+
+/**
  * Severity 0..100 aus Radar-Reflektivität + Fläche + Trend + Umgebung.
  *
  * Quellen:
  *  - topDbz: Maximalreflektivität der Zelle (DWD-RY)
  *  - areaKm2 / hailCoreAreaKm2: Größe und Hagelkern
  *  - dbzTrend / areaTrend: Verstärkung/Abschwächung
- *  - env (CAPE, LI): Eskalations-Gate für Stufe 4
+ *  - env (CAPE, LI, Windböen): Wind ist eigenes Kriterium (DWD-Maximum-
+ *    Prinzip), CAPE/LI dienen als Eskalations-Gate für Stufe 4
  *
  * Schwellen orientieren sich an den DWD-Unwetterkriterien (>50 dBZ + Hagelkern
  * = markant, >55 dBZ + Wachstum + CAPE-Stütze = extrem).
@@ -77,9 +117,23 @@ export function scoreCell(input: {
     }
   }
 
+  // Wind als eigenes Kriterium (kommt aus Open-Meteo, nicht aus Radar).
+  const wLevel = windLevelFromMs(input.env.windGustMs);
+  if (wLevel > 0 && input.env.windGustMs != null) {
+    const ms = input.env.windGustMs;
+    // Additiver Score-Beitrag: 1→6, 2→12, 3→20, 4→28 Punkte.
+    const windScore = wLevel === 4 ? 28 : wLevel === 3 ? 20 : wLevel === 2 ? 12 : 6;
+    score += windScore;
+    const bft = wLevel === 4 ? 12 : wLevel === 3 ? 10 : wLevel === 2 ? 8 : 7;
+    reasons.push(`Böen ${(ms * 3.6).toFixed(0)} km/h (Bft ${bft})`);
+  }
+
   score = clamp(Math.round(score), 0, 100);
   let level: StormSeverity =
     score >= 70 ? "severe" : score >= 45 ? "serious" : score >= 22 ? "watch" : "calm";
+
+  // DWD-Maximum-Prinzip: Wind-Kriterium hebt die Stufe an, wenn es höher liegt.
+  level = maxSeverity(level, windFloorSeverity(wLevel));
 
   // Stufe 4 (extrem) nur mit Umgebungs-Stütze. Ohne Daten Deckel bei severe.
   if (level === "severe") {
