@@ -7,8 +7,6 @@ import type { CellTrack } from "@/lib/weather/analysis/cockpit-diagnostics";
 import type { StormCell } from "@/lib/weather/storm/types";
 import { SEVERITY_COLOR, SEVERITY_BADGE } from "@/components/storm/severity-tokens";
 import {
-  estimateEchoTopKm,
-  estimateReflectivityDbz,
   etaToNearestTarget,
   type NamedTarget,
 } from "@/lib/weather/storm/estimate";
