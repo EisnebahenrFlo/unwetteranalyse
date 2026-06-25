@@ -370,8 +370,8 @@ function fit(map: MlMap, cell: StormCell) {
 }
 
 // Memo-Hilfe ungenutzt, aber als Hook-Anker für künftige Erweiterungen.
-// eslint-disable-next-line react-hooks/rules-of-hooks
 export function __useStormCellSummary(cell: StormCell) {
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   return useMemo(
     () => ({
       color: SEVERITY_COLOR[cell.severity.level],
