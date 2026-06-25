@@ -164,6 +164,7 @@ class StormBackgroundService {
       const env: StormEnvironment = {
         cape: sample.cape ?? this.config.environment.cape,
         liftedIndex: sample.liftedIndex ?? this.config.environment.liftedIndex,
+        windGustMs: sample.windGustMs ?? this.config.environment.windGustMs,
         validFor: sample.validFor ?? this.config.environment.validFor,
         source: "cell",
       };
