@@ -60,6 +60,34 @@ describe("scoreCell — Wind-Kriterium (DWD-Maximum)", () => {
   });
 });
 
+describe("scoreCell — Extreme-Gate verschärft (kein Hagel-Alleingang)", () => {
+  const hot = {
+    topDbz: 60,
+    hailCoreAreaKm2: 6,
+    areaKm2: 220,
+    dbzTrend: 5,
+    areaTrend: 1.6,
+  };
+  it("großer Hagelkern OHNE CAPE/LI/Wind-Stütze → max 'severe'", () => {
+    const r = scoreCell({ ...hot, env: { source: "cell" } });
+    expect(r.level).toBe("severe");
+  });
+  it("hoher Score MIT CAPE≥2500 → 'extreme'", () => {
+    const r = scoreCell({ ...hot, env: { cape: 2800, source: "cell" } });
+    expect(r.level).toBe("extreme");
+  });
+  it("hoher Score MIT Orkanböen (≥33 m/s) → 'extreme'", () => {
+    const r = scoreCell({ ...hot, env: { windGustMs: 34, source: "cell" } });
+    expect(r.level).toBe("extreme");
+    expect(r.reasons.join(" ")).toMatch(/Orkanb[öo]en/);
+  });
+});
+  it("kein Wind → keine Stufenanhebung", () => {
+    const r = scoreCell({ ...weak, env: {} });
+    expect(SEVERITY_RANK[r.level]).toBeLessThan(SEVERITY_RANK.serious);
+  });
+});
+
 describe("stormToLevel", () => {
   it("mappt auf DisplayLevel 0–4", () => {
     expect(stormToLevel("calm")).toBe(0);
