@@ -132,6 +132,7 @@ export interface WeatherAlert {
   description?: string;
   instruction?: string;
   severity: AlertSeverity;
+  warnLevel?: 1 | 2 | 3 | 4;
   event: string;
   eventCode?: number;
   onset: string;
