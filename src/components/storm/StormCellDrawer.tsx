@@ -81,7 +81,7 @@ export function StormCellDrawer({ cell, onClose, alerts, hazardReport = null }: 
           <div className="grid grid-cols-3 gap-2">
             <KpiBox
               icon={Zap}
-              label="Top-dBZ"
+              label="Top-dBZ*"
               value={Math.round(cell.topDbz).toString()}
               sub={`Fläche ${Math.round(cell.areaKm2)} km²`}
             />
@@ -111,7 +111,7 @@ export function StormCellDrawer({ cell, onClose, alerts, hazardReport = null }: 
                 Hagelkern erkannt
               </span>{" "}
               <span className="text-muted-foreground">
-                {cell.hailCoreAreaKm2.toFixed(0)} km² mit ≥57 dBZ
+                {cell.hailCoreAreaKm2.toFixed(0)} km² (Konvektionskern, Stufe ≥5 ≈ 48 dBZ abgeleitet)
               </span>
             </div>
           )}
@@ -185,9 +185,9 @@ export function StormCellDrawer({ cell, onClose, alerts, hazardReport = null }: 
           )}
 
           <p className="text-[10px] text-muted-foreground">
-            Detection direkt aus DWD-RY-Reflektivität (Connected-Component-Labeling). Tracking per
-            Centroid-Matching zwischen Frames. Severity nutzt CAPE/LI am Zellort, Forecast linear
-            extrapoliert mit Cone-Aufweitung √t.
+            * Detection aus DWD-RY (Niederschlagsrate, Farbskala-Näherung); dBZ* abgeleitet via
+            Z-R (Aniol). Tracking per Centroid-Matching zwischen Frames. Severity nutzt CAPE/LI und
+            Windböen am Zellort; Forecast linear extrapoliert mit Cone-Aufweitung √t.
           </p>
         </div>
       </DrawerContent>
