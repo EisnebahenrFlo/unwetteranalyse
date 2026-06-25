@@ -234,7 +234,6 @@ export function RadarCockpit() {
           ry={ryQ.data ? assessTimeline("RY", ryQ.data, WMS_LAYERS.ry.stepMinutes) : { label: "RY", confidence: "missing", detail: "lädt…" }}
           wn={wnQ.data ? assessTimeline("WN", wnQ.data, WMS_LAYERS.wn.stepMinutes) : null}
           pi={piQ.data ? assessTimeline("PI", piQ.data, WMS_LAYERS.pi.stepMinutes) : null}
-          qy={showQy ? (qyQ.data ? assessTimeline("QY", qyQ.data, WMS_LAYERS.qy.stepMinutes) : { label: "QY", confidence: "missing", detail: "lädt…" }) : null}
         />
         <div className="relative h-[60vh] min-h-[440px] w-full overflow-hidden rounded-xl border border-border bg-muted md:h-[68vh]">
           <RadarMap
@@ -243,7 +242,7 @@ export function RadarCockpit() {
             initialZoom={MODE_DEFS[mode].zoom}
             onBboxChange={setBbox}
           />
-          <Legend layer={activeLayer} showLightning={showLightning} showQy={showQy} />
+          <Legend layer={activeLayer} showLightning={showLightning} />
           <FrameBadge frame={activeFrame} scrub={scrub} />
         </div>
         <TimeScrubber
@@ -262,8 +261,6 @@ export function RadarCockpit() {
           onToggleLightning={() => setShowLightning((v) => !v)}
           showWn={showWnNowcast}
           onToggleWn={() => { setShowWnNowcast((v) => { if (v) setScrub(0); return !v; }); }}
-          showQy={showQy}
-          onToggleQy={() => setShowQy((v) => !v)}
           showRings={showRings}
           onToggleRings={() => setShowRings((v) => !v)}
           lightningStatus={lightning.status}
