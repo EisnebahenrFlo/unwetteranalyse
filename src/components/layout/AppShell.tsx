@@ -16,6 +16,7 @@ import { LocationSwitcher } from "./LocationSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@/lib/utils";
 import { MeteoconIcon } from "@/components/weather/MeteoconIcon";
+import { useAdaptiveTheme } from "@/hooks/use-adaptive-theme";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 /**
@@ -40,6 +41,7 @@ const SECONDARY_NAV = [
 type NavItemDef = { to: string; label: string; icon: ComponentType<{ className?: string }> };
 
 export function AppShell({ children }: { children: ReactNode }) {
+  useAdaptiveTheme();
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
