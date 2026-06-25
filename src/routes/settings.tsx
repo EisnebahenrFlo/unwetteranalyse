@@ -35,9 +35,9 @@ const WIND_UNITS: { value: WindUnit; label: string }[] = [
   { value: "bft", label: "Bft" },
 ];
 const THEMES: { value: ThemeMode; label: string }[] = [
+  { value: "auto", label: "Auto" },
   { value: "light", label: "Hell" },
   { value: "dark", label: "Dunkel" },
-  { value: "system", label: "System" },
 ];
 
 const ETA_OPTIONS: { value: number; label: string }[] = [

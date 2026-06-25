@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { WarnBadge } from "@/components/common/WarnBadge";
+import { SeverityRail, scoreToLevel } from "@/components/common/SeverityRail";
 import { TendencyBadge, deriveTendency } from "./TendencyBadge";
 import { MeteoconIcon, isNightAt } from "@/components/weather/MeteoconIcon";
 import { severeScore, summarizeModelSevere } from "@/lib/weather/analysis/convection";
@@ -44,12 +45,13 @@ export function SituationHeadline({ bundle, officialAlerts }: Props) {
     nowcastHeadline: nc.headline,
     officialCount: officialAlerts.length,
   });
+  const stufe = scoreToLevel(score);
 
   return (
     <Card className="grid grid-cols-1 gap-4 p-4 md:p-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
       {/* Primärblock */}
       <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-3">
+        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
           <div
             className={cn(
               "grid h-14 w-14 shrink-0 place-items-center rounded-xl ring-1",
@@ -87,6 +89,12 @@ export function SituationHeadline({ bundle, officialAlerts }: Props) {
               {bundle.point.admin ? ` · ${bundle.point.admin}` : ""}
             </div>
           </div>
+          <SeverityRail
+            level={stufe}
+            orientation="vertical"
+            label={stufe ? `S${stufe}` : "S0"}
+            className="hidden sm:flex"
+          />
         </div>
 
         <p className="text-[15px] leading-snug text-foreground">{kernSatz}</p>

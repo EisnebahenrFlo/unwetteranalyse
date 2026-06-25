@@ -4,6 +4,7 @@ import { useActivePoint } from "@/components/layout/LocationSwitcher";
 import { brightSkyAlertsQuery, forecastQuery } from "@/lib/weather/queries";
 import { DataCard } from "@/components/common/DataCard";
 import { WarnBadge } from "@/components/common/WarnBadge";
+import { SeverityRail, alertSeverityToLevel } from "@/components/common/SeverityRail";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ShieldCheck, ShieldAlert } from "@/components/icons";
 import { formatHour, formatRelative } from "@/lib/weather/format";
@@ -61,7 +62,13 @@ function AlertsPage() {
             .sort((a, b) => severityWeight(b.severity) - severityWeight(a.severity))
             .map((a) => (
               <article key={a.id} className="rounded-md border border-border bg-background/50 p-3">
-                <header className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
+                <header className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-start gap-2">
+                  <SeverityRail
+                    level={alertSeverityToLevel(a.severity)}
+                    orientation="vertical"
+                    showLabel={false}
+                    className="h-10"
+                  />
                   <WarnBadge severity={a.severity} showLevel />
                   <div className="min-w-0">
                     <h3 className="truncate text-sm font-semibold">{a.headline}</h3>
@@ -100,7 +107,13 @@ function AlertsPage() {
         <div className="flex flex-col gap-2">
           {derived.map((d) => (
             <article key={d.id} className="rounded-md border border-border bg-background/50 p-3">
-              <header className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
+              <header className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-start gap-2">
+                <SeverityRail
+                  level={alertSeverityToLevel(d.severity)}
+                  orientation="vertical"
+                  showLabel={false}
+                  className="h-10"
+                />
                 <WarnBadge severity={d.severity} />
                 <div className="min-w-0">
                   <h3 className="truncate text-sm font-semibold">{d.headline}</h3>

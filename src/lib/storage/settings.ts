@@ -1,6 +1,6 @@
 export type WindUnit = "ms" | "kmh" | "bft";
 export type TempUnit = "C" | "F";
-export type ThemeMode = "light" | "dark" | "system";
+export type ThemeMode = "light" | "dark" | "auto";
 export type StormAlertLevel = "watch" | "serious" | "severe";
 export type HazardMinLevel = "watch" | "elevated" | "high" | "extreme";
 
@@ -33,7 +33,7 @@ const KEY = "meteoflo.settings.v2";
 export const DEFAULT_SETTINGS: Settings = {
   windUnit: "kmh",
   tempUnit: "C",
-  theme: "light",
+  theme: "auto",
   defaultMapLayers: ["radar"],
   storm: {
     enabled: true,
@@ -60,9 +60,12 @@ export function getSettings(): Settings {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return DEFAULT_SETTINGS;
     const parsed = JSON.parse(raw) as Partial<Settings>;
+    // Migration: alter Wert "system" -> "auto"
+    const theme = (parsed.theme as string) === "system" ? "auto" : parsed.theme;
     return {
       ...DEFAULT_SETTINGS,
       ...parsed,
+      theme: (theme as ThemeMode) ?? DEFAULT_SETTINGS.theme,
       storm: { ...DEFAULT_SETTINGS.storm, ...(parsed.storm ?? {}) },
       hazards: { ...DEFAULT_SETTINGS.hazards, ...(parsed.hazards ?? {}) },
     };
