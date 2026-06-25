@@ -46,6 +46,7 @@ export function etaToNearestTarget(cell: StormCell, targets: NamedTarget[]): Cel
   for (const t of targets) {
     const d = distanceKm(cell.centroid, t);
     if (d < 1) continue;
+    if (d > 80) continue;
     const brg = bearingDeg(cell.centroid, t);
     const diff = Math.abs(((brg - motion.bearingDeg + 540) % 360) - 180);
     if (diff > 60) continue;
@@ -54,7 +55,7 @@ export function etaToNearestTarget(cell: StormCell, targets: NamedTarget[]): Cel
     const perp = d * Math.sin(toRad(diff));
     if (perp > 25) continue;
     const minutes = Math.round((along / motion.speedKmh) * 60);
-    if (minutes > 120) continue;
+    if (minutes < 0 || minutes > 90) continue;
     if (!best || minutes < best.minutes) best = { target: t, minutes, distanceKm: d };
   }
   return best;
