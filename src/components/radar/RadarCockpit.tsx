@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Pause, Play, SkipBack, SkipForward, Zap, Radar, Globe2, MapPin, Activity, ShieldAlert, Target } from "lucide-react";
+import { Pause, Play, SkipBack, SkipForward, Zap, Radar, Globe2, MapPin, Activity, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useActivePoint } from "@/components/layout/LocationSwitcher";
@@ -44,7 +44,6 @@ export function RadarCockpit() {
   const [mode, setMode] = useState<Mode>("focus");
   const [showLightning, setShowLightning] = useState(true);
   const [showWnNowcast, setShowWnNowcast] = useState(false);
-  const [showQy, setShowQy] = useState(false);
   const [showRings, setShowRings] = useState(true);
   const [scrub, setScrub] = useState<number>(0); // negative = RY past, positive = WN future, in step-units
   const [playing, setPlaying] = useState(false);
@@ -53,7 +52,6 @@ export function RadarCockpit() {
   const ryQ = useQuery({ queryKey: ["wms", "ry"], queryFn: () => fetchWmsTimeline("ry"), refetchInterval: 5 * 60_000, staleTime: 4 * 60_000 });
   const wnQ = useQuery({ queryKey: ["wms", "wn"], queryFn: () => fetchWmsTimeline("wn"), refetchInterval: 5 * 60_000, staleTime: 4 * 60_000, enabled: showWnNowcast || scrub > 0 });
   const piQ = useQuery({ queryKey: ["wms", "pi"], queryFn: () => fetchWmsTimeline("pi"), refetchInterval: 10 * 60_000, staleTime: 9 * 60_000, enabled: mode === "europe" });
-  const qyQ = useQuery({ queryKey: ["wms", "qy"], queryFn: () => fetchWmsTimeline("qy"), refetchInterval: 5 * 60_000, staleTime: 4 * 60_000, enabled: showQy });
   const forecastQ = useQuery(forecastQuery(point));
 
   const lightning = useLightningStream({ enabled: showLightning, bbox: bbox ?? undefined });
@@ -99,16 +97,6 @@ export function RadarCockpit() {
     m.setFrameStack("radar-ry", ryEntries, activeRy, MODE_DEFS[mode].opacity);
     m.setFrameStack("radar-wn", wnEntries, activeWn, MODE_DEFS[mode].opacity);
   }, [mode, ryFrames, wnFrames, showWnNowcast, activeFrame, activeLayer]);
-
-  // QY-Qualitätslayer als zusätzliches Overlay, an aktuellen Frame gekoppelt.
-  useEffect(() => {
-    if (!showQy) {
-      mapRef.current?.setRasterTiles("qy", null);
-      return;
-    }
-    const qyFrame = qyQ.data?.latest ?? activeFrame ?? null;
-    mapRef.current?.setRasterTiles("qy", qyFrame ? wmsTileUrl("qy", qyFrame) : null, 0.55);
-  }, [showQy, qyQ.data?.latest, activeFrame]);
 
   // Fokusringe an aktuellen Ort koppeln.
   useEffect(() => {
