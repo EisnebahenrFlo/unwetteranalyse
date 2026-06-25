@@ -1,22 +1,26 @@
 /**
- * Hagel-Diagnose aus echten Radar-Größen plus Umgebungs-Stütze.
+ * Hagel-Diagnose aus Radar-Näherung plus Umgebungs-Stütze.
  *
- *  - topDbz: Maximalreflektivität der Zelle (DWD-RY) — Hauptindikator
- *  - hailCoreAreaKm2: Fläche der ≥57-dBZ-Pixel (Kernindikator)
+ *  - topDbz: AUS NIEDERSCHLAGSRATE ABGELEITETE äquivalente Reflektivität
+ *    (DWD-RY → Z-R Aniol, a=256, b=1.42). KEINE gemessene 3D-Reflektivität.
+ *  - hailCoreAreaKm2: Fläche der Pixel ab Intensitätsstufe 5 (≈ 50 mm/h,
+ *    abgeleitet ≈ 48 dBZ). Kernindikator für intensiven Konvektionskern.
  *  - Echo-Top H45 aus CAPE-Updraft-Schätzung
  *  - Freezing Level H0 aus Open-Meteo
  *  - POH (Probability of Hail) nach Waldvogel et al. 1979
  *  - MESHS-Schätzung kombiniert dBZ, Δh und CAPE
  *
- * Ohne echtes 3D-Radar bleibt MESHS eine fundierte Schätzung.
+ * Realismus-Check: Ohne echtes 3D-Reflektivitätsprodukt (DX) oder
+ * RADOLAN-Binär ist Hagel hier eine Schätzung aus Niederschlagsrate +
+ * CAPE/Freezing Level. POH/MESHS sind fundiert, aber nicht messscharf.
  */
 
 import type { HailDiagnosis, HazardLevel, HazardSource } from "./types";
 
 export interface HailInput {
-  /** Top-Reflektivität in dBZ. */
+  /** Aus RY-Rate abgeleitete äquivalente Top-Reflektivität (dBZ, Z-R Aniol). */
   topDbz: number;
-  /** Hagelkern-Fläche (≥57 dBZ) in km². */
+  /** Hagelkern-Fläche (Stufe ≥5, ≈ 50 mm/h ≈ 48 dBZ abgeleitet) in km². */
   hailCoreAreaKm2: number;
   /** Gesamtfläche der Zelle in km². */
   areaKm2: number;
@@ -66,7 +70,7 @@ function levelFor(poh: number, meshs: number, coreKm2: number): HazardLevel {
 
 export function diagnoseHail(input: HailInput): HailDiagnosis {
   const reasons: string[] = [];
-  const sources: HazardSource[] = [{ label: "DWD-RY (Reflektivität)" }];
+  const sources: HazardSource[] = [{ label: "DWD-RY (Niederschlagsrate → dBZ via Z-R Aniol)" }];
 
   const top = echoTopMeters(input.cape, input.liftedIndex);
   let deltaKm: number | null = null;
@@ -88,7 +92,7 @@ export function diagnoseHail(input: HailInput): HailDiagnosis {
 
   reasons.unshift(`Top ${Math.round(input.topDbz)} dBZ · Fläche ${Math.round(input.areaKm2)} km²`);
   if (input.hailCoreAreaKm2 >= 1)
-    reasons.push(`Hagelkern ${input.hailCoreAreaKm2.toFixed(0)} km² (≥57 dBZ)`);
+    reasons.push(`Hagelkern ${input.hailCoreAreaKm2.toFixed(0)} km² (Stufe ≥5, ≈ 48 dBZ abgeleitet)`);
   if (poh > 0) reasons.push(`POH ${poh} %`);
   if (meshs > 0) reasons.push(`MESHS ≈ ${meshs.toFixed(1)} cm`);
 
