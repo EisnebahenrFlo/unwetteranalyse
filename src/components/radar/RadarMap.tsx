@@ -108,10 +108,10 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         type: "line",
         source: "focus-rings-src",
         paint: {
-          "line-color": "#0ea5e9",
-          "line-width": 1.2,
-          "line-dasharray": [2, 2],
-          "line-opacity": 0.75,
+          "line-color": "#0b1220",
+          "line-width": 2,
+          "line-dasharray": [3, 2],
+          "line-opacity": 0.9,
         },
       });
       map.addSource("focus-labels-src", { type: "geojson", data: emptyFC });
@@ -121,12 +121,16 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         source: "focus-labels-src",
         layout: {
           "text-field": ["get", "label"],
-          "text-size": 10,
+          "text-size": 12,
           "text-anchor": "left",
           "text-offset": [0.4, 0],
           "text-allow-overlap": true,
         },
-        paint: { "text-color": "#0c4a6e", "text-halo-color": "#ffffff", "text-halo-width": 1.2 },
+        paint: {
+          "text-color": "#0b1220",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 2,
+        },
       });
       map.addSource("focus-center-src", { type: "geojson", data: emptyFC });
       map.addLayer({
