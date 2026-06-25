@@ -22,8 +22,8 @@ export interface LightningInput {
 }
 
 const BIN_MS = 2 * 60_000; // 2-min-Bins
-const BASELINE_BINS = 5;   // 10 min Baseline
-const JUMP_SIGMA = 2;      // Schwelle nach Schultz
+const BASELINE_BINS = 5; // 10 min Baseline
+const JUMP_SIGMA = 2; // Schwelle nach Schultz
 
 function binRates(times: number[], now: number): number[] {
   // Letzte 6 Bins: bin[0] = aktuell, bin[1..5] = Baseline.
@@ -64,15 +64,16 @@ export function diagnoseLightning(input: LightningInput): LightningDiagnosis {
   const sigma = sd > 0 ? (current - mean) / sd : current > mean ? 99 : 0;
   const jumpActive = sigma >= JUMP_SIGMA && current > mean + 0.5;
 
-  const reasons: string[] = [
-    `Aktuelle Rate ${input.currentRatePerMin.toFixed(1)} Blitze/min`,
-  ];
+  const reasons: string[] = [`Aktuelle Rate ${input.currentRatePerMin.toFixed(1)} Blitze/min`];
   if (sd > 0) reasons.push(`Baseline ${mean.toFixed(1)} ±${sd.toFixed(1)} (10 min)`);
   if (jumpActive) reasons.push(`Lightning Jump aktiv (${sigma.toFixed(1)} σ über Baseline)`);
   else if (sigma > 1) reasons.push(`Aktivität leicht erhöht (${sigma.toFixed(1)} σ)`);
 
   const level = levelFor(input.currentRatePerMin, jumpActive, sigma);
-  const score = Math.min(100, Math.round(input.currentRatePerMin * 6 + (jumpActive ? 30 : 0) + Math.max(0, sigma) * 4));
+  const score = Math.min(
+    100,
+    Math.round(input.currentRatePerMin * 6 + (jumpActive ? 30 : 0) + Math.max(0, sigma) * 4),
+  );
 
   const sources: HazardSource[] = [
     { label: "Blitzortung (Strike-Stream)" },

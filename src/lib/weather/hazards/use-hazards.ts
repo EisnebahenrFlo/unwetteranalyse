@@ -41,12 +41,25 @@ export function useHazards(opts: {
     if (!enabled || cells.length === 0) return;
     const points = cells.map((c) => ({ lat: c.centroid.lat, lon: c.centroid.lon }));
     let cancelled = false;
-    loadCellEnvironments(points).then((m) => { if (!cancelled) setEnv(m); }).catch(() => {});
-    loadCellPrecipitation(points).then((m) => { if (!cancelled) setPrecip(m); }).catch(() => {});
-    return () => { cancelled = true; };
+    loadCellEnvironments(points)
+      .then((m) => {
+        if (!cancelled) setEnv(m);
+      })
+      .catch(() => {});
+    loadCellPrecipitation(points)
+      .then((m) => {
+        if (!cancelled) setPrecip(m);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
     // Key auf gerundete Centroide reduzieren, damit kleine Bewegungen nichts auslösen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, cells.map((c) => `${c.centroid.lat.toFixed(2)},${c.centroid.lon.toFixed(2)}`).join("|")]);
+  }, [
+    enabled,
+    cells.map((c) => `${c.centroid.lat.toFixed(2)},${c.centroid.lon.toFixed(2)}`).join("|"),
+  ]);
 
   return useMemo(() => {
     if (!enabled) return { reports: [], alerts: [], lastRun: Date.now() };
@@ -55,5 +68,17 @@ export function useHazards(opts: {
     // History-Transitions persistieren (Side-Effect, idempotent).
     if (alerts.length > 0) recordHazardTransitions(alerts);
     return { reports, alerts, lastRun: Date.now() };
-  }, [enabled, cells, env, precip, favorites, thresholds.minLevel, thresholds.alertEtaMin, thresholds.hitKm, thresholds.enableHail, thresholds.enableFlood, thresholds.enableLightning]);
+  }, [
+    enabled,
+    cells,
+    env,
+    precip,
+    favorites,
+    thresholds.minLevel,
+    thresholds.alertEtaMin,
+    thresholds.hitKm,
+    thresholds.enableHail,
+    thresholds.enableFlood,
+    thresholds.enableLightning,
+  ]);
 }

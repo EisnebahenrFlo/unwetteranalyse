@@ -34,7 +34,11 @@ interface ServiceConfig {
   thresholds: StormThresholds;
 }
 
-const WS_ENDPOINTS = ["wss://ws1.blitzortung.org/", "wss://ws7.blitzortung.org/", "wss://ws8.blitzortung.org/"];
+const WS_ENDPOINTS = [
+  "wss://ws1.blitzortung.org/",
+  "wss://ws7.blitzortung.org/",
+  "wss://ws8.blitzortung.org/",
+];
 const BUFFER_MS = 60 * 60 * 1000;
 const TICK_MS = 15_000;
 const PERSIST_KEY = "meteoflo.storm.tracks.v1";
@@ -80,7 +84,9 @@ class StormBackgroundService {
 
   subscribe(cb: () => void) {
     this.listeners.add(cb);
-    return () => { this.listeners.delete(cb); };
+    return () => {
+      this.listeners.delete(cb);
+    };
   }
 
   getSnapshot(): StormBackgroundSnapshot {
@@ -91,7 +97,11 @@ class StormBackgroundService {
     resetStormTracking();
     this.cellEnv.clear();
     this.buffer = [];
-    try { window.localStorage.removeItem(PERSIST_KEY); } catch { /* noop */ }
+    try {
+      window.localStorage.removeItem(PERSIST_KEY);
+    } catch {
+      /* noop */
+    }
     this.snapshot = { ...EMPTY_SNAPSHOT, wsStatus: this.wsStatus };
     this.emit();
     if (this.started) this.tick();
@@ -150,9 +160,12 @@ class StormBackgroundService {
           const json = decodeLzw(raw);
           const parsed = JSON.parse(json) as { time?: number; lat?: number; lon?: number };
           if (typeof parsed.lat !== "number" || typeof parsed.lon !== "number") return;
-          const tsMs = typeof parsed.time === "number" ? Math.floor(parsed.time / 1_000_000) : Date.now();
+          const tsMs =
+            typeof parsed.time === "number" ? Math.floor(parsed.time / 1_000_000) : Date.now();
           this.buffer.push({ time: tsMs, lat: parsed.lat, lon: parsed.lon });
-        } catch { /* korruptes Frame ignorieren */ }
+        } catch {
+          /* korruptes Frame ignorieren */
+        }
       };
       ws.onerror = () => this.setStatus("error");
       ws.onclose = () => {
@@ -221,9 +234,15 @@ class StormBackgroundService {
       this.envFetchPending = true;
       const points = named.map((c) => ({ lat: c.centroid.lat, lon: c.centroid.lon }));
       loadCellEnvironments(points)
-        .then((map) => { this.cellEnv = map; })
-        .catch(() => { /* gehandhabt im Modul */ })
-        .finally(() => { this.envFetchPending = false; });
+        .then((map) => {
+          this.cellEnv = map;
+        })
+        .catch(() => {
+          /* gehandhabt im Modul */
+        })
+        .finally(() => {
+          this.envFetchPending = false;
+        });
     }
 
     const alerts = computeStormAlerts(named, this.config.favorites, now, this.config.thresholds);
@@ -250,7 +269,9 @@ class StormBackgroundService {
       if (!raw) return;
       const entries = JSON.parse(raw);
       if (Array.isArray(entries)) importTrackState(entries);
-    } catch { /* ignorieren */ }
+    } catch {
+      /* ignorieren */
+    }
   }
 
   private persist() {
@@ -258,7 +279,9 @@ class StormBackgroundService {
     try {
       const entries = exportTrackState();
       window.localStorage.setItem(PERSIST_KEY, JSON.stringify(entries));
-    } catch { /* Quota / SSR */ }
+    } catch {
+      /* Quota / SSR */
+    }
   }
 }
 

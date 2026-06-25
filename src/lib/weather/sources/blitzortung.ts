@@ -12,14 +12,21 @@ export interface LightningStrike {
   lon: number;
 }
 
-const WS_ENDPOINTS = ["wss://ws1.blitzortung.org/", "wss://ws7.blitzortung.org/", "wss://ws8.blitzortung.org/"];
+const WS_ENDPOINTS = [
+  "wss://ws1.blitzortung.org/",
+  "wss://ws7.blitzortung.org/",
+  "wss://ws8.blitzortung.org/",
+];
 const BUFFER_MS = 60 * 60 * 1000; // 60 min im Puffer halten
 
 /**
  * Hält einen Live-Buffer der letzten ~60 min an Blitzen,
  * optional auf eine BBox gefiltert. Pausiert bei Tab-Inaktivität.
  */
-export function useLightningStream(opts: { enabled: boolean; bbox?: [number, number, number, number] }) {
+export function useLightningStream(opts: {
+  enabled: boolean;
+  bbox?: [number, number, number, number];
+}) {
   const { enabled, bbox } = opts;
   const [strikes, setStrikes] = useState<LightningStrike[]>([]);
   const [status, setStatus] = useState<"idle" | "connecting" | "open" | "error" | "closed">("idle");
@@ -59,7 +66,8 @@ export function useLightningStream(opts: { enabled: boolean; bbox?: [number, num
             const json = decodeLzw(raw);
             const parsed = JSON.parse(json) as { time?: number; lat?: number; lon?: number };
             if (typeof parsed.lat !== "number" || typeof parsed.lon !== "number") return;
-            const tsMs = typeof parsed.time === "number" ? Math.floor(parsed.time / 1_000_000) : Date.now();
+            const tsMs =
+              typeof parsed.time === "number" ? Math.floor(parsed.time / 1_000_000) : Date.now();
             bufferRef.current.push({ time: tsMs, lat: parsed.lat, lon: parsed.lon });
           } catch {
             // einzelne korrupte Frames ignorieren
@@ -84,7 +92,9 @@ export function useLightningStream(opts: { enabled: boolean; bbox?: [number, num
       bufferRef.current = bufferRef.current.filter((s) => s.time >= cutoff);
       if (bbox) {
         const [w, s, e, n] = bbox;
-        setStrikes(bufferRef.current.filter((p) => p.lon >= w && p.lon <= e && p.lat >= s && p.lat <= n));
+        setStrikes(
+          bufferRef.current.filter((p) => p.lon >= w && p.lon <= e && p.lat >= s && p.lat <= n),
+        );
       } else {
         setStrikes([...bufferRef.current]);
       }

@@ -44,7 +44,10 @@ interface OpenMeteoResult {
   feature_code?: string;
 }
 
-function toGeoPoint(r: OpenMeteoResult, postalHint?: string): GeoPoint & { postal?: string; population?: number } {
+function toGeoPoint(
+  r: OpenMeteoResult,
+  postalHint?: string,
+): GeoPoint & { postal?: string; population?: number } {
   return {
     lat: r.latitude,
     lon: r.longitude,
@@ -79,10 +82,13 @@ export async function searchLocations(query: string, language = "de"): Promise<G
   if (cls.kind === "coords" && cls.lat != null && cls.lon != null) {
     const reverse = await reverseGeocode(cls.lat, cls.lon, language).catch(() => null);
     if (reverse) return [reverse];
-    return [{
-      lat: cls.lat, lon: cls.lon,
-      name: `${cls.lat.toFixed(4)}, ${cls.lon.toFixed(4)}`,
-    }];
+    return [
+      {
+        lat: cls.lat,
+        lon: cls.lon,
+        name: `${cls.lat.toFixed(4)}, ${cls.lon.toFixed(4)}`,
+      },
+    ];
   }
 
   // Open-Meteo Geocoding kennt keine PLZ-Suche → über Nominatim auflösen,
@@ -129,8 +135,14 @@ async function searchByPostalCode(postal: string, language: string): Promise<Geo
   return data.map((r) => {
     const a = r.address ?? {};
     const name =
-      a.city ?? a.town ?? a.village ?? a.municipality ?? a.hamlet ?? a.suburb ??
-      r.display_name?.split(",")[0]?.trim() ?? postal;
+      a.city ??
+      a.town ??
+      a.village ??
+      a.municipality ??
+      a.hamlet ??
+      a.suburb ??
+      r.display_name?.split(",")[0]?.trim() ??
+      postal;
     return {
       lat: Number(r.lat),
       lon: Number(r.lon),
@@ -147,9 +159,17 @@ interface NominatimReverse {
   lon: string;
   display_name?: string;
   address?: {
-    city?: string; town?: string; village?: string; municipality?: string;
-    hamlet?: string; suburb?: string; county?: string; state?: string;
-    country?: string; country_code?: string; postcode?: string;
+    city?: string;
+    town?: string;
+    village?: string;
+    municipality?: string;
+    hamlet?: string;
+    suburb?: string;
+    county?: string;
+    state?: string;
+    country?: string;
+    country_code?: string;
+    postcode?: string;
   };
 }
 
@@ -171,8 +191,14 @@ export async function reverseGeocode(lat: number, lon: number, language = "de"):
   const data = (await res.json()) as NominatimReverse;
   const a = data.address ?? {};
   const name =
-    a.city ?? a.town ?? a.village ?? a.municipality ?? a.hamlet ?? a.suburb ??
-    data.display_name?.split(",")[0]?.trim() ?? `${lat.toFixed(3)}, ${lon.toFixed(3)}`;
+    a.city ??
+    a.town ??
+    a.village ??
+    a.municipality ??
+    a.hamlet ??
+    a.suburb ??
+    data.display_name?.split(",")[0]?.trim() ??
+    `${lat.toFixed(3)}, ${lon.toFixed(3)}`;
 
   return {
     lat,
@@ -192,14 +218,21 @@ export async function getCurrentLocation(language = "de"): Promise<GeoPoint> {
     throw new Error("Geolocation wird vom Browser nicht unterstützt.");
   }
   const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(resolve, (err) => {
-      const msg =
-        err.code === err.PERMISSION_DENIED ? "Standortzugriff verweigert. Bitte in den Browser-Einstellungen erlauben." :
-        err.code === err.POSITION_UNAVAILABLE ? "Standort aktuell nicht verfügbar." :
-        err.code === err.TIMEOUT ? "Standortabfrage hat zu lange gedauert." :
-        "Standort konnte nicht ermittelt werden.";
-      reject(new Error(msg));
-    }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60 * 1000 });
+    navigator.geolocation.getCurrentPosition(
+      resolve,
+      (err) => {
+        const msg =
+          err.code === err.PERMISSION_DENIED
+            ? "Standortzugriff verweigert. Bitte in den Browser-Einstellungen erlauben."
+            : err.code === err.POSITION_UNAVAILABLE
+              ? "Standort aktuell nicht verfügbar."
+              : err.code === err.TIMEOUT
+                ? "Standortabfrage hat zu lange gedauert."
+                : "Standort konnte nicht ermittelt werden.";
+        reject(new Error(msg));
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60 * 1000 },
+    );
   });
   return reverseGeocode(pos.coords.latitude, pos.coords.longitude, language);
 }

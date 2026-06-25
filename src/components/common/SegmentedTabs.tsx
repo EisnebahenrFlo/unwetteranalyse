@@ -22,7 +22,12 @@ interface Props<T extends string> {
  * Kontrolliert oder unkontrolliert nutzbar.
  */
 export function SegmentedTabs<T extends string>({
-  tabs, value, defaultValue, onChange, size = "md", className,
+  tabs,
+  value,
+  defaultValue,
+  onChange,
+  size = "md",
+  className,
 }: Props<T>) {
   const [internal, setInternal] = useState<T>(defaultValue ?? tabs[0]?.id);
   const active = value ?? internal;

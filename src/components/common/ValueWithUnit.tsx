@@ -1,7 +1,11 @@
 import { cn } from "@/lib/utils";
 
 export function ValueWithUnit({
-  value, unit, size = "md", className, hint,
+  value,
+  unit,
+  size = "md",
+  className,
+  hint,
 }: {
   value: string;
   unit?: string;
@@ -18,7 +22,10 @@ export function ValueWithUnit({
   return (
     <div className={cn("flex flex-col gap-0.5", className)}>
       <div className="flex items-baseline gap-1.5">
-        <span className={cn("font-mono font-semibold tracking-tight text-foreground", sizes[size])} style={{ fontFamily: "var(--font-mono)" }}>
+        <span
+          className={cn("font-mono font-semibold tracking-tight text-foreground", sizes[size])}
+          style={{ fontFamily: "var(--font-mono)" }}
+        >
           {value}
         </span>
         {unit && <span className="text-xs text-muted-foreground">{unit}</span>}

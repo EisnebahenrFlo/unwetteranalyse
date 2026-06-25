@@ -6,7 +6,7 @@ import { useSettings } from "@/hooks/use-settings";
 import { formatTemp, formatWind, formatRelative } from "@/lib/weather/format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/EmptyState";
-import { Radio } from "lucide-react";
+import { Radio } from "@/components/icons";
 import { useLiveNow } from "@/hooks/use-live-now";
 
 export const Route = createFileRoute("/stations")({

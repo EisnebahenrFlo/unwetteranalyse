@@ -4,7 +4,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { useQuery } from "@tanstack/react-query";
 import { dwdRadarTileUrl } from "@/lib/weather/sources/dwd-radar";
 import { dwdRadarFramesQuery } from "@/lib/weather/queries";
-import { Layers, Pause, Play, AlertCircle } from "lucide-react";
+import { Layers, Pause, Play, AlertCircle } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import type { GeoPoint } from "@/lib/weather/types";
 
@@ -58,7 +58,11 @@ export function WeatherMap({ center, layer }: Props) {
     window.setTimeout(() => map.resize(), 250);
     const ro = new ResizeObserver(() => map.resize());
     ro.observe(container);
-    return () => { ro.disconnect(); map.remove(); mapRef.current = null; };
+    return () => {
+      ro.disconnect();
+      map.remove();
+      mapRef.current = null;
+    };
   }, []);
 
   // recenter when active point changes
@@ -86,8 +90,12 @@ export function WeatherMap({ center, layer }: Props) {
     const map = mapRef.current;
     if (!map) return;
     const apply = () => {
-      ["radar-layer"].forEach((id) => { if (map.getLayer(id)) map.removeLayer(id); });
-      ["radar-src"].forEach((id) => { if (map.getSource(id)) map.removeSource(id); });
+      ["radar-layer"].forEach((id) => {
+        if (map.getLayer(id)) map.removeLayer(id);
+      });
+      ["radar-src"].forEach((id) => {
+        if (map.getSource(id)) map.removeSource(id);
+      });
       if (layer !== "radar") return;
       const frame = frames[Math.min(frameIdx, frames.length - 1)];
       map.addSource("radar-src", {
@@ -96,14 +104,20 @@ export function WeatherMap({ center, layer }: Props) {
         tileSize: 256,
         attribution: "© Deutscher Wetterdienst",
       });
-      map.addLayer({ id: "radar-layer", type: "raster", source: "radar-src", paint: { "raster-opacity": 0.7 } });
+      map.addLayer({
+        id: "radar-layer",
+        type: "raster",
+        source: "radar-src",
+        paint: { "raster-opacity": 0.7 },
+      });
     };
     if (map.isStyleLoaded()) apply();
     else map.once("load", apply);
   }, [layer, frameIdx, frames]);
 
   const currentFrame = frames[frameIdx];
-  const radarUnavailable = layer === "radar" && !radarQ.isLoading && (radarQ.isError || frames.length === 0);
+  const radarUnavailable =
+    layer === "radar" && !radarQ.isLoading && (radarQ.isError || frames.length === 0);
 
   return (
     <div className="relative h-[62vh] min-h-[420px] w-full overflow-hidden rounded-lg border border-border bg-muted md:h-[68vh]">
@@ -114,14 +128,20 @@ export function WeatherMap({ center, layer }: Props) {
           <div className="min-w-0">
             <div className="font-medium">Radar nicht verfügbar</div>
             <div className="text-[11px] text-muted-foreground">
-              DWD WMS antwortet nicht oder liefert keine Frames. Karte bleibt sichtbar, Niederschlags-Overlay fehlt.
+              DWD WMS antwortet nicht oder liefert keine Frames. Karte bleibt sichtbar,
+              Niederschlags-Overlay fehlt.
             </div>
           </div>
         </div>
       )}
       {layer === "radar" && currentFrame && (
         <div className="absolute bottom-3 left-3 right-3 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-border bg-background/90 px-3 py-2 backdrop-blur">
-          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setPlaying((p) => !p)}>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7"
+            onClick={() => setPlaying((p) => !p)}
+          >
             {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
           </Button>
           <input
@@ -129,11 +149,20 @@ export function WeatherMap({ center, layer }: Props) {
             min={0}
             max={frames.length - 1}
             value={frameIdx}
-            onChange={(e) => { setPlaying(false); setFrameIdx(Number(e.target.value)); }}
+            onChange={(e) => {
+              setPlaying(false);
+              setFrameIdx(Number(e.target.value));
+            }}
             className="min-w-0 accent-primary"
           />
-          <div className="shrink-0 font-mono text-xs text-foreground" style={{ fontFamily: "var(--font-mono)" }}>
-            {new Date(currentFrame.time).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+          <div
+            className="shrink-0 font-mono text-xs text-foreground"
+            style={{ fontFamily: "var(--font-mono)" }}
+          >
+            {new Date(currentFrame.time).toLocaleTimeString("de-DE", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
           </div>
         </div>
       )}

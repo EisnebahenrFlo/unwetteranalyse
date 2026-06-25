@@ -27,37 +27,99 @@ export function piecewise(x: number, points: Array<[number, number]>): number {
 
 // ─── Niederschlag (mm/h) ────────────────────────────────────────────────
 export const normRainMmH = (mm: number) =>
-  piecewise(mm, [[0, 0], [0.5, 8], [2.5, 22], [10, 45], [15, 60], [25, 78], [40, 92], [60, 100]]);
+  piecewise(mm, [
+    [0, 0],
+    [0.5, 8],
+    [2.5, 22],
+    [10, 45],
+    [15, 60],
+    [25, 78],
+    [40, 92],
+    [60, 100],
+  ]);
 
 // ─── Wind / Böen (km/h) ─────────────────────────────────────────────────
 export const normGustKmh = (kmh: number) =>
-  piecewise(kmh, [[0, 0], [40, 10], [50, 25], [65, 50], [80, 70], [100, 85], [120, 100]]);
+  piecewise(kmh, [
+    [0, 0],
+    [40, 10],
+    [50, 25],
+    [65, 50],
+    [80, 70],
+    [100, 85],
+    [120, 100],
+  ]);
 
 export const normWindKmh = (kmh: number) =>
-  piecewise(kmh, [[0, 0], [20, 8], [40, 25], [60, 50], [80, 75], [100, 100]]);
+  piecewise(kmh, [
+    [0, 0],
+    [20, 8],
+    [40, 25],
+    [60, 50],
+    [80, 75],
+    [100, 100],
+  ]);
 
 // ─── Konvektive Energie ─────────────────────────────────────────────────
 export const normCape = (jkg: number) =>
-  piecewise(jkg, [[0, 0], [300, 12], [800, 30], [1500, 55], [2500, 80], [4000, 100]]);
+  piecewise(jkg, [
+    [0, 0],
+    [300, 12],
+    [800, 30],
+    [1500, 55],
+    [2500, 80],
+    [4000, 100],
+  ]);
 
 /** Lifted Index: negativer = labiler. */
 export const normLiftedIndex = (li: number) =>
-  piecewise(li, [[4, 0], [0, 10], [-1, 22], [-3, 45], [-5, 70], [-7, 88], [-10, 100]]);
+  piecewise(li, [
+    [4, 0],
+    [0, 10],
+    [-1, 22],
+    [-3, 45],
+    [-5, 70],
+    [-7, 88],
+    [-10, 100],
+  ]);
 
 /** K-Index (°C): ≥20 schwach, ≥30 wahrscheinlich, ≥40 sehr wahrscheinlich. */
 export const normKIndex = (k: number) =>
-  piecewise(k, [[0, 0], [20, 15], [25, 30], [30, 50], [35, 70], [40, 88], [45, 100]]);
+  piecewise(k, [
+    [0, 0],
+    [20, 15],
+    [25, 30],
+    [30, 50],
+    [35, 70],
+    [40, 88],
+    [45, 100],
+  ]);
 
 /** Total Totals (°C): ≥44 möglich, ≥50 wahrscheinlich, ≥55 schwer. */
 export const normTotalTotals = (tt: number) =>
-  piecewise(tt, [[0, 0], [40, 10], [44, 25], [48, 45], [50, 60], [55, 82], [60, 100]]);
+  piecewise(tt, [
+    [0, 0],
+    [40, 10],
+    [44, 25],
+    [48, 45],
+    [50, 60],
+    [55, 82],
+    [60, 100],
+  ]);
 
 /** Gewitterwahrscheinlichkeit (0–1) → 0–100. */
 export const normThunderProb = (p: number) => clamp(p * 100);
 
 /** Blitzaktivität (Strikes / 5 min im Radius). */
 export const normLightning5min = (n: number) =>
-  piecewise(n, [[0, 0], [1, 25], [5, 50], [15, 75], [40, 95], [100, 100]]);
+  piecewise(n, [
+    [0, 0],
+    [1, 25],
+    [5, 50],
+    [15, 75],
+    [40, 95],
+    [100, 100],
+  ]);
 
 /** Radarintensität (mm/h aus Reflektivität). */
 export const normRadarDbz = (mmh: number) => normRainMmH(mmh);

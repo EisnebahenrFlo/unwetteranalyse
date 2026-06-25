@@ -64,7 +64,7 @@ export function lowLevelShearMs(p: HourlyPoint): number | null {
   // Vereinfachung: skalare Differenz; Richtungsanteil als kleiner Bonus.
   let base = Math.abs(b - a);
   if (da != null && p.windDirection80mDeg != null) {
-    const diff = Math.abs(((p.windDirection180mDeg ?? da) - da + 540) % 360 - 180);
+    const diff = Math.abs((((p.windDirection180mDeg ?? da) - da + 540) % 360) - 180);
     base += (diff / 180) * 3; // bis +3 m/s "Richtungs-Shear"
   }
   return base;
@@ -104,21 +104,35 @@ export function severeScore(p: HourlyPoint): SevereScore {
   }
 
   const rain = p.precipitationMm ?? 0;
-  if (rain >= 40) { score += 30; reasons.push("Extremer Starkregen"); }
-  else if (rain >= 25) { score += 22; reasons.push("Heftiger Starkregen"); }
-  else if (rain >= 15) { score += 12; reasons.push("Starkregen markant"); }
+  if (rain >= 40) {
+    score += 30;
+    reasons.push("Extremer Starkregen");
+  } else if (rain >= 25) {
+    score += 22;
+    reasons.push("Heftiger Starkregen");
+  } else if (rain >= 15) {
+    score += 12;
+    reasons.push("Starkregen markant");
+  }
 
   const gust = p.windGustMs ?? 0;
-  if (gust >= 33) { score += 30; reasons.push("Orkanböen"); }
-  else if (gust >= 25) { score += 22; reasons.push("Schwerer Sturm"); }
-  else if (gust >= 18) { score += 12; reasons.push("Sturmböen"); }
-  else if (gust >= 14) { score += 6; reasons.push("Windböen"); }
+  if (gust >= 33) {
+    score += 30;
+    reasons.push("Orkanböen");
+  } else if (gust >= 25) {
+    score += 22;
+    reasons.push("Schwerer Sturm");
+  } else if (gust >= 18) {
+    score += 12;
+    reasons.push("Sturmböen");
+  } else if (gust >= 14) {
+    score += 6;
+    reasons.push("Windböen");
+  }
 
   score = Math.min(100, Math.round(score));
   const level: SevereScore["level"] =
-    score >= 70 ? "severe" :
-    score >= 45 ? "moderate" :
-    score >= 20 ? "minor" : "none";
+    score >= 70 ? "severe" : score >= 45 ? "moderate" : score >= 20 ? "minor" : "none";
   return { value: score, level, reasons };
 }
 

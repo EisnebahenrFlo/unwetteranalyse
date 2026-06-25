@@ -13,7 +13,11 @@ export interface SourceHealth {
   detail: string;
 }
 
-export function assessTimeline(name: string, t: WmsTimeline | undefined, expectedMinutes: number): SourceHealth {
+export function assessTimeline(
+  name: string,
+  t: WmsTimeline | undefined,
+  expectedMinutes: number,
+): SourceHealth {
   if (!t || !t.latest) return { label: name, confidence: "missing", detail: "keine Daten" };
   const lagMin = (t.lagMs ?? 0) / 60_000;
   const expectedMs = expectedMinutes * 60_000;
@@ -35,7 +39,10 @@ export interface LightningInsight {
   bearingFromUser: string | null;
 }
 
-export function analyseLightning(strikes: LightningStrike[], user?: { lat: number; lon: number }): LightningInsight {
+export function analyseLightning(
+  strikes: LightningStrike[],
+  user?: { lat: number; lon: number },
+): LightningInsight {
   const now = Date.now();
   const last5 = strikes.filter((s) => now - s.time <= 5 * 60_000).length;
   const prev5 = strikes.filter((s) => {
@@ -43,7 +50,13 @@ export function analyseLightning(strikes: LightningStrike[], user?: { lat: numbe
     return age > 5 * 60_000 && age <= 10 * 60_000;
   }).length;
   const trend: LightningInsight["trend"] =
-    last5 === 0 && prev5 === 0 ? "none" : last5 > prev5 + 2 ? "rising" : prev5 > last5 + 2 ? "falling" : "steady";
+    last5 === 0 && prev5 === 0
+      ? "none"
+      : last5 > prev5 + 2
+        ? "rising"
+        : prev5 > last5 + 2
+          ? "falling"
+          : "steady";
 
   let centroid: LightningInsight["centroid"] = null;
   const recent = strikes.filter((s) => now - s.time <= 15 * 60_000);
@@ -68,6 +81,23 @@ function bearing(a: { lat: number; lon: number }, b: { lat: number; lon: number 
 }
 
 function compass(deg: number) {
-  const dirs = ["N", "NNO", "NO", "ONO", "O", "OSO", "SO", "SSO", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+  const dirs = [
+    "N",
+    "NNO",
+    "NO",
+    "ONO",
+    "O",
+    "OSO",
+    "SO",
+    "SSO",
+    "S",
+    "SSW",
+    "SW",
+    "WSW",
+    "W",
+    "WNW",
+    "NW",
+    "NNW",
+  ];
   return dirs[Math.round(deg / 22.5) % 16];
 }

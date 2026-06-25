@@ -14,7 +14,11 @@ export interface RawCluster {
  * gescannt → im Mittel ~O(n). Die exakte ≤eps-Prüfung bleibt Haversine,
  * das Ergebnis ist identisch zur Brute-Force-Variante.
  */
-export function dbscanStrikes(strikes: LightningStrike[], epsKm: number, minPts: number): RawCluster[] {
+export function dbscanStrikes(
+  strikes: LightningStrike[],
+  epsKm: number,
+  minPts: number,
+): RawCluster[] {
   const n = strikes.length;
   if (n === 0) return [];
 
@@ -27,7 +31,7 @@ export function dbscanStrikes(strikes: LightningStrike[], epsKm: number, minPts:
   }
   const cosLat = Math.max(0.05, Math.cos(toRad(maxAbsLat)));
   const latStep = epsKm / 110.574;
-  const lonStep = epsKm / (111.320 * cosLat);
+  const lonStep = epsKm / (111.32 * cosLat);
 
   const gx = (lon: number) => Math.floor(lon / lonStep);
   const gy = (lat: number) => Math.floor(lat / latStep);
@@ -72,7 +76,10 @@ export function dbscanStrikes(strikes: LightningStrike[], epsKm: number, minPts:
     const id = cId++;
     cluster[i] = id;
     const queue: number[] = [];
-    for (const j of nb) { queue.push(j); queued[j] = 1; }
+    for (const j of nb) {
+      queue.push(j);
+      queued[j] = 1;
+    }
     let head = 0;
     while (head < queue.length) {
       const j = queue[head++];
@@ -80,7 +87,11 @@ export function dbscanStrikes(strikes: LightningStrike[], epsKm: number, minPts:
         visited[j] = 1;
         const nb2 = neighbors(j);
         if (nb2.length + 1 >= minPts) {
-          for (const k of nb2) if (!queued[k]) { queued[k] = 1; queue.push(k); }
+          for (const k of nb2)
+            if (!queued[k]) {
+              queued[k] = 1;
+              queue.push(k);
+            }
         }
       }
       if (cluster[j] === -1) cluster[j] = id;

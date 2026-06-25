@@ -40,7 +40,11 @@ export function dwdRadarTileUrl(time?: string) {
 }
 
 function expandTimeDimension(raw: string) {
-  if (raw.includes(",")) return raw.split(",").map((value) => value.trim()).filter(Boolean);
+  if (raw.includes(","))
+    return raw
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
 
   const [startRaw, endRaw, stepRaw] = raw.split("/");
   const start = new Date(startRaw).getTime();

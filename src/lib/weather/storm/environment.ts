@@ -104,18 +104,20 @@ export async function loadCellEnvironments(
 
   for (let i = 0; i < toFetch.length; i += MAX_BATCH) {
     const slice = toFetch.slice(i, i + MAX_BATCH);
-    const promise = fetchBatch(slice).catch((err) => {
-      console.warn("[storm] cell env fetch failed", err);
-      // Negativ-Cache, damit wir nicht in einer Schleife retryen.
-      const now2 = Date.now();
-      slice.forEach((k) => {
-        if (!cache.has(k)) {
-          cache.set(k, { cape: null, liftedIndex: null, validFor: null, fetchedAt: now2 });
-        }
+    const promise = fetchBatch(slice)
+      .catch((err) => {
+        console.warn("[storm] cell env fetch failed", err);
+        // Negativ-Cache, damit wir nicht in einer Schleife retryen.
+        const now2 = Date.now();
+        slice.forEach((k) => {
+          if (!cache.has(k)) {
+            cache.set(k, { cape: null, liftedIndex: null, validFor: null, fetchedAt: now2 });
+          }
+        });
+      })
+      .finally(() => {
+        slice.forEach((k) => inflight.delete(k));
       });
-    }).finally(() => {
-      slice.forEach((k) => inflight.delete(k));
-    });
     slice.forEach((k) => inflight.set(k, promise));
   }
 

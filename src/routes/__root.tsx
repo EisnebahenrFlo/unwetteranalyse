@@ -35,10 +35,15 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <AppShell>
       <div className="mx-auto max-w-md py-16 text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">Seite konnte nicht geladen werden</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          Seite konnte nicht geladen werden
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
         <button
-          onClick={() => { router.invalidate(); reset(); }}
+          onClick={() => {
+            router.invalidate();
+            reset();
+          }}
           className="mt-6 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           Erneut versuchen
@@ -69,16 +74,36 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "ForecastHub" },
-      { name: "description", content: "Modernes, ruhiges Wetteranalysetool für DACH und Italien mit DWD-orientierter Warnlogik und Lernmodus." },
+      {
+        name: "description",
+        content:
+          "Modernes, ruhiges Wetteranalysetool für DACH und Italien mit DWD-orientierter Warnlogik und Lernmodus.",
+      },
       { name: "author", content: "ForecastHub" },
       { property: "og:title", content: "ForecastHub" },
-      { property: "og:description", content: "Modernes, ruhiges Wetteranalysetool für DACH und Italien mit DWD-orientierter Warnlogik und Lernmodus." },
+      {
+        property: "og:description",
+        content:
+          "Modernes, ruhiges Wetteranalysetool für DACH und Italien mit DWD-orientierter Warnlogik und Lernmodus.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "ForecastHub" },
-      { name: "twitter:description", content: "Modernes, ruhiges Wetteranalysetool für DACH und Italien mit DWD-orientierter Warnlogik und Lernmodus." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/572413d7-7cb8-4494-a6db-6639780bb573/id-preview-8ca62a70--688bd4f4-bd88-4464-8502-8d052ff22d31.lovable.app-1781626592276.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/572413d7-7cb8-4494-a6db-6639780bb573/id-preview-8ca62a70--688bd4f4-bd88-4464-8502-8d052ff22d31.lovable.app-1781626592276.png" },
+      {
+        name: "twitter:description",
+        content:
+          "Modernes, ruhiges Wetteranalysetool für DACH und Italien mit DWD-orientierter Warnlogik und Lernmodus.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/572413d7-7cb8-4494-a6db-6639780bb573/id-preview-8ca62a70--688bd4f4-bd88-4464-8502-8d052ff22d31.lovable.app-1781626592276.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/572413d7-7cb8-4494-a6db-6639780bb573/id-preview-8ca62a70--688bd4f4-bd88-4464-8502-8d052ff22d31.lovable.app-1781626592276.png",
+      },
     ],
     links: [{ rel: "stylesheet", href: appCss }],
   }),

@@ -103,7 +103,9 @@ export function diagnoseHail(input: HailInput): HailDiagnosis {
     deltaKm = Math.max(0, (top - input.freezingLevelM) / 1000);
     sources.push({ label: "Open-Meteo CAPE/LI (Echo-Top-Schätzung)" });
     sources.push({ label: "Open-Meteo Freezing Level" });
-    reasons.push(`Echo-Top ≈ ${Math.round(top / 100) / 10} km, H0 ${Math.round(input.freezingLevelM / 100) / 10} km → Δh ${deltaKm.toFixed(1)} km`);
+    reasons.push(
+      `Echo-Top ≈ ${Math.round(top / 100) / 10} km, H0 ${Math.round(input.freezingLevelM / 100) / 10} km → Δh ${deltaKm.toFixed(1)} km`,
+    );
   } else {
     reasons.push("Echo-Top / Freezing Level fehlen — POH konservativ");
   }
@@ -112,7 +114,9 @@ export function diagnoseHail(input: HailInput): HailDiagnosis {
   const meshs = deltaKm != null ? meshsCm(dbz, deltaKm, input.cape, input.jumpActive) : 0;
   const level = levelFor(poh, meshs);
 
-  reasons.unshift(`Reflektivitäts-Proxy ≈ ${Math.round(dbz)} dBZ aus ${input.strikeRatePerMin.toFixed(1)} Blitze/min`);
+  reasons.unshift(
+    `Reflektivitäts-Proxy ≈ ${Math.round(dbz)} dBZ aus ${input.strikeRatePerMin.toFixed(1)} Blitze/min`,
+  );
   if (poh > 0) reasons.push(`POH ${poh} %`);
   if (meshs > 0) reasons.push(`MESHS ≈ ${meshs.toFixed(1)} cm`);
   if (input.jumpActive) reasons.push("Lightning Jump aktiv — Hagel wahrscheinlicher");

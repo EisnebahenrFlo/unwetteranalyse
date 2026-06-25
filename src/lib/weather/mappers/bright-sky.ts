@@ -23,18 +23,29 @@ function pickRolling<T>(w: Record<string, unknown>, key: string): T | undefined 
 function iconToWmoCode(icon?: string): number | undefined {
   switch (icon) {
     case "clear-day":
-    case "clear-night": return 0;
+    case "clear-night":
+      return 0;
     case "partly-cloudy-day":
-    case "partly-cloudy-night": return 2;
-    case "cloudy": return 3;
-    case "fog": return 45;
-    case "wind": return 3;
-    case "rain": return 63;
-    case "sleet": return 67;
-    case "snow": return 73;
-    case "hail": return 96;
-    case "thunderstorm": return 95;
-    default: return undefined;
+    case "partly-cloudy-night":
+      return 2;
+    case "cloudy":
+      return 3;
+    case "fog":
+      return 45;
+    case "wind":
+      return 3;
+    case "rain":
+      return 63;
+    case "sleet":
+      return 67;
+    case "snow":
+      return 73;
+    case "hail":
+      return 96;
+    case "thunderstorm":
+      return 95;
+    default:
+      return undefined;
   }
 }
 
@@ -66,14 +77,23 @@ export function mapBrightSkyCurrent(raw: {
 
 export function mapBrightSkyStations(raw: {
   weather?: Array<{
-    timestamp: string; source_id: number;
-    temperature?: number; dew_point?: number;
-    wind_speed?: number; wind_gust_speed?: number;
-    pressure_msl?: number; precipitation?: number; cloud_cover?: number;
+    timestamp: string;
+    source_id: number;
+    temperature?: number;
+    dew_point?: number;
+    wind_speed?: number;
+    wind_gust_speed?: number;
+    pressure_msl?: number;
+    precipitation?: number;
+    cloud_cover?: number;
   }>;
   sources?: Array<{
-    id: number; station_name?: string; dwd_station_id?: string;
-    lat: number; lon: number; distance?: number;
+    id: number;
+    station_name?: string;
+    dwd_station_id?: string;
+    lat: number;
+    lon: number;
+    distance?: number;
   }>;
 }): StationObservation[] {
   const sources = raw.sources ?? [];
@@ -111,12 +131,19 @@ export function mapBrightSkyStations(raw: {
 
 export function mapBrightSkyAlerts(raw: {
   alerts?: Array<{
-    id?: string | number; alert_id?: string;
-    event_en?: string; event_de?: string; event_code?: number;
+    id?: string | number;
+    alert_id?: string;
+    event_en?: string;
+    event_de?: string;
+    event_code?: number;
     severity?: string;
-    headline_de?: string; headline_en?: string;
-    description_de?: string; instruction_de?: string;
-    onset?: string; expires?: string; effective?: string;
+    headline_de?: string;
+    headline_en?: string;
+    description_de?: string;
+    instruction_de?: string;
+    onset?: string;
+    expires?: string;
+    effective?: string;
   }>;
 }): WeatherAlert[] {
   return (raw.alerts ?? []).map((a, idx) => ({

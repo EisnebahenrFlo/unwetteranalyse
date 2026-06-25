@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { XMLParser } from "fast-xml-parser";
 
 const parser = new XMLParser({
@@ -14,7 +15,11 @@ const parser = new XMLParser({
  */
 export function parseWmsTimeDimension(xml: string, layerName: string): string | null {
   let root: any;
-  try { root = parser.parse(xml); } catch { return null; }
+  try {
+    root = parser.parse(xml);
+  } catch {
+    return null;
+  }
   const cap = root?.WMS_Capabilities ?? root?.WMT_MS_Capabilities;
   const top = cap?.Capability?.Layer;
   if (!top) return null;

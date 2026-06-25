@@ -39,7 +39,11 @@ export function formatHour(iso: string): string {
 }
 
 export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" });
+  return new Date(iso).toLocaleDateString("de-DE", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+  });
 }
 
 export function formatRelative(iso: string): string {
@@ -67,22 +71,56 @@ export function formatLiveHour(iso: string, now = new Date()): string {
 
 export function windDirectionLabel(deg: number | undefined): string {
   if (deg == null) return "—";
-  const dirs = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+  const dirs = [
+    "N",
+    "NNO",
+    "NO",
+    "ONO",
+    "O",
+    "OSO",
+    "SO",
+    "SSO",
+    "S",
+    "SSW",
+    "SW",
+    "WSW",
+    "W",
+    "WNW",
+    "NW",
+    "NNW",
+  ];
   return dirs[Math.round(deg / 22.5) % 16];
 }
 
 export function weatherCodeLabel(code: number | undefined): string {
   if (code == null) return "—";
   const map: Record<number, string> = {
-    0:"Klar",1:"Überwiegend klar",2:"Teils bewölkt",3:"Bedeckt",
-    45:"Nebel",48:"Reifnebel",
-    51:"Leichter Nieselregen",53:"Nieselregen",55:"Starker Nieselregen",
-    61:"Leichter Regen",63:"Regen",65:"Starker Regen",
-    66:"Gefrierender Regen",67:"Starker gefr. Regen",
-    71:"Leichter Schneefall",73:"Schneefall",75:"Starker Schneefall",77:"Schneegriesel",
-    80:"Regenschauer",81:"Kräftiger Schauer",82:"Heftiger Schauer",
-    85:"Schneeschauer",86:"Kräftiger Schneeschauer",
-    95:"Gewitter",96:"Gewitter mit Hagel",99:"Schweres Gewitter",
+    0: "Klar",
+    1: "Überwiegend klar",
+    2: "Teils bewölkt",
+    3: "Bedeckt",
+    45: "Nebel",
+    48: "Reifnebel",
+    51: "Leichter Nieselregen",
+    53: "Nieselregen",
+    55: "Starker Nieselregen",
+    61: "Leichter Regen",
+    63: "Regen",
+    65: "Starker Regen",
+    66: "Gefrierender Regen",
+    67: "Starker gefr. Regen",
+    71: "Leichter Schneefall",
+    73: "Schneefall",
+    75: "Starker Schneefall",
+    77: "Schneegriesel",
+    80: "Regenschauer",
+    81: "Kräftiger Schauer",
+    82: "Heftiger Schauer",
+    85: "Schneeschauer",
+    86: "Kräftiger Schneeschauer",
+    95: "Gewitter",
+    96: "Gewitter mit Hagel",
+    99: "Schweres Gewitter",
   };
   return map[code] ?? "—";
 }

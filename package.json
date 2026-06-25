@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "check:emoji": "node scripts/check-emoji.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -57,7 +58,6 @@
     "embla-carousel-react": "^8.6.0",
     "fast-xml-parser": "^5.9.3",
     "input-otp": "^1.4.2",
-    "lucide-react": "^0.575.0",
     "maplibre-gl": "^5.24.0",
     "react": "^19.2.0",
     "react-day-picker": "^9.14.0",

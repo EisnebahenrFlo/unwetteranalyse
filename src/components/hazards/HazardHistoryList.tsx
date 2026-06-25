@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CloudHail, CloudRain, Zap, Inbox } from "lucide-react";
+import { CloudHail, CloudRain, Zap, Inbox } from "@/components/icons";
 import { getFavoriteHistory } from "@/lib/weather/hazards/history";
 import type { HazardHistoryEvent, HazardKind } from "@/lib/weather/hazards/types";
 import { HAZARD_KIND_LABEL, HAZARD_LEVEL_LABEL, HAZARD_LEVEL_TONE } from "./hazard-tokens";
@@ -47,8 +47,16 @@ export function HazardHistoryList({
       {events.map((e) => {
         const Icon = ICONS[e.kind];
         return (
-          <li key={e.id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 py-2 text-xs">
-            <span className={cn("mt-0.5 flex h-6 w-6 items-center justify-center rounded-md", HAZARD_LEVEL_TONE[e.level])}>
+          <li
+            key={e.id}
+            className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 py-2 text-xs"
+          >
+            <span
+              className={cn(
+                "mt-0.5 flex h-6 w-6 items-center justify-center rounded-md",
+                HAZARD_LEVEL_TONE[e.level],
+              )}
+            >
               <Icon className="h-3.5 w-3.5" />
             </span>
             <div className="min-w-0">
@@ -59,7 +67,10 @@ export function HazardHistoryList({
             </div>
             <div className="text-right font-mono text-[10px] text-muted-foreground">
               {new Date(e.occurredAt).toLocaleString("de-DE", {
-                day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+                day: "2-digit",
+                month: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
               })}
             </div>
           </li>

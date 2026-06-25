@@ -10,13 +10,13 @@ import type { HourlyPoint } from "@/lib/weather/types";
 export type Verdict = "ok" | "watch" | "alert" | "unknown";
 
 export interface TriggerLight {
-  moisture: Verdict;     // Feuchte
-  instability: Verdict;  // CAPE / LI
-  lift: Verdict;         // Hebung / Trigger (Wind, BL-Höhe, Druck)
+  moisture: Verdict; // Feuchte
+  instability: Verdict; // CAPE / LI
+  lift: Verdict; // Hebung / Trigger (Wind, BL-Höhe, Druck)
   precipSignal: Verdict; // Niederschlagssignal Modell
-  liveConfirm: Verdict;  // Live-Bestätigung (Blitz / Radar-Frame frisch)
+  liveConfirm: Verdict; // Live-Bestätigung (Blitz / Radar-Frame frisch)
   summary: string;
-  score: number;         // 0..5 (Anzahl alert-Stufen, grob)
+  score: number; // 0..5 (Anzahl alert-Stufen, grob)
 }
 
 /**
@@ -30,41 +30,54 @@ export function triggerLight(input: {
 }): TriggerLight {
   const h = input.nowHour;
 
-  const spread = h?.temperatureC != null && h?.dewPointC != null ? h.temperatureC - h.dewPointC : null;
+  const spread =
+    h?.temperatureC != null && h?.dewPointC != null ? h.temperatureC - h.dewPointC : null;
   const moisture: Verdict =
     spread == null ? "unknown" : spread <= 3 ? "alert" : spread <= 6 ? "watch" : "ok";
 
   const cape = h?.cape ?? null;
   const li = h?.liftedIndex ?? null;
   const instability: Verdict =
-    cape == null && li == null ? "unknown" :
-    (cape != null && cape >= 1500) || (li != null && li <= -4) ? "alert" :
-    (cape != null && cape >= 500) || (li != null && li <= -2) ? "watch" :
-    "ok";
+    cape == null && li == null
+      ? "unknown"
+      : (cape != null && cape >= 1500) || (li != null && li <= -4)
+        ? "alert"
+        : (cape != null && cape >= 500) || (li != null && li <= -2)
+          ? "watch"
+          : "ok";
 
   // Hebung als Proxy aus Wind (Konvergenz), BL-Höhe, Druckanomalie.
   const gust = h?.windGustMs ?? null;
   const bl = h?.boundaryLayerHeightM ?? null;
   const lift: Verdict =
-    gust == null && bl == null ? "unknown" :
-    (gust != null && gust >= 18) || (bl != null && bl >= 2500) ? "alert" :
-    (gust != null && gust >= 12) || (bl != null && bl >= 1500) ? "watch" :
-    "ok";
+    gust == null && bl == null
+      ? "unknown"
+      : (gust != null && gust >= 18) || (bl != null && bl >= 2500)
+        ? "alert"
+        : (gust != null && gust >= 12) || (bl != null && bl >= 1500)
+          ? "watch"
+          : "ok";
 
   const prec = h?.precipitationMm ?? null;
   const pp = h?.precipitationProbability ?? null;
   const precipSignal: Verdict =
-    prec == null && pp == null ? "unknown" :
-    (prec != null && prec >= 2) || (pp != null && pp >= 70) ? "alert" :
-    (prec != null && prec >= 0.3) || (pp != null && pp >= 40) ? "watch" :
-    "ok";
+    prec == null && pp == null
+      ? "unknown"
+      : (prec != null && prec >= 2) || (pp != null && pp >= 70)
+        ? "alert"
+        : (prec != null && prec >= 0.3) || (pp != null && pp >= 40)
+          ? "watch"
+          : "ok";
 
   const radarFresh = input.ryLagMs != null && input.ryLagMs <= 15 * 60_000;
   const liveConfirm: Verdict =
-    input.lightning5min === 0 && input.ryLagMs == null ? "unknown" :
-    input.lightning5min >= 5 ? "alert" :
-    input.lightning5min > 0 || (radarFresh && (prec ?? 0) >= 0.3) ? "watch" :
-    "ok";
+    input.lightning5min === 0 && input.ryLagMs == null
+      ? "unknown"
+      : input.lightning5min >= 5
+        ? "alert"
+        : input.lightning5min > 0 || (radarFresh && (prec ?? 0) >= 0.3)
+          ? "watch"
+          : "ok";
 
   const axes = [moisture, instability, lift, precipSignal, liveConfirm];
   const score = axes.filter((v) => v === "alert").length;
@@ -81,10 +94,10 @@ export function triggerLight(input: {
 /* -------------------- Blitz gegen Radar -------------------- */
 
 export type RadarLightningState =
-  | "consistent"          // Echo + Blitze
-  | "echo_no_lightning"   // Niederschlag aber keine Blitze
-  | "lightning_no_echo"   // Blitze aber kein frisches/sichtbares Echo
-  | "quiet"               // beides ruhig
+  | "consistent" // Echo + Blitze
+  | "echo_no_lightning" // Niederschlag aber keine Blitze
+  | "lightning_no_echo" // Blitze aber kein frisches/sichtbares Echo
+  | "quiet" // beides ruhig
   | "unknown";
 
 export interface RadarLightningCheck {
@@ -121,11 +134,16 @@ export function blitzVsRadar(input: {
 
   const detail = (() => {
     switch (state) {
-      case "consistent": return "Radar-Echo und Blitze passen zusammen. Gewitteraktivität wahrscheinlich.";
-      case "echo_no_lightning": return "Radar zeigt Niederschlag, aber keine Blitze. Wahrscheinlich Regen ohne Elektrik.";
-      case "lightning_no_echo": return "Blitze ohne klar bestätigtes Echo. Entweder isoliert, Radarlücke oder Reichweite.";
-      case "quiet": return "Keine Echos, keine Blitze.";
-      default: return "Radar-Status unklar.";
+      case "consistent":
+        return "Radar-Echo und Blitze passen zusammen. Gewitteraktivität wahrscheinlich.";
+      case "echo_no_lightning":
+        return "Radar zeigt Niederschlag, aber keine Blitze. Wahrscheinlich Regen ohne Elektrik.";
+      case "lightning_no_echo":
+        return "Blitze ohne klar bestätigtes Echo. Entweder isoliert, Radarlücke oder Reichweite.";
+      case "quiet":
+        return "Keine Echos, keine Blitze.";
+      default:
+        return "Radar-Status unklar.";
     }
   })();
 
@@ -156,7 +174,8 @@ export function modelVsObservation(input: {
   const observedConvection = input.lightning15min > 0 || input.ryFreshAndWet;
 
   let state: ModelObsState = "unknown";
-  if (cape == null && pp == null && input.lightning15min === 0 && !input.ryFreshAndWet) state = "unknown";
+  if (cape == null && pp == null && input.lightning15min === 0 && !input.ryFreshAndWet)
+    state = "unknown";
   else if (modelExpectsConvection && observedConvection) state = "match";
   else if (modelExpectsConvection && !observedConvection) state = "model_overcalls";
   else if (!modelExpectsConvection && observedConvection) state = "model_underestimates";
@@ -164,10 +183,14 @@ export function modelVsObservation(input: {
 
   const detail = (() => {
     switch (state) {
-      case "match": return "Modell und Beobachtung erzählen die gleiche Geschichte.";
-      case "model_overcalls": return "Modell sieht konvektives Potenzial, Live-Signale bestätigen es nicht. Vorsichtig bewerten.";
-      case "model_underestimates": return "Live-Signale zeigen Aktivität, die das Modell so nicht im Bild hat.";
-      default: return "Nicht genug Datenbasis für Vergleich.";
+      case "match":
+        return "Modell und Beobachtung erzählen die gleiche Geschichte.";
+      case "model_overcalls":
+        return "Modell sieht konvektives Potenzial, Live-Signale bestätigen es nicht. Vorsichtig bewerten.";
+      case "model_underestimates":
+        return "Live-Signale zeigen Aktivität, die das Modell so nicht im Bild hat.";
+      default:
+        return "Nicht genug Datenbasis für Vergleich.";
     }
   })();
 
@@ -178,10 +201,10 @@ export function modelVsObservation(input: {
 
 export interface CellTrack {
   hasTrack: boolean;
-  bearingDeg: number | null;        // Bewegungsrichtung der Aktivität (von älter → frischer)
+  bearingDeg: number | null; // Bewegungsrichtung der Aktivität (von älter → frischer)
   bearingCompass: string | null;
   speedKmh: number | null;
-  distanceKm: number | null;        // Abstand frischer Schwerpunkt zum Fokus
+  distanceKm: number | null; // Abstand frischer Schwerpunkt zum Fokus
   approachingFocus: boolean | null;
   etaMinutes: number | null;
   detail: string;
@@ -210,10 +233,16 @@ export function cellTracking(input: {
   if (fresh.length < 2 || older.length < 2) {
     return {
       hasTrack: false,
-      bearingDeg: null, bearingCompass: null,
-      speedKmh: null, distanceKm: distanceKm(cFreshEarly, input.focus),
-      approachingFocus: null, etaMinutes: null,
-      detail: fresh.length === 0 ? "Keine frische Blitzaktivität — kein Tracking möglich." : "Zu wenige Blitze für Tracking.",
+      bearingDeg: null,
+      bearingCompass: null,
+      speedKmh: null,
+      distanceKm: distanceKm(cFreshEarly, input.focus),
+      approachingFocus: null,
+      etaMinutes: null,
+      detail:
+        fresh.length === 0
+          ? "Keine frische Blitzaktivität — kein Tracking möglich."
+          : "Zu wenige Blitze für Tracking.",
       freshCentroid: cFreshEarly,
       olderCentroid: centroid(older),
       forecastPosition: null,
@@ -230,7 +259,8 @@ export function cellTracking(input: {
   const focusBearing = bearing(cFresh, input.focus);
   const dAngle = Math.abs(((bearingDeg - focusBearing + 540) % 360) - 180);
   const approachingFocus = dAngle <= 45;
-  const etaMinutes = approachingFocus && speedKmh > 1 ? Math.round((distanceKm_ / speedKmh) * 60) : null;
+  const etaMinutes =
+    approachingFocus && speedKmh > 1 ? Math.round((distanceKm_ / speedKmh) * 60) : null;
 
   // Extrapolation: +30 min entlang Bearing & Speed.
   const forecastPosition =
@@ -249,9 +279,7 @@ export function cellTracking(input: {
       : "Zelle bewegt sich nicht klar auf den Fokus zu.",
     freshCentroid: cFresh,
     olderCentroid: cOlder,
-    forecastPosition: forecastPosition
-      ? { ...forecastPosition, offsetMinutes: 30 }
-      : null,
+    forecastPosition: forecastPosition ? { ...forecastPosition, offsetMinutes: 30 } : null,
     sampleCount: fresh.length,
   };
 }
@@ -270,12 +298,31 @@ function bearing(a: { lat: number; lon: number }, b: { lat: number; lon: number 
   const toDeg = (r: number) => (r * 180) / Math.PI;
   const dLon = toRad(b.lon - a.lon);
   const y = Math.sin(dLon) * Math.cos(toRad(b.lat));
-  const x = Math.cos(toRad(a.lat)) * Math.sin(toRad(b.lat)) - Math.sin(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.cos(dLon);
+  const x =
+    Math.cos(toRad(a.lat)) * Math.sin(toRad(b.lat)) -
+    Math.sin(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.cos(dLon);
   return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
 function compass(deg: number) {
-  const dirs = ["N", "NNO", "NO", "ONO", "O", "OSO", "SO", "SSO", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+  const dirs = [
+    "N",
+    "NNO",
+    "NO",
+    "ONO",
+    "O",
+    "OSO",
+    "SO",
+    "SSO",
+    "S",
+    "SSW",
+    "SW",
+    "WSW",
+    "W",
+    "WNW",
+    "NW",
+    "NNW",
+  ];
   return dirs[Math.round(deg / 22.5) % 16];
 }
 
@@ -284,7 +331,9 @@ function haversineKm(a: { lat: number; lon: number }, b: { lat: number; lon: num
   const toRad = (d: number) => (d * Math.PI) / 180;
   const dLat = toRad(b.lat - a.lat);
   const dLon = toRad(b.lon - a.lon);
-  const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
@@ -306,9 +355,8 @@ function projectPoint(
   const φ1 = toRad(start.lat);
   const λ1 = toRad(start.lon);
   const φ2 = Math.asin(Math.sin(φ1) * Math.cos(δ) + Math.cos(φ1) * Math.sin(δ) * Math.cos(θ));
-  const λ2 = λ1 + Math.atan2(
-    Math.sin(θ) * Math.sin(δ) * Math.cos(φ1),
-    Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2),
-  );
+  const λ2 =
+    λ1 +
+    Math.atan2(Math.sin(θ) * Math.sin(δ) * Math.cos(φ1), Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2));
   return { lat: toDeg(φ2), lon: ((toDeg(λ2) + 540) % 360) - 180 };
 }

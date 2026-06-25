@@ -1,6 +1,17 @@
 import { Link } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
-import { Layers, AlertTriangle, Radio, LineChart, GraduationCap, Settings, Map, Compass, MoreHorizontal } from "lucide-react";
+import {
+  Layers,
+  AlertTriangle,
+  Radio,
+  LineChart,
+  GraduationCap,
+  Settings,
+  Map,
+  Compass,
+  MoreHorizontal,
+} from "@/components/icons";
+import type { ComponentType } from "react";
 import { LocationSwitcher } from "./LocationSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@/lib/utils";
@@ -26,7 +37,7 @@ const SECONDARY_NAV = [
   { to: "/settings", label: "Einstellungen", icon: Settings },
 ] as const;
 
-type NavItemDef = { to: string; label: string; icon: typeof Compass };
+type NavItemDef = { to: string; label: string; icon: ComponentType<{ className?: string }> };
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -67,7 +78,9 @@ function SideNav() {
           <NavItem key={item.to} {...item} />
         ))}
         <div className="my-2 border-t border-border" />
-        <div className="px-3 pb-1 pt-1 text-[10px] uppercase tracking-wider text-muted-foreground">Mehr</div>
+        <div className="px-3 pb-1 pt-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+          Mehr
+        </div>
         {SECONDARY_NAV.map((item) => (
           <NavItem key={item.to} {...item} />
         ))}
@@ -87,7 +100,9 @@ function NavItem({ to, label, icon: Icon }: NavItemDef) {
       activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground font-medium" }}
       inactiveProps={{ className: "text-sidebar-foreground/80 hover:bg-sidebar-accent/60" }}
       activeOptions={{ exact: to === "/" }}
-      className={cn("grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors")}
+      className={cn(
+        "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
+      )}
       preload="intent"
     >
       <Icon className="h-4 w-4" />

@@ -4,12 +4,17 @@ import { InfoPopover } from "@/components/common/InfoPopover";
 import { SegmentedTabs } from "@/components/common/SegmentedTabs";
 import { useSettings } from "@/hooks/use-settings";
 import {
-  formatTemp, formatWind, formatPercent, formatPressure, formatPrecip,
-  windDirectionLabel, weatherCodeLabel,
+  formatTemp,
+  formatWind,
+  formatPercent,
+  formatPressure,
+  formatPrecip,
+  windDirectionLabel,
+  weatherCodeLabel,
 } from "@/lib/weather/format";
 import type { CurrentConditions as CC, DataMeta, HourlyPoint } from "@/lib/weather/types";
 import { MeteoconIcon, isNightAt } from "@/components/weather/MeteoconIcon";
-import { Thermometer, Wind, CloudRain, Gauge } from "lucide-react";
+import { Thermometer, Wind, CloudRain, Gauge } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
 type TabId = "temp" | "wind" | "precip" | "pressure";
@@ -29,7 +34,9 @@ export function CurrentConditions({ current, meta, fallbackLabel, hourly }: Prop
   if (!current || !Number.isFinite(current.temperatureC)) {
     return (
       <DataCard title="Aktuelle Lage" meta={meta}>
-        <div className="text-sm text-muted-foreground">{fallbackLabel ?? "Keine aktuellen Daten verfügbar."}</div>
+        <div className="text-sm text-muted-foreground">
+          {fallbackLabel ?? "Keine aktuellen Daten verfügbar."}
+        </div>
       </DataCard>
     );
   }
@@ -65,7 +72,17 @@ export function CurrentConditions({ current, meta, fallbackLabel, hourly }: Prop
 
 /* ------------------------------ Hero ------------------------------ */
 
-function Hero({ current, night, condition, tempUnit }: { current: CC; night: boolean; condition: string; tempUnit: "C" | "F" }) {
+function Hero({
+  current,
+  night,
+  condition,
+  tempUnit,
+}: {
+  current: CC;
+  night: boolean;
+  condition: string;
+  tempUnit: "C" | "F";
+}) {
   const tempNum = formatTemp(current.temperatureC, tempUnit).split(" ")[0];
   return (
     <div className="flex items-center gap-3">
@@ -100,7 +117,9 @@ function Hero({ current, night, condition, tempUnit }: { current: CC; night: boo
 function TempSection({ current, unit }: { current: CC; unit: "C" | "F" }) {
   const muggy =
     current.dewPointC != null && current.dewPointC >= 16
-      ? current.dewPointC >= 20 ? "drückend schwül" : "schwül"
+      ? current.dewPointC >= 20
+        ? "drückend schwül"
+        : "schwül"
       : null;
   return (
     <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-3">
@@ -115,10 +134,7 @@ function TempSection({ current, unit }: { current: CC; unit: "C" | "F" }) {
           text: "Temperatur, bei der Wasserdampf kondensiert. Nahe an der Lufttemperatur = schwül, Nebel/Tau wahrscheinlich.",
         }}
       />
-      <Field
-        label="Rel. Feuchte"
-        value={formatPercent(current.relativeHumidity)}
-      />
+      <Field label="Rel. Feuchte" value={formatPercent(current.relativeHumidity)} />
     </div>
   );
 }
@@ -152,7 +168,9 @@ function WindSection({ current, unit }: { current: CC; unit: "kmh" | "ms" | "bft
 }
 
 function PrecipSection({ current, hourly }: { current: CC; hourly?: HourlyPoint[] }) {
-  const nextProb = hourly?.slice(0, 3).find((h) => h.precipitationProbability != null)?.precipitationProbability;
+  const nextProb = hourly
+    ?.slice(0, 3)
+    .find((h) => h.precipitationProbability != null)?.precipitationProbability;
   const next6Sum = hourly?.slice(0, 6).reduce((s, h) => s + (h.precipitationMm ?? 0), 0);
   return (
     <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-3">
@@ -179,11 +197,17 @@ function PrecipSection({ current, hourly }: { current: CC; hourly?: HourlyPoint[
 }
 
 function PressureSection({ current, hourly }: { current: CC; hourly?: HourlyPoint[] }) {
-  const series = hourly?.slice(0, 4).map((h) => h.pressureHpa).filter((v): v is number => v != null) ?? [];
-  const delta = current.pressureHpa != null && series.length >= 2
-    ? series[series.length - 1] - current.pressureHpa
-    : null;
-  const trend = delta == null ? null : delta >= 0.7 ? "steigend" : delta <= -0.7 ? "fallend" : "stabil";
+  const series =
+    hourly
+      ?.slice(0, 4)
+      .map((h) => h.pressureHpa)
+      .filter((v): v is number => v != null) ?? [];
+  const delta =
+    current.pressureHpa != null && series.length >= 2
+      ? series[series.length - 1] - current.pressureHpa
+      : null;
+  const trend =
+    delta == null ? null : delta >= 0.7 ? "steigend" : delta <= -0.7 ? "fallend" : "stabil";
   return (
     <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-3">
       <Field
@@ -200,10 +224,7 @@ function PressureSection({ current, hourly }: { current: CC; hourly?: HourlyPoin
         value={delta == null ? "—" : `${delta > 0 ? "+" : ""}${delta.toFixed(1)} hPa`}
         hint="Modellprognose"
       />
-      <Field
-        label="Bewölkung"
-        value={formatPercent(current.cloudCover)}
-      />
+      <Field label="Bewölkung" value={formatPercent(current.cloudCover)} />
     </div>
   );
 }
@@ -211,7 +232,10 @@ function PressureSection({ current, hourly }: { current: CC; hourly?: HourlyPoin
 /* ------------------------------ Bausteine ------------------------------ */
 
 function Field({
-  label, value, hint, info,
+  label,
+  value,
+  hint,
+  info,
 }: {
   label: string;
   value: string;
@@ -224,7 +248,10 @@ function Field({
         {label}
         {info && <InfoPopover title={info.title}>{info.text}</InfoPopover>}
       </div>
-      <div className="font-mono text-2xl font-semibold leading-none tabular-nums text-foreground" style={{ fontFamily: "var(--font-mono)" }}>
+      <div
+        className="font-mono text-2xl font-semibold leading-none tabular-nums text-foreground"
+        style={{ fontFamily: "var(--font-mono)" }}
+      >
         {value}
       </div>
       {hint && <div className="mt-1 text-[11px] text-muted-foreground">{hint}</div>}
@@ -236,16 +263,27 @@ function Compass({ deg }: { deg: number | null }) {
   return (
     <div className="flex h-20 w-20 shrink-0 items-center justify-center">
       <div className="relative h-16 w-16 rounded-full border border-border bg-muted/40">
-        <span className="absolute left-1/2 top-1 -translate-x-1/2 text-[9px] font-semibold text-muted-foreground">N</span>
-        <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[9px] text-muted-foreground">S</span>
-        <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[9px] text-muted-foreground">W</span>
-        <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] text-muted-foreground">O</span>
+        <span className="absolute left-1/2 top-1 -translate-x-1/2 text-[9px] font-semibold text-muted-foreground">
+          N
+        </span>
+        <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[9px] text-muted-foreground">
+          S
+        </span>
+        <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[9px] text-muted-foreground">
+          W
+        </span>
+        <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] text-muted-foreground">
+          O
+        </span>
         {deg != null && (
           <div
             className={cn(
               "absolute left-1/2 top-1/2 h-7 w-0.5 origin-bottom -translate-x-1/2 -translate-y-full rounded-full bg-primary",
             )}
-            style={{ transform: `translate(-50%, -100%) rotate(${deg}deg)`, transformOrigin: "50% 100%" }}
+            style={{
+              transform: `translate(-50%, -100%) rotate(${deg}deg)`,
+              transformOrigin: "50% 100%",
+            }}
           />
         )}
         <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground" />

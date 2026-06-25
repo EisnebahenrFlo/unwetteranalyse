@@ -24,18 +24,27 @@ export function SevereWeatherPanel({ bundle }: { bundle: ForecastBundle }) {
   const gustPeak = peak(horizon.map((h) => ({ v: h.windGustMs, t: h.time })));
   const rainPeak = peak(horizon.map((h) => ({ v: h.precipitationMm, t: h.time })));
 
-  const gustLevel: AlertSeverity | "none" =
-    !gustPeak ? "none" :
-    gustPeak.v >= 33 ? "extreme" :
-    gustPeak.v >= 25 ? "severe" :
-    gustPeak.v >= 18 ? "moderate" :
-    gustPeak.v >= 14 ? "minor" : "none";
+  const gustLevel: AlertSeverity | "none" = !gustPeak
+    ? "none"
+    : gustPeak.v >= 33
+      ? "extreme"
+      : gustPeak.v >= 25
+        ? "severe"
+        : gustPeak.v >= 18
+          ? "moderate"
+          : gustPeak.v >= 14
+            ? "minor"
+            : "none";
 
-  const rainLevel: AlertSeverity | "none" =
-    !rainPeak ? "none" :
-    rainPeak.v >= 40 ? "severe" :
-    rainPeak.v >= 25 ? "moderate" :
-    rainPeak.v >= 15 ? "minor" : "none";
+  const rainLevel: AlertSeverity | "none" = !rainPeak
+    ? "none"
+    : rainPeak.v >= 40
+      ? "severe"
+      : rainPeak.v >= 25
+        ? "moderate"
+        : rainPeak.v >= 15
+          ? "minor"
+          : "none";
 
   return (
     <DataCard
@@ -85,8 +94,14 @@ export function SevereWeatherPanel({ bundle }: { bundle: ForecastBundle }) {
           label="Neuschnee 24 h"
           value={winter.snowfallSumCm > 0 ? winter.snowfallSumCm.toFixed(1) : "—"}
           unit="cm"
-          level={winter.snowfallSumCm >= 15 ? "moderate" : winter.snowfallSumCm >= 5 ? "minor" : "none"}
-          hint={winter.freezingLevelMinM != null ? `0 °C bei ${Math.round(winter.freezingLevelMinM)} m` : undefined}
+          level={
+            winter.snowfallSumCm >= 15 ? "moderate" : winter.snowfallSumCm >= 5 ? "minor" : "none"
+          }
+          hint={
+            winter.freezingLevelMinM != null
+              ? `0 °C bei ${Math.round(winter.freezingLevelMinM)} m`
+              : undefined
+          }
           info={{
             title: "Schneefall & Schneefallgrenze",
             text: "Summe der nächsten 24 h plus tiefste Höhe der 0-°C-Grenze. Wichtig zur Einordnung, ob Niederschlag als Schnee fällt.",
@@ -120,7 +135,13 @@ const LEVEL_STYLES: Record<AlertSeverity | "none", string> = {
 };
 
 function Tile({
-  icon, label, value, unit, level, hint, info,
+  icon,
+  label,
+  value,
+  unit,
+  level,
+  hint,
+  info,
 }: {
   icon: React.ReactNode;
   label: string;

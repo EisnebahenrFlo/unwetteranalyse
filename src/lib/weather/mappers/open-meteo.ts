@@ -1,35 +1,68 @@
 import type {
-  CurrentConditions, DailyPoint, ForecastBundle, GeoPoint, HourlyPoint,
-  ModelSeries, MinutelyPoint, WeatherModelId,
+  CurrentConditions,
+  DailyPoint,
+  ForecastBundle,
+  GeoPoint,
+  HourlyPoint,
+  ModelSeries,
+  MinutelyPoint,
+  WeatherModelId,
 } from "../types";
 
 interface OmHourly {
   time: string[];
-  temperature_2m?: number[]; apparent_temperature?: number[]; dew_point_2m?: number[];
-  precipitation?: number[]; precipitation_probability?: number[];
-  wind_speed_10m?: number[]; wind_gusts_10m?: number[];
-  pressure_msl?: number[]; cloud_cover?: number[]; weather_code?: number[];
-  cape?: number[]; lifted_index?: number[]; freezing_level_height?: number[]; snowfall?: number[];
+  temperature_2m?: number[];
+  apparent_temperature?: number[];
+  dew_point_2m?: number[];
+  precipitation?: number[];
+  precipitation_probability?: number[];
+  wind_speed_10m?: number[];
+  wind_gusts_10m?: number[];
+  pressure_msl?: number[];
+  cloud_cover?: number[];
+  weather_code?: number[];
+  cape?: number[];
+  lifted_index?: number[];
+  freezing_level_height?: number[];
+  snowfall?: number[];
   convective_inhibition?: number[];
-  wind_speed_80m?: number[]; wind_speed_180m?: number[];
-  wind_direction_80m?: number[]; wind_direction_180m?: number[];
-  boundary_layer_height?: number[]; visibility?: number[]; uv_index?: number[];
+  wind_speed_80m?: number[];
+  wind_speed_180m?: number[];
+  wind_direction_80m?: number[];
+  wind_direction_180m?: number[];
+  boundary_layer_height?: number[];
+  visibility?: number[];
+  uv_index?: number[];
   relative_humidity_2m?: number[];
-  temperature_850hPa?: number[]; temperature_700hPa?: number[]; temperature_500hPa?: number[];
-  dew_point_850hPa?: number[]; dew_point_700hPa?: number[];
+  temperature_850hPa?: number[];
+  temperature_700hPa?: number[];
+  temperature_500hPa?: number[];
+  dew_point_850hPa?: number[];
+  dew_point_700hPa?: number[];
 }
 interface OmDaily {
   time: string[];
-  temperature_2m_min: number[]; temperature_2m_max: number[];
-  precipitation_sum: number[]; precipitation_probability_max?: number[];
-  wind_gusts_10m_max?: number[]; weather_code?: number[];
-  sunrise?: string[]; sunset?: string[];
+  temperature_2m_min: number[];
+  temperature_2m_max: number[];
+  precipitation_sum: number[];
+  precipitation_probability_max?: number[];
+  wind_gusts_10m_max?: number[];
+  weather_code?: number[];
+  sunrise?: string[];
+  sunset?: string[];
 }
 interface OmCurrent {
-  time: string; temperature_2m: number; apparent_temperature?: number;
-  relative_humidity_2m?: number; precipitation?: number;
-  wind_speed_10m: number; wind_gusts_10m?: number; wind_direction_10m?: number;
-  pressure_msl?: number; cloud_cover?: number; weather_code?: number;
+  time: string;
+  temperature_2m: number;
+  apparent_temperature?: number;
+  relative_humidity_2m?: number;
+  precipitation?: number;
+  wind_speed_10m: number;
+  wind_gusts_10m?: number;
+  wind_direction_10m?: number;
+  pressure_msl?: number;
+  cloud_cover?: number;
+  weather_code?: number;
 }
 interface OmMinutely {
   time: string[];
@@ -116,7 +149,13 @@ export function mapCurrent(c: OmCurrent | undefined): CurrentConditions | undefi
 }
 
 export function mapForecastBundle(
-  raw: { hourly?: OmHourly; daily?: OmDaily; current?: OmCurrent; minutely_15?: OmMinutely; elevation?: number },
+  raw: {
+    hourly?: OmHourly;
+    daily?: OmDaily;
+    current?: OmCurrent;
+    minutely_15?: OmMinutely;
+    elevation?: number;
+  },
   point: GeoPoint,
 ): ForecastBundle {
   return {
@@ -136,10 +175,14 @@ export function mapForecastBundle(
 
 export function mapModelSeries(
   raw: { hourly?: OmHourly },
-  model: WeatherModelId, label: string, resolutionKm: number,
+  model: WeatherModelId,
+  label: string,
+  resolutionKm: number,
 ): ModelSeries {
   return {
-    model, label, hourly: mapHourly(raw.hourly),
+    model,
+    label,
+    hourly: mapHourly(raw.hourly),
     meta: { source: "open-meteo", updatedAt: new Date().toISOString(), resolutionKm },
   };
 }

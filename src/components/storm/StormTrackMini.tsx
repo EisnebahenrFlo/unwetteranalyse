@@ -41,7 +41,12 @@ export function StormTrackMini({ cell }: { cell: StormCell }) {
         },
         layers: [
           { id: "bg", type: "background", paint: { "background-color": "#e6ecf2" } },
-          { id: "osm", type: "raster", source: "osm", paint: { "raster-saturation": -0.4, "raster-brightness-max": 0.95 } },
+          {
+            id: "osm",
+            type: "raster",
+            source: "osm",
+            paint: { "raster-saturation": -0.4, "raster-brightness-max": 0.95 },
+          },
         ],
       },
       center: [cell.centroid.lon, cell.centroid.lat],
@@ -51,7 +56,10 @@ export function StormTrackMini({ cell }: { cell: StormCell }) {
       dragRotate: false,
       pitchWithRotate: false,
     });
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: false, showCompass: false }), "top-right");
+    map.addControl(
+      new maplibregl.NavigationControl({ visualizePitch: false, showCompass: false }),
+      "top-right",
+    );
     mapRef.current = map;
 
     map.on("load", () => {
@@ -62,7 +70,11 @@ export function StormTrackMini({ cell }: { cell: StormCell }) {
         id: "mini-cone-fill",
         type: "fill",
         source: "mini-cone",
-        paint: { "fill-color": ["get", "color"], "fill-opacity": 0.15, "fill-outline-color": ["get", "color"] },
+        paint: {
+          "fill-color": ["get", "color"],
+          "fill-opacity": 0.15,
+          "fill-outline-color": ["get", "color"],
+        },
       });
       map.addSource("mini-past", { type: "geojson", data: empty });
       map.addLayer({
@@ -158,7 +170,11 @@ export function StormTrackMini({ cell }: { cell: StormCell }) {
           "text-allow-overlap": true,
           "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"],
         },
-        paint: { "text-color": ["get", "color"], "text-halo-color": "#ffffff", "text-halo-width": 1.4 },
+        paint: {
+          "text-color": ["get", "color"],
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 1.4,
+        },
       });
       paint(map, cell);
       fit(map, cell);
@@ -195,7 +211,8 @@ export function StormTrackMini({ cell }: { cell: StormCell }) {
         </span>
         <span className="text-muted-foreground">
           {cell.history.length} Track-Punkte
-          {cell.forecast.length > 0 && ` · Prognose bis +${cell.forecast[cell.forecast.length - 1].offsetMin} min`}
+          {cell.forecast.length > 0 &&
+            ` · Prognose bis +${cell.forecast[cell.forecast.length - 1].offsetMin} min`}
           {empty && " · keine Historie"}
         </span>
       </div>
@@ -218,17 +235,27 @@ function paint(map: MlMap, cell: StormCell) {
   const color = SEVERITY_COLOR[cell.severity.level];
   const empty = { type: "FeatureCollection" as const, features: [] };
 
-  const cone: AnyFeature[] = cell.cone.length >= 4
-    ? [{ type: "Feature", geometry: { type: "Polygon", coordinates: [cell.cone] }, properties: { color } }]
-    : [];
+  const cone: AnyFeature[] =
+    cell.cone.length >= 4
+      ? [
+          {
+            type: "Feature",
+            geometry: { type: "Polygon", coordinates: [cell.cone] },
+            properties: { color },
+          },
+        ]
+      : [];
 
-  const past: AnyFeature[] = cell.history.length >= 2
-    ? [{
-        type: "Feature",
-        geometry: { type: "LineString", coordinates: cell.history.map((h) => [h.lon, h.lat]) },
-        properties: { color },
-      }]
-    : [];
+  const past: AnyFeature[] =
+    cell.history.length >= 2
+      ? [
+          {
+            type: "Feature",
+            geometry: { type: "LineString", coordinates: cell.history.map((h) => [h.lon, h.lat]) },
+            properties: { color },
+          },
+        ]
+      : [];
 
   const pastPts: AnyFeature[] = cell.history.map((h, i) => ({
     type: "Feature",
@@ -239,19 +266,22 @@ function paint(map: MlMap, cell: StormCell) {
     },
   }));
 
-  const fc: AnyFeature[] = cell.forecast.length > 0
-    ? [{
-        type: "Feature",
-        geometry: {
-          type: "LineString",
-          coordinates: [
-            [cell.centroid.lon, cell.centroid.lat],
-            ...cell.forecast.map((f) => [f.lon, f.lat] as [number, number]),
-          ],
-        },
-        properties: { color },
-      }]
-    : [];
+  const fc: AnyFeature[] =
+    cell.forecast.length > 0
+      ? [
+          {
+            type: "Feature",
+            geometry: {
+              type: "LineString",
+              coordinates: [
+                [cell.centroid.lon, cell.centroid.lat],
+                ...cell.forecast.map((f) => [f.lon, f.lat] as [number, number]),
+              ],
+            },
+            properties: { color },
+          },
+        ]
+      : [];
 
   const etas: AnyFeature[] = [];
   for (const off of ETA_OFFSETS) {
@@ -264,11 +294,13 @@ function paint(map: MlMap, cell: StormCell) {
     });
   }
 
-  const now: AnyFeature[] = [{
-    type: "Feature",
-    geometry: { type: "Point", coordinates: [cell.centroid.lon, cell.centroid.lat] },
-    properties: { color },
-  }];
+  const now: AnyFeature[] = [
+    {
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [cell.centroid.lon, cell.centroid.lat] },
+      properties: { color },
+    },
+  ];
 
   (map.getSource("mini-cone") as maplibregl.GeoJSONSource | undefined)?.setData(
     cone.length ? { type: "FeatureCollection", features: cone as never[] } : empty,
@@ -302,7 +334,10 @@ function fit(map: MlMap, cell: StormCell) {
     map.easeTo({ center: [cell.centroid.lon, cell.centroid.lat], zoom: 9, duration: 400 });
     return;
   }
-  let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+  let minLon = Infinity,
+    maxLon = -Infinity,
+    minLat = Infinity,
+    maxLat = -Infinity;
   for (const [lon, lat] of pts) {
     if (lon < minLon) minLon = lon;
     if (lon > maxLon) maxLon = lon;
@@ -311,19 +346,37 @@ function fit(map: MlMap, cell: StormCell) {
   }
   // Minimal-Spannweite, damit zu kleine Cluster nicht überzoomen.
   const minSpanDeg = 0.15;
-  if (maxLon - minLon < minSpanDeg) { const c = (maxLon + minLon) / 2; minLon = c - minSpanDeg / 2; maxLon = c + minSpanDeg / 2; }
-  if (maxLat - minLat < minSpanDeg) { const c = (maxLat + minLat) / 2; minLat = c - minSpanDeg / 2; maxLat = c + minSpanDeg / 2; }
-  map.fitBounds([[minLon, minLat], [maxLon, maxLat]], {
-    padding: { top: 32, right: 32, bottom: 32, left: 32 },
-    duration: 400,
-    maxZoom: 11,
-  });
+  if (maxLon - minLon < minSpanDeg) {
+    const c = (maxLon + minLon) / 2;
+    minLon = c - minSpanDeg / 2;
+    maxLon = c + minSpanDeg / 2;
+  }
+  if (maxLat - minLat < minSpanDeg) {
+    const c = (maxLat + minLat) / 2;
+    minLat = c - minSpanDeg / 2;
+    maxLat = c + minSpanDeg / 2;
+  }
+  map.fitBounds(
+    [
+      [minLon, minLat],
+      [maxLon, maxLat],
+    ],
+    {
+      padding: { top: 32, right: 32, bottom: 32, left: 32 },
+      duration: 400,
+      maxZoom: 11,
+    },
+  );
 }
 
 // Memo-Hilfe ungenutzt, aber als Hook-Anker für künftige Erweiterungen.
+// eslint-disable-next-line react-hooks/rules-of-hooks
 export function __useStormCellSummary(cell: StormCell) {
-  return useMemo(() => ({
-    color: SEVERITY_COLOR[cell.severity.level],
-    points: cell.history.length,
-  }), [cell]);
+  return useMemo(
+    () => ({
+      color: SEVERITY_COLOR[cell.severity.level],
+      points: cell.history.length,
+    }),
+    [cell],
+  );
 }

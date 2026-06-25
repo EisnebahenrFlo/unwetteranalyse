@@ -21,7 +21,11 @@ export function buildForecast(
     let sumSq = 0;
     for (const h of history) {
       const dtMin = (last.time - h.time) / 60_000;
-      const expected = destination(last, motion.speedKmh * (dtMin / 60), (motion.bearingDeg + 180) % 360);
+      const expected = destination(
+        last,
+        motion.speedKmh * (dtMin / 60),
+        (motion.bearingDeg + 180) % 360,
+      );
       sumSq += distanceKm(expected, h) ** 2;
     }
     baseSigma = Math.max(2, Math.sqrt(sumSq / history.length));

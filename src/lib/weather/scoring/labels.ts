@@ -23,16 +23,41 @@ export function bandLabel(b: Band): string {
 }
 
 /** Farbklasse aus warn-Tokens. */
-export function bandColorClass(b: Band): { bg: string; text: string; border: string; soft: string } {
+export function bandColorClass(b: Band): {
+  bg: string;
+  text: string;
+  border: string;
+  soft: string;
+} {
   switch (b) {
     case "hochkritisch":
-      return { bg: "bg-warn-extreme", text: "text-warn-extreme-fg", border: "border-warn-extreme", soft: "bg-warn-extreme/15" };
+      return {
+        bg: "bg-warn-extreme",
+        text: "text-warn-extreme-fg",
+        border: "border-warn-extreme",
+        soft: "bg-warn-extreme/15",
+      };
     case "kritisch":
-      return { bg: "bg-warn-severe", text: "text-warn-severe-fg", border: "border-warn-severe", soft: "bg-warn-severe/15" };
+      return {
+        bg: "bg-warn-severe",
+        text: "text-warn-severe-fg",
+        border: "border-warn-severe",
+        soft: "bg-warn-severe/15",
+      };
     case "markant":
-      return { bg: "bg-warn-moderate", text: "text-warn-moderate-fg", border: "border-warn-moderate", soft: "bg-warn-moderate/15" };
+      return {
+        bg: "bg-warn-moderate",
+        text: "text-warn-moderate-fg",
+        border: "border-warn-moderate",
+        soft: "bg-warn-moderate/15",
+      };
     case "aufmerksam":
-      return { bg: "bg-warn-minor", text: "text-warn-minor-fg", border: "border-warn-minor", soft: "bg-warn-minor/15" };
+      return {
+        bg: "bg-warn-minor",
+        text: "text-warn-minor-fg",
+        border: "border-warn-minor",
+        soft: "bg-warn-minor/15",
+      };
     default:
       return { bg: "bg-muted", text: "text-foreground", border: "border-border", soft: "bg-muted" };
   }
@@ -41,11 +66,16 @@ export function bandColorClass(b: Band): { bg: string; text: string; border: str
 /** Brücke zur bestehenden AlertSeverity (für ältere Komponenten). */
 export function bandToSeverity(b: Band): AlertSeverity | "none" {
   switch (b) {
-    case "hochkritisch": return "extreme";
-    case "kritisch": return "severe";
-    case "markant": return "moderate";
-    case "aufmerksam": return "minor";
-    default: return "none";
+    case "hochkritisch":
+      return "extreme";
+    case "kritisch":
+      return "severe";
+    case "markant":
+      return "moderate";
+    case "aufmerksam":
+      return "minor";
+    default:
+      return "none";
   }
 }
 

@@ -25,7 +25,9 @@ export function SituationHeadline({ bundle, officialAlerts }: Props) {
   const hazardSet = buildHazards(bundle);
   const sum24 = summarizeModelSevere(bundle.hourly, 24);
   const nc = buildNowcast2h(bundle.hourly, bundle.minutely, now);
-  const live = bundle.hourly[0] ? severeScore(bundle.hourly[0]) : { value: 0, level: "none" as const, reasons: [] };
+  const live = bundle.hourly[0]
+    ? severeScore(bundle.hourly[0])
+    : { value: 0, level: "none" as const, reasons: [] };
   const tendency = deriveTendency(live.value, nc.peakScore);
 
   const lead = hazardSet.hazards[0] ?? null;
@@ -48,7 +50,12 @@ export function SituationHeadline({ bundle, officialAlerts }: Props) {
       {/* Primärblock */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <div className={cn("grid h-14 w-14 shrink-0 place-items-center rounded-xl ring-1", scoreRing(score))}>
+          <div
+            className={cn(
+              "grid h-14 w-14 shrink-0 place-items-center rounded-xl ring-1",
+              scoreRing(score),
+            )}
+          >
             <MeteoconIcon
               code={bundle.hourly[0]?.weatherCode}
               isNight={night}
@@ -59,14 +66,25 @@ export function SituationHeadline({ bundle, officialAlerts }: Props) {
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-mono text-3xl font-semibold leading-none tabular-nums text-foreground" style={{ fontFamily: "var(--font-mono)" }}>
+              <span
+                className="font-mono text-3xl font-semibold leading-none tabular-nums text-foreground"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
                 {score}
               </span>
               <span className="text-xs text-muted-foreground">/100</span>
-              <span className={cn("rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide", scorePill(score))}>{label}</span>
+              <span
+                className={cn(
+                  "rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
+                  scorePill(score),
+                )}
+              >
+                {label}
+              </span>
             </div>
             <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
-              {bundle.point.name}{bundle.point.admin ? ` · ${bundle.point.admin}` : ""}
+              {bundle.point.name}
+              {bundle.point.admin ? ` · ${bundle.point.admin}` : ""}
             </div>
           </div>
         </div>
@@ -86,22 +104,34 @@ export function SituationHeadline({ bundle, officialAlerts }: Props) {
 
       {/* Sekundärblock: Hauptgefahr + Fenster */}
       <div className="grid grid-cols-1 gap-2 rounded-lg border border-border bg-muted/30 p-3 sm:grid-cols-2 lg:grid-cols-1">
-        <Kpi label="Hauptgefahr" value={lead?.title ?? "Keine"} hint={lead ? lead.description : "Keine markante Gefahr in 24 h."} />
+        <Kpi
+          label="Hauptgefahr"
+          value={lead?.title ?? "Keine"}
+          hint={lead ? lead.description : "Keine markante Gefahr in 24 h."}
+        />
         <Kpi
           label="Hauptfenster"
-          value={hazardSet.peakWindow ? `${formatHour(hazardSet.peakWindow.start)}–${formatHour(hazardSet.peakWindow.end)}` : "—"}
-          hint={nc.peakStep && nc.peakScore > 20 ? `Peak 2 h: +${nc.peakStep.minutesFromNow} min, Score ${nc.peakScore}` : "Kein zusammenhängendes Severe-Fenster."}
+          value={
+            hazardSet.peakWindow
+              ? `${formatHour(hazardSet.peakWindow.start)}–${formatHour(hazardSet.peakWindow.end)}`
+              : "—"
+          }
+          hint={
+            nc.peakStep && nc.peakScore > 20
+              ? `Peak 2 h: +${nc.peakStep.minutesFromNow} min, Score ${nc.peakScore}`
+              : "Kein zusammenhängendes Severe-Fenster."
+          }
         />
         <Kpi
           label="Live jetzt"
           value={live.value > 0 ? `${live.value}/100` : "ruhig"}
-          hint={live.reasons.length ? live.reasons.slice(0, 2).join(" · ") : "Keine konvektiven Signale."}
+          hint={
+            live.reasons.length
+              ? live.reasons.slice(0, 2).join(" · ")
+              : "Keine konvektiven Signale."
+          }
         />
-        <Kpi
-          label="Nowcast 2 h"
-          value={`${nc.peakScore}/100`}
-          hint={nc.headline}
-        />
+        <Kpi label="Nowcast 2 h" value={`${nc.peakScore}/100`} hint={nc.headline} />
       </div>
     </Card>
   );
@@ -110,7 +140,9 @@ export function SituationHeadline({ bundle, officialAlerts }: Props) {
 function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="min-w-0">
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
       <div className="mt-0.5 truncate text-sm font-semibold text-foreground">{value}</div>
       {hint && <div className="line-clamp-2 text-[11px] text-muted-foreground">{hint}</div>}
     </div>
@@ -137,7 +169,12 @@ function scoreRing(s: number): string {
 }
 
 function composeStatement({
-  worst, score, lead, leadWindow, nowcastHeadline, officialCount,
+  worst,
+  score,
+  lead,
+  leadWindow,
+  nowcastHeadline,
+  officialCount,
 }: {
   worst: "minor" | "moderate" | "severe" | "extreme" | "none";
   score: number;
@@ -150,11 +187,21 @@ function composeStatement({
     return `Ruhige Wetterlage ohne markante Signale. ${nowcastHeadline}.`;
   }
   const sevText =
-    worst === "extreme" ? "Extreme Unwetterlage" :
-    worst === "severe"  ? "Schwere Unwetterlage" :
-    worst === "moderate"? "Unwetterpotenzial vorhanden" :
-    worst === "minor"   ? "Markante Wetterlage" : "Erhöhte Lage";
-  const leadText = lead ? `${lead.title.toLowerCase()} führend (${leadWindow ?? "im Tagesverlauf"})` : "ohne klare Einzelgefahr";
-  const offText = officialCount > 0 ? `, ${officialCount} amtl. Warnung${officialCount === 1 ? "" : "en"} aktiv` : "";
+    worst === "extreme"
+      ? "Extreme Unwetterlage"
+      : worst === "severe"
+        ? "Schwere Unwetterlage"
+        : worst === "moderate"
+          ? "Unwetterpotenzial vorhanden"
+          : worst === "minor"
+            ? "Markante Wetterlage"
+            : "Erhöhte Lage";
+  const leadText = lead
+    ? `${lead.title.toLowerCase()} führend (${leadWindow ?? "im Tagesverlauf"})`
+    : "ohne klare Einzelgefahr";
+  const offText =
+    officialCount > 0
+      ? `, ${officialCount} amtl. Warnung${officialCount === 1 ? "" : "en"} aktiv`
+      : "";
   return `${sevText}, ${leadText}${offText}. ${nowcastHeadline}.`;
 }

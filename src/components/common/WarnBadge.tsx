@@ -10,15 +10,26 @@ const STYLES: Record<AlertSeverity, string> = {
 };
 
 export function WarnBadge({
-  severity, label, showLevel = false, className,
-}: { severity: AlertSeverity; label?: string; showLevel?: boolean; className?: string }) {
+  severity,
+  label,
+  showLevel = false,
+  className,
+}: {
+  severity: AlertSeverity;
+  label?: string;
+  showLevel?: boolean;
+  className?: string;
+}) {
   const lvl = severityToLevel(severity);
   const info = WARN_LEVEL[lvl];
   return (
-    <span className={cn(
-      "inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide",
-      STYLES[severity], className,
-    )}>
+    <span
+      className={cn(
+        "inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide",
+        STYLES[severity],
+        className,
+      )}
+    >
       {label ?? (showLevel ? `Stufe ${lvl} · ${info.name}` : info.name)}
     </span>
   );

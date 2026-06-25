@@ -13,7 +13,10 @@ import { gridKey } from "@/lib/weather/storm/environment";
 import { type CellPrecipSample, precipKey } from "./precipitation";
 
 function maxLevel(levels: HazardLevel[]): HazardLevel {
-  return levels.reduce<HazardLevel>((acc, l) => (HAZARD_RANK[l] > HAZARD_RANK[acc] ? l : acc), "none");
+  return levels.reduce<HazardLevel>(
+    (acc, l) => (HAZARD_RANK[l] > HAZARD_RANK[acc] ? l : acc),
+    "none",
+  );
 }
 
 export function buildHazardReports(

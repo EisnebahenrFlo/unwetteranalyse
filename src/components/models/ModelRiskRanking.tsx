@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { WarnBadge } from "@/components/common/WarnBadge";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight } from "@/components/icons";
 import type { ModelRankRow } from "@/lib/weather/analysis/model-consensus";
 import { ModelDetailDrawer } from "./ModelDetailDrawer";
 import { cn } from "@/lib/utils";
@@ -34,9 +34,15 @@ export function ModelRiskRanking({ rows }: { rows: ModelRankRow[] }) {
                 </div>
                 <div className="mt-1.5 flex items-center gap-2">
                   <div className="relative h-1.5 w-24 overflow-hidden rounded-full bg-muted">
-                    <div className={cn("h-full rounded-full", tone(r.worstScore))} style={{ width: `${Math.max(4, r.worstScore)}%` }} />
+                    <div
+                      className={cn("h-full rounded-full", tone(r.worstScore))}
+                      style={{ width: `${Math.max(4, r.worstScore)}%` }}
+                    />
                   </div>
-                  <span className="font-mono text-xs tabular-nums text-muted-foreground" style={{ fontFamily: "var(--font-mono)" }}>
+                  <span
+                    className="font-mono text-xs tabular-nums text-muted-foreground"
+                    style={{ fontFamily: "var(--font-mono)" }}
+                  >
                     {r.worstScore}
                   </span>
                 </div>
@@ -45,7 +51,10 @@ export function ModelRiskRanking({ rows }: { rows: ModelRankRow[] }) {
                     <span className="text-[11px] text-muted-foreground">keine Treiber</span>
                   )}
                   {r.drivers.map((d) => (
-                    <span key={d} className="rounded-md border border-border/60 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                    <span
+                      key={d}
+                      className="rounded-md border border-border/60 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
+                    >
                       {d}
                     </span>
                   ))}

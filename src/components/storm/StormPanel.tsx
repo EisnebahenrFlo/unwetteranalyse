@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Zap, Wind, Target, ChevronRight, Activity } from "lucide-react";
+import { Zap, Wind, Target, ChevronRight, Activity } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import type { StormCell, StormAlert } from "@/lib/weather/storm/types";
 import type { HazardCellReport } from "@/lib/weather/hazards/types";
@@ -45,9 +45,7 @@ export function StormPanel({ cells, alerts, activeEta, lightningOpen, hazardRepo
         </span>
       </header>
 
-      {activeEta && (
-        <ActiveEtaRow eta={activeEta} onOpen={() => setSelected(activeEta.cell)} />
-      )}
+      {activeEta && <ActiveEtaRow eta={activeEta} onOpen={() => setSelected(activeEta.cell)} />}
 
       {cells.length === 0 ? (
         <EmptyState lightningOpen={lightningOpen} />
@@ -86,40 +84,66 @@ function ActiveEtaRow({
   return (
     <button
       onClick={onOpen}
-      className={cn("grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-border/60 px-3 py-2 text-left text-xs", tone)}
+      className={cn(
+        "grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-border/60 px-3 py-2 text-left text-xs",
+        tone,
+      )}
     >
       <Target className="h-3.5 w-3.5" />
       <div className="min-w-0">
-        <div className="truncate font-semibold">{eta.cell.id} · {label}</div>
-        <div className="truncate opacity-80">{eta.distanceKm.toFixed(0)} km · {SEVERITY_LABEL[eta.cell.severity.level]}</div>
+        <div className="truncate font-semibold">
+          {eta.cell.id} · {label}
+        </div>
+        <div className="truncate opacity-80">
+          {eta.distanceKm.toFixed(0)} km · {SEVERITY_LABEL[eta.cell.severity.level]}
+        </div>
       </div>
       <ChevronRight className="h-3.5 w-3.5 opacity-70" />
     </button>
   );
 }
 
-function CellRow({ cell, alerts, onOpen }: { cell: StormCell; alerts: StormAlert[]; onOpen: () => void }) {
+function CellRow({
+  cell,
+  alerts,
+  onOpen,
+}: {
+  cell: StormCell;
+  alerts: StormAlert[];
+  onOpen: () => void;
+}) {
   return (
     <li>
       <button
         onClick={onOpen}
         className="grid w-full grid-cols-[12px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5 text-left hover:bg-muted/40"
       >
-        <span className="h-2.5 w-2.5 rounded-full" style={{ background: SEVERITY_COLOR[cell.severity.level] }} />
+        <span
+          className="h-2.5 w-2.5 rounded-full"
+          style={{ background: SEVERITY_COLOR[cell.severity.level] }}
+        />
         <div className="min-w-0">
           <div className="flex items-center gap-2 truncate text-sm font-medium text-foreground">
             <span className="font-mono text-xs text-muted-foreground">{cell.id}</span>
-            <span>{SEVERITY_LABEL[cell.severity.level]} · Score {cell.severity.score}</span>
+            <span>
+              {SEVERITY_LABEL[cell.severity.level]} · Score {cell.severity.score}
+            </span>
           </div>
           <div className="truncate text-[11px] text-muted-foreground">
             {cell.strikeRatePerMin.toFixed(1)} Blitze/min · {cell.strikeCount} im Fenster
             {cell.motion && cell.motion.speedKmh > 1 && (
-              <> · {Math.round(cell.motion.speedKmh)} km/h {cell.motion.bearingCompass}</>
+              <>
+                {" "}
+                · {Math.round(cell.motion.speedKmh)} km/h {cell.motion.bearingCompass}
+              </>
             )}
           </div>
           {alerts.length > 0 && (
             <div className="mt-1 truncate text-[11px] font-medium text-foreground">
-              {alerts.slice(0, 2).map((a) => `${a.favoriteName} +${a.etaMin}min`).join(" · ")}
+              {alerts
+                .slice(0, 2)
+                .map((a) => `${a.favoriteName} +${a.etaMin}min`)
+                .join(" · ")}
               {alerts.length > 2 && ` · +${alerts.length - 2}`}
             </div>
           )}
@@ -135,9 +159,17 @@ function EmptyState({ lightningOpen }: { lightningOpen: boolean }) {
     <div className="px-3 py-6 text-center text-xs text-muted-foreground">
       <Activity className="mx-auto mb-2 h-5 w-5 opacity-50" />
       {lightningOpen ? (
-        <>Keine konvektiven Zellen erkannt.<br />Sobald Blitze clustern, erscheinen Tracks hier.</>
+        <>
+          Keine konvektiven Zellen erkannt.
+          <br />
+          Sobald Blitze clustern, erscheinen Tracks hier.
+        </>
       ) : (
-        <>Blitz-Stream ist aus oder verbindet noch.<br />Layer „Blitze“ aktivieren.</>
+        <>
+          Blitz-Stream ist aus oder verbindet noch.
+          <br />
+          Layer „Blitze“ aktivieren.
+        </>
       )}
     </div>
   );

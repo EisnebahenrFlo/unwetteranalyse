@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, Crosshair, Loader2, MapPin, Search, Star, X } from "lucide-react";
+import { ChevronDown, Crosshair, Loader2, MapPin, Search, Star, X } from "@/components/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,10 @@ import { Button } from "@/components/ui/button";
 import { useSavedLocations } from "@/hooks/use-saved-locations";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
-  addSavedLocation, moveSavedLocation, removeSavedLocation, isFavorite,
+  addSavedLocation,
+  moveSavedLocation,
+  removeSavedLocation,
+  isFavorite,
 } from "@/lib/storage/saved-locations";
 import { classifyQuery, getCurrentLocation, searchLocations } from "@/lib/geo/geocoding";
 import { FavoriteRow, FavoriteEmpty } from "./FavoriteRow";
@@ -22,7 +25,11 @@ import { cn } from "@/lib/utils";
  * irgendetwas anzeigen kann, bis ein Ort gewählt wurde.
  */
 const INITIAL_FALLBACK: GeoPoint = {
-  lat: 52.52, lon: 13.405, name: "Berlin", country: "DE", admin: "Berlin",
+  lat: 52.52,
+  lon: 13.405,
+  name: "Berlin",
+  country: "DE",
+  admin: "Berlin",
 };
 
 export type ActivePoint = GeoPoint;
@@ -34,7 +41,8 @@ export function useActivePoint(): ActivePoint {
   const lon = Number(search.lon);
   if (Number.isFinite(lat) && Number.isFinite(lon)) {
     return {
-      lat, lon,
+      lat,
+      lon,
       name: typeof search.name === "string" ? search.name : "Eigener Ort",
       country: typeof search.country === "string" ? search.country : undefined,
       admin: typeof search.admin === "string" ? search.admin : undefined,
@@ -120,7 +128,9 @@ function SwitcherPanel({ active, onClose }: { active: ActivePoint; onClose: () =
     return () => window.clearTimeout(id);
   }, [raw]);
 
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   const cls = useMemo(() => classifyQuery(raw), [raw]);
 
@@ -137,7 +147,11 @@ function SwitcherPanel({ active, onClose }: { active: ActivePoint; onClose: () =
       to: ".",
       search: (prev: Record<string, unknown>) => ({
         ...prev,
-        lat: p.lat, lon: p.lon, name: p.name, country: p.country, admin: p.admin,
+        lat: p.lat,
+        lon: p.lon,
+        name: p.name,
+        country: p.country,
+        admin: p.admin,
       }),
     });
     setRaw("");
@@ -159,10 +173,13 @@ function SwitcherPanel({ active, onClose }: { active: ActivePoint; onClose: () =
   };
 
   const kindHint =
-    cls.kind === "coords" ? "GPS-Koordinaten erkannt" :
-    cls.kind === "postal" ? "Postleitzahl" :
-    cls.kind === "name" && raw.length >= 2 ? "Ortsname" :
-    "Name, PLZ oder Koordinaten (z. B. 52.52, 13.41)";
+    cls.kind === "coords"
+      ? "GPS-Koordinaten erkannt"
+      : cls.kind === "postal"
+        ? "Postleitzahl"
+        : cls.kind === "name" && raw.length >= 2
+          ? "Ortsname"
+          : "Name, PLZ oder Koordinaten (z. B. 52.52, 13.41)";
 
   return (
     <div className="flex flex-col gap-3">
@@ -180,7 +197,13 @@ function SwitcherPanel({ active, onClose }: { active: ActivePoint; onClose: () =
             className="h-10 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
           />
           {raw && (
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setRaw("")} aria-label="Leeren">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              onClick={() => setRaw("")}
+              aria-label="Leeren"
+            >
               <X className="h-3.5 w-3.5" />
             </Button>
           )}
@@ -192,9 +215,11 @@ function SwitcherPanel({ active, onClose }: { active: ActivePoint; onClose: () =
             disabled={gpsState === "loading"}
             className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 font-medium transition-colors hover:bg-accent disabled:opacity-60"
           >
-            {gpsState === "loading"
-              ? <Loader2 className="h-3 w-3 animate-spin" />
-              : <Crosshair className="h-3 w-3" />}
+            {gpsState === "loading" ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Crosshair className="h-3 w-3" />
+            )}
             Mein Standort
           </button>
         </div>
@@ -229,7 +254,9 @@ function SwitcherPanel({ active, onClose }: { active: ActivePoint; onClose: () =
                   result={r}
                   alreadyFav={isFavorite(r)}
                   onPick={pick}
-                  onAddFavorite={(g) => { addSavedLocation(g); }}
+                  onAddFavorite={(g) => {
+                    addSavedLocation(g);
+                  }}
                 />
               ))}
             </ul>
@@ -271,7 +298,10 @@ function SwitcherPanel({ active, onClose }: { active: ActivePoint; onClose: () =
 /* ----------------------------- Search result row ----------------------------- */
 
 function SearchResultRow({
-  result, alreadyFav, onPick, onAddFavorite,
+  result,
+  alreadyFav,
+  onPick,
+  onAddFavorite,
 }: {
   result: GeoPoint & { postal?: string };
   alreadyFav: boolean;
@@ -293,11 +323,20 @@ function SearchResultRow({
         size="icon"
         variant="ghost"
         className="h-7 w-7"
-        onClick={(e) => { e.stopPropagation(); onAddFavorite(result); setPinned(true); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onAddFavorite(result);
+          setPinned(true);
+        }}
         aria-label={pinned ? "Bereits Favorit" : "Als Favorit speichern"}
         title={pinned ? "Bereits Favorit" : "Als Favorit speichern"}
       >
-        <Star className={cn("h-3.5 w-3.5", pinned ? "fill-amber-400 text-amber-500" : "text-muted-foreground")} />
+        <Star
+          className={cn(
+            "h-3.5 w-3.5",
+            pinned ? "fill-amber-400 text-amber-500" : "text-muted-foreground",
+          )}
+        />
       </Button>
     </li>
   );

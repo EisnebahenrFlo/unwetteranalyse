@@ -65,7 +65,10 @@ export function reorderSavedLocations(orderedIds: string[]) {
   const next: SavedLocation[] = [];
   for (const id of orderedIds) {
     const item = byId.get(id);
-    if (item) { next.push(item); byId.delete(id); }
+    if (item) {
+      next.push(item);
+      byId.delete(id);
+    }
   }
   // Übrige hinten anhängen (z. B. neu hinzugekommene).
   for (const item of byId.values()) next.push(item);

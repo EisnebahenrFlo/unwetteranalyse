@@ -29,6 +29,18 @@ export default tseslint.config(
               message:
                 "TanStack Start does not use the Next.js `server-only` package. Rename the module to `*.server.ts` or mark it with `@tanstack/react-start/server-only`.",
             },
+            {
+              name: "lucide-react",
+              message:
+                "lucide-react ist verboten. Nutze Meteocons via @/components/weather/MeteoconIcon oder das eigene Icon-Set unter @/components/icons.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["lucide-react", "lucide-react/*"],
+              message:
+                "lucide-react ist verboten. Nutze Meteocons via @/components/weather/MeteoconIcon oder das eigene Icon-Set unter @/components/icons.",
+            },
           ],
         },
       ],

@@ -1,22 +1,50 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Pause, Play, SkipBack, SkipForward, Zap, Radar, Globe2, MapPin, Activity, Target } from "lucide-react";
+import {
+  Pause,
+  Play,
+  SkipBack,
+  SkipForward,
+  Zap,
+  Radar,
+  Globe2,
+  MapPin,
+  Activity,
+  Target,
+} from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useActivePoint } from "@/components/layout/LocationSwitcher";
 import { RadarMap, type RadarMapHandle } from "./RadarMap";
-import { WMS_LAYERS, fetchWmsTimeline, wmsTileUrl, type WmsLayerKey } from "@/lib/weather/sources/dwd-wms";
+import {
+  WMS_LAYERS,
+  fetchWmsTimeline,
+  wmsTileUrl,
+  type WmsLayerKey,
+} from "@/lib/weather/sources/dwd-wms";
 import { useLightningStream } from "@/lib/weather/sources/blitzortung";
-import { analyseLightning, assessTimeline, type Confidence } from "@/lib/weather/analysis/radar-cockpit";
+import {
+  analyseLightning,
+  assessTimeline,
+  type Confidence,
+} from "@/lib/weather/analysis/radar-cockpit";
 import { forecastQuery } from "@/lib/weather/queries";
 import { useLiveNow } from "@/hooks/use-live-now";
 import { liveHourly } from "@/lib/weather/live";
 import {
-  triggerLight, blitzVsRadar, modelVsObservation, cellTracking,
+  triggerLight,
+  blitzVsRadar,
+  modelVsObservation,
+  cellTracking,
 } from "@/lib/weather/analysis/cockpit-diagnostics";
 import {
-  TriggerLightCard, BlitzRadarCard, ModelObsCard, CellTrackCard,
-  SourceConfidenceGrid, type SourceConfidence,
+  TriggerLightCard,
+  BlitzRadarCard,
+  ModelObsCard,
+  CellTrackCard,
+  SourceConfidenceGrid,
+  type SourceConfidence,
 } from "./CockpitDiagnostics";
 import { useStormTracking } from "@/lib/weather/storm/use-storm-tracking";
 import { StormPanel } from "@/components/storm/StormPanel";
@@ -30,10 +58,13 @@ import { DEFAULT_STORM_THRESHOLDS } from "@/lib/weather/storm/types";
 
 type Mode = "focus" | "europe" | "ground";
 
-const MODE_DEFS: Record<Mode, { label: string; icon: typeof Radar; baseLayer: WmsLayerKey; zoom: number; opacity: number }> = {
-  focus:  { label: "Fokus DE",       icon: Radar,  baseLayer: "ry", zoom: 6.5, opacity: 0.75 },
-  europe: { label: "Mitteleuropa",   icon: Globe2, baseLayer: "pi", zoom: 5.0, opacity: 0.7 },
-  ground: { label: "Bodencheck",     icon: MapPin, baseLayer: "ry", zoom: 7.5, opacity: 0.35 },
+const MODE_DEFS: Record<
+  Mode,
+  { label: string; icon: typeof Radar; baseLayer: WmsLayerKey; zoom: number; opacity: number }
+> = {
+  focus: { label: "Fokus DE", icon: Radar, baseLayer: "ry", zoom: 6.5, opacity: 0.75 },
+  europe: { label: "Mitteleuropa", icon: Globe2, baseLayer: "pi", zoom: 5.0, opacity: 0.7 },
+  ground: { label: "Bodencheck", icon: MapPin, baseLayer: "ry", zoom: 7.5, opacity: 0.35 },
 };
 
 export function RadarCockpit() {
@@ -49,9 +80,26 @@ export function RadarCockpit() {
   const [playing, setPlaying] = useState(false);
   const [bbox, setBbox] = useState<[number, number, number, number] | null>(null);
 
-  const ryQ = useQuery({ queryKey: ["wms", "ry"], queryFn: () => fetchWmsTimeline("ry"), refetchInterval: 5 * 60_000, staleTime: 4 * 60_000 });
-  const wnQ = useQuery({ queryKey: ["wms", "wn"], queryFn: () => fetchWmsTimeline("wn"), refetchInterval: 5 * 60_000, staleTime: 4 * 60_000, enabled: showWnNowcast || scrub > 0 });
-  const piQ = useQuery({ queryKey: ["wms", "pi"], queryFn: () => fetchWmsTimeline("pi"), refetchInterval: 10 * 60_000, staleTime: 9 * 60_000, enabled: mode === "europe" });
+  const ryQ = useQuery({
+    queryKey: ["wms", "ry"],
+    queryFn: () => fetchWmsTimeline("ry"),
+    refetchInterval: 5 * 60_000,
+    staleTime: 4 * 60_000,
+  });
+  const wnQ = useQuery({
+    queryKey: ["wms", "wn"],
+    queryFn: () => fetchWmsTimeline("wn"),
+    refetchInterval: 5 * 60_000,
+    staleTime: 4 * 60_000,
+    enabled: showWnNowcast || scrub > 0,
+  });
+  const piQ = useQuery({
+    queryKey: ["wms", "pi"],
+    queryFn: () => fetchWmsTimeline("pi"),
+    refetchInterval: 10 * 60_000,
+    staleTime: 9 * 60_000,
+    enabled: mode === "europe",
+  });
   const forecastQ = useQuery(forecastQuery(point));
 
   const lightning = useLightningStream({ enabled: showLightning, bbox: bbox ?? undefined });
@@ -81,17 +129,22 @@ export function RadarCockpit() {
   // Frame-Stacks: alle relevanten Frames bleiben gemountet → kein Refetch beim Scrubben/Playback.
   // Wechsel passieren über raster-opacity (Crossfade ~180 ms) statt Source/Layer-Recreate.
   useEffect(() => {
-    const m = mapRef.current; if (!m) return;
+    const m = mapRef.current;
+    if (!m) return;
     if (mode === "europe") {
       m.setFrameStack("radar-ry", [], null, MODE_DEFS[mode].opacity);
       m.setFrameStack("radar-wn", [], null, MODE_DEFS[mode].opacity);
-      if (activeFrame) m.setRasterTiles("radar-pi", wmsTileUrl("pi", activeFrame), MODE_DEFS[mode].opacity);
+      if (activeFrame)
+        m.setRasterTiles("radar-pi", wmsTileUrl("pi", activeFrame), MODE_DEFS[mode].opacity);
       else m.setRasterTiles("radar-pi", null);
       return;
     }
     m.setRasterTiles("radar-pi", null);
     const ryEntries = ryFrames.map((t) => ({ time: t, url: wmsTileUrl("ry", t) }));
-    const wnEntries = (showWnNowcast ? wnFrames : []).map((t) => ({ time: t, url: wmsTileUrl("wn", t) }));
+    const wnEntries = (showWnNowcast ? wnFrames : []).map((t) => ({
+      time: t,
+      url: wmsTileUrl("wn", t),
+    }));
     const activeRy = activeLayer === "ry" ? activeFrame : null;
     const activeWn = activeLayer === "wn" ? activeFrame : null;
     m.setFrameStack("radar-ry", ryEntries, activeRy, MODE_DEFS[mode].opacity);
@@ -113,7 +166,7 @@ export function RadarCockpit() {
     if (!playing) return;
     const id = window.setInterval(() => {
       setScrub((s) => {
-        const minStep = -(Math.max(0, ryFrames.length - 1));
+        const minStep = -Math.max(0, ryFrames.length - 1);
         const maxStep = showWnNowcast ? wnFrames.length : 0;
         const next = s + 1;
         return next > maxStep ? minStep : next;
@@ -122,7 +175,7 @@ export function RadarCockpit() {
     return () => window.clearInterval(id);
   }, [playing, ryFrames.length, wnFrames.length, showWnNowcast]);
 
-  const minScrub = -(Math.max(0, ryFrames.length - 1));
+  const minScrub = -Math.max(0, ryFrames.length - 1);
   const maxScrub = wnFrames.length;
 
   // Diagnose-Eingaben
@@ -137,12 +190,20 @@ export function RadarCockpit() {
     return lightning.strikes.filter((s) => s.time >= cutoff).length;
   }, [lightning.strikes]);
   const ryLagMs = ryQ.data?.lagMs ?? null;
-  const ryFreshAndWet = ryLagMs != null && ryLagMs <= 15 * 60_000 && (nowHour?.precipitationMm ?? 0) >= 0.3;
+  const ryFreshAndWet =
+    ryLagMs != null && ryLagMs <= 15 * 60_000 && (nowHour?.precipitationMm ?? 0) >= 0.3;
 
   const trig = triggerLight({ nowHour, lightning5min: lightningInsight.last5, ryLagMs });
-  const radarLight = blitzVsRadar({ strikes: lightning.strikes, ry: ryQ.data, nowHourPrecipMm: nowHour?.precipitationMm ?? null });
+  const radarLight = blitzVsRadar({
+    strikes: lightning.strikes,
+    ry: ryQ.data,
+    nowHourPrecipMm: nowHour?.precipitationMm ?? null,
+  });
   const modelObs = modelVsObservation({ nowHour, lightning15min, ryFreshAndWet });
-  const track = cellTracking({ strikes: lightning.strikes, focus: { lat: point.lat, lon: point.lon } });
+  const track = cellTracking({
+    strikes: lightning.strikes,
+    focus: { lat: point.lat, lon: point.lon },
+  });
 
   // Stormtrack-Geometrie in die Karte schreiben.
   useEffect(() => {
@@ -153,11 +214,14 @@ export function RadarCockpit() {
   const favorites = useSavedLocations();
   const [settings] = useSettings();
   const stormEnabled = settings.storm.enabled;
-  const stormThresholds = useMemo(() => ({
-    ...DEFAULT_STORM_THRESHOLDS,
-    alertEtaMin: settings.storm.alertEtaMin,
-    alertLevel: settings.storm.alertLevel,
-  }), [settings.storm.alertEtaMin, settings.storm.alertLevel]);
+  const stormThresholds = useMemo(
+    () => ({
+      ...DEFAULT_STORM_THRESHOLDS,
+      alertEtaMin: settings.storm.alertEtaMin,
+      alertLevel: settings.storm.alertLevel,
+    }),
+    [settings.storm.alertEtaMin, settings.storm.alertLevel],
+  );
   const storm = useStormTracking({
     activePoint: { lat: point.lat, lon: point.lon },
     thresholds: stormThresholds,
@@ -179,20 +243,27 @@ export function RadarCockpit() {
   }, [point.lat, point.lon, point.name, favorites]);
 
   /* ---------- Hazard-Engine (Hagel, Sturzflut, Blitz-Jump) ---------- */
-  const hazardThresholds = useMemo(() => ({
-    ...DEFAULT_HAZARD_THRESHOLDS,
-    minLevel: settings.hazards.minLevel as HazardLevel,
-    alertEtaMin: settings.hazards.alertEtaMin,
-    cooldownMin: settings.hazards.cooldownMin,
-    hitKm: settings.hazards.hitKm,
-    enableHail: settings.hazards.enableHail,
-    enableFlood: settings.hazards.enableFlood,
-    enableLightning: settings.hazards.enableLightning,
-  }), [
-    settings.hazards.minLevel, settings.hazards.alertEtaMin, settings.hazards.cooldownMin,
-    settings.hazards.hitKm, settings.hazards.enableHail, settings.hazards.enableFlood,
-    settings.hazards.enableLightning,
-  ]);
+  const hazardThresholds = useMemo(
+    () => ({
+      ...DEFAULT_HAZARD_THRESHOLDS,
+      minLevel: settings.hazards.minLevel as HazardLevel,
+      alertEtaMin: settings.hazards.alertEtaMin,
+      cooldownMin: settings.hazards.cooldownMin,
+      hitKm: settings.hazards.hitKm,
+      enableHail: settings.hazards.enableHail,
+      enableFlood: settings.hazards.enableFlood,
+      enableLightning: settings.hazards.enableLightning,
+    }),
+    [
+      settings.hazards.minLevel,
+      settings.hazards.alertEtaMin,
+      settings.hazards.cooldownMin,
+      settings.hazards.hitKm,
+      settings.hazards.enableHail,
+      settings.hazards.enableFlood,
+      settings.hazards.enableLightning,
+    ],
+  );
   const hazards = useHazards({
     cells: storm.cells,
     favorites,
@@ -202,24 +273,43 @@ export function RadarCockpit() {
 
   const sourceConfidence: SourceConfidence[] = [
     {
-      key: "ry", label: "Radar RY",
+      key: "ry",
+      label: "Radar RY",
       state: ryQ.data?.latest ? (ryQ.data.gaps > 0 ? "limited" : "good") : "missing",
-      detail: ryQ.data?.latest ? `${Math.round((ryQ.data.lagMs ?? 0) / 60000)} min alt${ryQ.data.gaps > 0 ? ` · ${ryQ.data.gaps} Lücken` : ""}` : "keine Frames",
+      detail: ryQ.data?.latest
+        ? `${Math.round((ryQ.data.lagMs ?? 0) / 60000)} min alt${ryQ.data.gaps > 0 ? ` · ${ryQ.data.gaps} Lücken` : ""}`
+        : "keine Frames",
     },
     {
-      key: "wn", label: "Nowcast WN",
+      key: "wn",
+      label: "Nowcast WN",
       state: wnQ.data?.latest ? "good" : showWnNowcast ? "limited" : "missing",
-      detail: wnQ.data?.latest ? `${wnQ.data.frames.length} Frames` : showWnNowcast ? "lädt" : "Layer aus",
+      detail: wnQ.data?.latest
+        ? `${wnQ.data.frames.length} Frames`
+        : showWnNowcast
+          ? "lädt"
+          : "Layer aus",
     },
     {
-      key: "blitz", label: "Blitz-Stream",
-      state: lightning.status === "open" ? "good" : lightning.status === "connecting" ? "limited" : "missing",
+      key: "blitz",
+      label: "Blitz-Stream",
+      state:
+        lightning.status === "open"
+          ? "good"
+          : lightning.status === "connecting"
+            ? "limited"
+            : "missing",
       detail: `${lightning.status} · ${lightning.strikes.length} im 60-min-Puffer · Einzeleinschläge können falsch lokalisiert sein`,
     },
     {
-      key: "model", label: "Modell",
+      key: "model",
+      label: "Modell",
       state: forecastQ.data ? "good" : forecastQ.isLoading ? "limited" : "missing",
-      detail: forecastQ.data ? "Open-Meteo Forecast" : forecastQ.isLoading ? "lädt" : "nicht erreichbar",
+      detail: forecastQ.data
+        ? "Open-Meteo Forecast"
+        : forecastQ.isLoading
+          ? "lädt"
+          : "nicht erreichbar",
     },
   ];
 
@@ -231,7 +321,11 @@ export function RadarCockpit() {
         <TopBar
           mode={mode}
           onModeChange={setMode}
-          ry={ryQ.data ? assessTimeline("RY", ryQ.data, WMS_LAYERS.ry.stepMinutes) : { label: "RY", confidence: "missing", detail: "lädt…" }}
+          ry={
+            ryQ.data
+              ? assessTimeline("RY", ryQ.data, WMS_LAYERS.ry.stepMinutes)
+              : { label: "RY", confidence: "missing", detail: "lädt…" }
+          }
           wn={wnQ.data ? assessTimeline("WN", wnQ.data, WMS_LAYERS.wn.stepMinutes) : null}
           pi={piQ.data ? assessTimeline("PI", piQ.data, WMS_LAYERS.pi.stepMinutes) : null}
         />
@@ -251,16 +345,28 @@ export function RadarCockpit() {
           max={maxScrub}
           stepMinutes={5}
           playing={playing}
-          onChange={(v) => { setPlaying(false); setScrub(v); if (v > 0) setShowWnNowcast(true); }}
+          onChange={(v) => {
+            setPlaying(false);
+            setScrub(v);
+            if (v > 0) setShowWnNowcast(true);
+          }}
           onPlay={() => setPlaying((p) => !p)}
-          onJumpNow={() => { setPlaying(false); setScrub(0); }}
+          onJumpNow={() => {
+            setPlaying(false);
+            setScrub(0);
+          }}
           disabled={ryFrames.length === 0}
         />
         <LayerToolbar
           showLightning={showLightning}
           onToggleLightning={() => setShowLightning((v) => !v)}
           showWn={showWnNowcast}
-          onToggleWn={() => { setShowWnNowcast((v) => { if (v) setScrub(0); return !v; }); }}
+          onToggleWn={() => {
+            setShowWnNowcast((v) => {
+              if (v) setScrub(0);
+              return !v;
+            });
+          }}
           showRings={showRings}
           onToggleRings={() => setShowRings((v) => !v)}
           lightningStatus={lightning.status}
@@ -288,7 +394,11 @@ export function RadarCockpit() {
 /* ------------------------------ Topbar ------------------------------ */
 
 function TopBar({
-  mode, onModeChange, ry, wn, pi,
+  mode,
+  onModeChange,
+  ry,
+  wn,
+  pi,
 }: {
   mode: Mode;
   onModeChange: (m: Mode) => void;
@@ -307,7 +417,9 @@ function TopBar({
               onClick={() => onModeChange(m)}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
-                mode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
+                mode === m
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted",
               )}
             >
               <Icon className="h-3.5 w-3.5" />
@@ -330,12 +442,20 @@ function TopBar({
 
 function HealthPill({ h }: { h: { label: string; confidence: Confidence; detail: string } }) {
   const tone =
-    h.confidence === "ok" ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" :
-    h.confidence === "delayed" ? "bg-amber-500/15 text-amber-700 dark:text-amber-300" :
-    h.confidence === "degraded" ? "bg-orange-500/15 text-orange-700 dark:text-orange-300" :
-    "bg-muted text-muted-foreground";
+    h.confidence === "ok"
+      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+      : h.confidence === "delayed"
+        ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+        : h.confidence === "degraded"
+          ? "bg-orange-500/15 text-orange-700 dark:text-orange-300"
+          : "bg-muted text-muted-foreground";
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-mono", tone)}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-mono",
+        tone,
+      )}
+    >
       <span className="font-semibold">{h.label}</span>
       <span className="opacity-80">{h.detail}</span>
     </span>
@@ -347,12 +467,21 @@ function HealthPill({ h }: { h: { label: string; confidence: Confidence; detail:
 function FrameBadge({ frame, scrub }: { frame: string | null; scrub: number }) {
   const tag = scrub === 0 ? "Jetzt" : scrub < 0 ? "Verlauf" : "Nowcast";
   const tone =
-    scrub === 0 ? "bg-emerald-500/90 text-white" :
-    scrub < 0  ? "bg-slate-500/90 text-white" :
-    "bg-sky-500/90 text-white";
+    scrub === 0
+      ? "bg-emerald-500/90 text-white"
+      : scrub < 0
+        ? "bg-slate-500/90 text-white"
+        : "bg-sky-500/90 text-white";
   return (
     <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-2">
-      <span className={cn("rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wide", tone)}>{tag}</span>
+      <span
+        className={cn(
+          "rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wide",
+          tone,
+        )}
+      >
+        {tag}
+      </span>
       {frame && (
         <span className="rounded-md bg-background/85 px-2 py-1 font-mono text-[11px] text-foreground backdrop-blur">
           {new Date(frame).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
@@ -365,7 +494,9 @@ function FrameBadge({ frame, scrub }: { frame: string | null; scrub: number }) {
 function Legend({ layer, showLightning }: { layer: WmsLayerKey; showLightning: boolean }) {
   return (
     <div className="pointer-events-none absolute bottom-3 right-3 rounded-md border border-border bg-background/90 px-2.5 py-1.5 text-[10px] backdrop-blur">
-      <div className="mb-1 font-semibold uppercase tracking-wide text-muted-foreground">{WMS_LAYERS[layer].label} · Niederschlag</div>
+      <div className="mb-1 font-semibold uppercase tracking-wide text-muted-foreground">
+        {WMS_LAYERS[layer].label} · Niederschlag
+      </div>
       <div className="flex items-center gap-1">
         {["#bbdefb", "#42a5f5", "#1976d2", "#f59e0b", "#dc2626"].map((c) => (
           <span key={c} className="h-2.5 w-5 rounded-sm" style={{ backgroundColor: c }} />
@@ -374,9 +505,15 @@ function Legend({ layer, showLightning }: { layer: WmsLayerKey; showLightning: b
       {showLightning && (
         <div className="mt-1.5 flex items-center gap-2 text-muted-foreground">
           <Zap className="h-3 w-3" />
-          <span className="inline-flex items-center gap-1"><Dot color="#facc15" /> 0–5</span>
-          <span className="inline-flex items-center gap-1"><Dot color="#f59e0b" /> 5–15</span>
-          <span className="inline-flex items-center gap-1"><Dot color="#9ca3af" /> 15–30 min</span>
+          <span className="inline-flex items-center gap-1">
+            <Dot color="#facc15" /> 0–5
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Dot color="#f59e0b" /> 5–15
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Dot color="#9ca3af" /> 15–30 min
+          </span>
         </div>
       )}
     </div>
@@ -390,19 +527,46 @@ function Dot({ color }: { color: string }) {
 /* ------------------------------ Time Scrubber ------------------------------ */
 
 function TimeScrubber({
-  value, min, max, stepMinutes, playing, onChange, onPlay, onJumpNow, disabled,
+  value,
+  min,
+  max,
+  stepMinutes,
+  playing,
+  onChange,
+  onPlay,
+  onJumpNow,
+  disabled,
 }: {
-  value: number; min: number; max: number; stepMinutes: number;
-  playing: boolean; onChange: (v: number) => void; onPlay: () => void; onJumpNow: () => void; disabled?: boolean;
+  value: number;
+  min: number;
+  max: number;
+  stepMinutes: number;
+  playing: boolean;
+  onChange: (v: number) => void;
+  onPlay: () => void;
+  onJumpNow: () => void;
+  disabled?: boolean;
 }) {
   const offsetMin = value * stepMinutes;
   const label = offsetMin === 0 ? "Jetzt" : `${offsetMin > 0 ? "+" : ""}${offsetMin} min`;
   return (
     <div className="grid grid-cols-[auto_auto_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-xl border border-border bg-card px-2 py-2">
-      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onChange(Math.max(min, value - 1))} disabled={disabled}>
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-8 w-8"
+        onClick={() => onChange(Math.max(min, value - 1))}
+        disabled={disabled}
+      >
         <SkipBack className="h-3.5 w-3.5" />
       </Button>
-      <Button size="icon" variant={playing ? "default" : "outline"} className="h-8 w-8" onClick={onPlay} disabled={disabled}>
+      <Button
+        size="icon"
+        variant={playing ? "default" : "outline"}
+        className="h-8 w-8"
+        onClick={onPlay}
+        disabled={disabled}
+      >
         {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
       </Button>
       <div className="relative">
@@ -422,10 +586,20 @@ function TimeScrubber({
           <span>+{max * stepMinutes} min</span>
         </div>
       </div>
-      <button onClick={onJumpNow} className="rounded-md border border-border px-2 py-1 font-mono text-[11px] text-foreground hover:bg-muted" disabled={disabled}>
+      <button
+        onClick={onJumpNow}
+        className="rounded-md border border-border px-2 py-1 font-mono text-[11px] text-foreground hover:bg-muted"
+        disabled={disabled}
+      >
         {label}
       </button>
-      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onChange(Math.min(max, value + 1))} disabled={disabled}>
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-8 w-8"
+        onClick={() => onChange(Math.min(max, value + 1))}
+        disabled={disabled}
+      >
         <SkipForward className="h-3.5 w-3.5" />
       </Button>
     </div>
@@ -435,11 +609,20 @@ function TimeScrubber({
 /* ------------------------------ Layer Toolbar ------------------------------ */
 
 function LayerToolbar({
-  showLightning, onToggleLightning, showWn, onToggleWn, showRings, onToggleRings, lightningStatus,
+  showLightning,
+  onToggleLightning,
+  showWn,
+  onToggleWn,
+  showRings,
+  onToggleRings,
+  lightningStatus,
 }: {
-  showLightning: boolean; onToggleLightning: () => void;
-  showWn: boolean; onToggleWn: () => void;
-  showRings: boolean; onToggleRings: () => void;
+  showLightning: boolean;
+  onToggleLightning: () => void;
+  showWn: boolean;
+  onToggleWn: () => void;
+  showRings: boolean;
+  onToggleRings: () => void;
   lightningStatus: string;
 }) {
   return (
@@ -453,7 +636,13 @@ function LayerToolbar({
         icon={<Zap className="h-3 w-3" />}
         hint={`Blitzortung · ${lightningStatus}`}
       />
-      <LayerChip active={showRings} onClick={onToggleRings} label="Ringe" icon={<Target className="h-3 w-3" />} hint="10 · 25 · 50 · 100 km" />
+      <LayerChip
+        active={showRings}
+        onClick={onToggleRings}
+        label="Ringe"
+        icon={<Target className="h-3 w-3" />}
+        hint="10 · 25 · 50 · 100 km"
+      />
       <div className="ml-auto inline-flex items-center gap-1 rounded-md bg-muted/50 px-2 py-1 text-[10px] text-muted-foreground">
         <Activity className="h-3 w-3" /> Animation lädt nur bei Play
       </div>
@@ -461,14 +650,28 @@ function LayerToolbar({
   );
 }
 
-function LayerChip({ active, onClick, label, hint, icon }: { active: boolean; onClick?: () => void; label: string; hint: string; icon?: React.ReactNode }) {
+function LayerChip({
+  active,
+  onClick,
+  label,
+  hint,
+  icon,
+}: {
+  active: boolean;
+  onClick?: () => void;
+  label: string;
+  hint: string;
+  icon?: React.ReactNode;
+}) {
   return (
     <button
       onClick={onClick}
       disabled={!onClick}
       className={cn(
         "group inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs transition-colors",
-        active ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:bg-muted",
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border text-muted-foreground hover:bg-muted",
         !onClick && "cursor-default",
       )}
       title={hint}
@@ -483,7 +686,12 @@ function LayerChip({ active, onClick, label, hint, icon }: { active: boolean; on
 /* ------------------------------ Analysis Rail ------------------------------ */
 
 function AnalysisRail({
-  ry, wn, pi, mode, lightning, lightningStatus,
+  ry,
+  wn,
+  pi,
+  mode,
+  lightning,
+  lightningStatus,
 }: {
   ry: ReturnType<typeof useQuery<any>>["data"];
   wn: ReturnType<typeof useQuery<any>>["data"];
@@ -492,17 +700,20 @@ function AnalysisRail({
   lightning: ReturnType<typeof analyseLightning>;
   lightningStatus: string;
 }) {
-  const ryAge = ry?.latest ? Math.round((Date.now() - new Date(ry.latest).getTime()) / 60000) : null;
+  const ryAge = ry?.latest
+    ? Math.round((Date.now() - new Date(ry.latest).getTime()) / 60000)
+    : null;
   const wnAvailable = wn?.frames?.length ?? 0;
 
   return (
     <aside className="flex flex-col gap-3">
       <RailCard title="Jetzt" tone="primary">
-        {ryAge != null ? <Line label="Radar RY" value={`vor ${ryAge} min aktualisiert`} /> : <Line label="Radar RY" value="lädt…" />}
-        <Line
-          label="Blitze (5 min)"
-          value={lightning.last5 > 0 ? `${lightning.last5}` : "keine"}
-        />
+        {ryAge != null ? (
+          <Line label="Radar RY" value={`vor ${ryAge} min aktualisiert`} />
+        ) : (
+          <Line label="Radar RY" value="lädt…" />
+        )}
+        <Line label="Blitze (5 min)" value={lightning.last5 > 0 ? `${lightning.last5}` : "keine"} />
         {lightning.bearingFromUser && lightning.last5 > 0 && (
           <Line label="Schwerpunkt" value={`Richtung ${lightning.bearingFromUser}`} />
         )}
@@ -515,7 +726,9 @@ function AnalysisRail({
             <Line label="Blitztrend" value={trendLabel(lightning.trend)} />
           </>
         ) : (
-          <p className="text-xs text-muted-foreground">Nowcast laden, indem WN im Zeitregler aktiviert wird.</p>
+          <p className="text-xs text-muted-foreground">
+            Nowcast laden, indem WN im Zeitregler aktiviert wird.
+          </p>
         )}
       </RailCard>
 
@@ -526,7 +739,10 @@ function AnalysisRail({
           <p className="text-xs text-muted-foreground">Aktiviere WN für Kurzfristausblick.</p>
         )}
         {mode === "europe" && pi?.latest && (
-          <Line label="PI Composite" value={`Frame ${new Date(pi.latest).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}`} />
+          <Line
+            label="PI Composite"
+            value={`Frame ${new Date(pi.latest).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}`}
+          />
         )}
       </RailCard>
 
@@ -540,14 +756,26 @@ function AnalysisRail({
   );
 }
 
-function RailCard({ title, children, tone = "default" }: { title: string; children: React.ReactNode; tone?: "default" | "primary" | "muted" }) {
+function RailCard({
+  title,
+  children,
+  tone = "default",
+}: {
+  title: string;
+  children: React.ReactNode;
+  tone?: "default" | "primary" | "muted";
+}) {
   const toneClass =
-    tone === "primary" ? "border-primary/40 bg-primary/5" :
-    tone === "muted" ? "bg-muted/40" :
-    "bg-card";
+    tone === "primary"
+      ? "border-primary/40 bg-primary/5"
+      : tone === "muted"
+        ? "bg-muted/40"
+        : "bg-card";
   return (
     <section className={cn("rounded-xl border border-border p-3", toneClass)}>
-      <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
+      <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {title}
+      </h3>
       <div className="grid gap-1.5">{children}</div>
     </section>
   );
@@ -564,10 +792,14 @@ function Line({ label, value }: { label: string; value: string }) {
 
 function trendLabel(t: ReturnType<typeof analyseLightning>["trend"]) {
   switch (t) {
-    case "rising": return "steigend";
-    case "falling": return "fallend";
-    case "steady": return "stabil";
-    default: return "keine Aktivität";
+    case "rising":
+      return "steigend";
+    case "falling":
+      return "fallend";
+    case "steady":
+      return "stabil";
+    default:
+      return "keine Aktivität";
   }
 }
 
@@ -580,10 +812,15 @@ function confidenceLabel(t: any): string {
 
 function lightningStatusLabel(s: string) {
   switch (s) {
-    case "open": return "live";
-    case "connecting": return "verbinde…";
-    case "closed": return "getrennt";
-    case "error": return "Fehler";
-    default: return "aus";
+    case "open":
+      return "live";
+    case "connecting":
+      return "verbinde…";
+    case "closed":
+      return "getrennt";
+    case "error":
+      return "Fehler";
+    default:
+      return "aus";
   }
 }

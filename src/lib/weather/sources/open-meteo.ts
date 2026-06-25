@@ -6,31 +6,62 @@
 const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
 
 const HOURLY_VARS = [
-  "temperature_2m","apparent_temperature","dew_point_2m","relative_humidity_2m",
-  "precipitation","precipitation_probability","wind_speed_10m","wind_gusts_10m",
-  "wind_direction_10m","pressure_msl","cloud_cover","weather_code",
-  "cape","lifted_index","freezing_level_height","snowfall",
-  "convective_inhibition","wind_speed_80m","wind_speed_180m",
-  "wind_direction_80m","wind_direction_180m","boundary_layer_height",
-  "visibility","uv_index",
-  "temperature_850hPa","temperature_700hPa","temperature_500hPa",
-  "dew_point_850hPa","dew_point_700hPa",
+  "temperature_2m",
+  "apparent_temperature",
+  "dew_point_2m",
+  "relative_humidity_2m",
+  "precipitation",
+  "precipitation_probability",
+  "wind_speed_10m",
+  "wind_gusts_10m",
+  "wind_direction_10m",
+  "pressure_msl",
+  "cloud_cover",
+  "weather_code",
+  "cape",
+  "lifted_index",
+  "freezing_level_height",
+  "snowfall",
+  "convective_inhibition",
+  "wind_speed_80m",
+  "wind_speed_180m",
+  "wind_direction_80m",
+  "wind_direction_180m",
+  "boundary_layer_height",
+  "visibility",
+  "uv_index",
+  "temperature_850hPa",
+  "temperature_700hPa",
+  "temperature_500hPa",
+  "dew_point_850hPa",
+  "dew_point_700hPa",
 ].join(",");
 
 const DAILY_VARS = [
-  "temperature_2m_min","temperature_2m_max","precipitation_sum",
-  "precipitation_probability_max","wind_gusts_10m_max","weather_code","sunrise","sunset",
+  "temperature_2m_min",
+  "temperature_2m_max",
+  "precipitation_sum",
+  "precipitation_probability_max",
+  "wind_gusts_10m_max",
+  "weather_code",
+  "sunrise",
+  "sunset",
 ].join(",");
 
 const CURRENT_VARS = [
-  "temperature_2m","apparent_temperature","relative_humidity_2m","precipitation",
-  "wind_speed_10m","wind_gusts_10m","wind_direction_10m","pressure_msl",
-  "cloud_cover","weather_code",
+  "temperature_2m",
+  "apparent_temperature",
+  "relative_humidity_2m",
+  "precipitation",
+  "wind_speed_10m",
+  "wind_gusts_10m",
+  "wind_direction_10m",
+  "pressure_msl",
+  "cloud_cover",
+  "weather_code",
 ].join(",");
 
-const MINUTELY_VARS = [
-  "precipitation","precipitation_probability","weather_code",
-].join(",");
+const MINUTELY_VARS = ["precipitation", "precipitation_probability", "weather_code"].join(",");
 
 export interface FetchForecastInput {
   lat: number;
@@ -64,22 +95,44 @@ export async function fetchOpenMeteoForecast(input: FetchForecastInput) {
  * Open-Meteos Multi-Model-Antwort mit Variablen-Suffixen ist deutlich fummeliger.
  */
 export async function fetchOpenMeteoSingleModel(input: {
-  lat: number; lon: number; model: string; forecastDays?: number;
+  lat: number;
+  lon: number;
+  model: string;
+  forecastDays?: number;
 }) {
   const url = new URL(FORECAST_URL);
   url.searchParams.set("latitude", String(input.lat));
   url.searchParams.set("longitude", String(input.lon));
   url.searchParams.set("timezone", "auto");
   url.searchParams.set("wind_speed_unit", "ms");
-  url.searchParams.set("hourly", [
-    "temperature_2m","precipitation","precipitation_probability",
-    "wind_speed_10m","wind_gusts_10m","wind_direction_10m",
-    "cape","lifted_index","convective_inhibition",
-    "dew_point_2m","weather_code","snowfall","freezing_level_height",
-    "relative_humidity_2m","pressure_msl","cloud_cover",
-    "wind_speed_80m","wind_speed_180m","wind_direction_80m","wind_direction_180m",
-    "boundary_layer_height","visibility","uv_index",
-  ].join(","));
+  url.searchParams.set(
+    "hourly",
+    [
+      "temperature_2m",
+      "precipitation",
+      "precipitation_probability",
+      "wind_speed_10m",
+      "wind_gusts_10m",
+      "wind_direction_10m",
+      "cape",
+      "lifted_index",
+      "convective_inhibition",
+      "dew_point_2m",
+      "weather_code",
+      "snowfall",
+      "freezing_level_height",
+      "relative_humidity_2m",
+      "pressure_msl",
+      "cloud_cover",
+      "wind_speed_80m",
+      "wind_speed_180m",
+      "wind_direction_80m",
+      "wind_direction_180m",
+      "boundary_layer_height",
+      "visibility",
+      "uv_index",
+    ].join(","),
+  );
   url.searchParams.set("forecast_days", String(input.forecastDays ?? 3));
   url.searchParams.set("models", input.model);
   const res = await fetch(url.toString());

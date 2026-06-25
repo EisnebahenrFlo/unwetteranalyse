@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, MapPin, X } from "lucide-react";
+import { ArrowDown, ArrowUp, MapPin, X } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { MeteoconIcon, meteoconNameForCode } from "@/components/weather/MeteoconIcon";
 import { forecastQuery } from "@/lib/weather/queries";
@@ -28,10 +28,14 @@ const TONE_LABEL: Record<Tone, string> = {
 function severityToTone(s: AlertSeverity | "none"): Tone {
   switch (s) {
     case "extreme":
-    case "severe": return "red";
-    case "moderate": return "orange";
-    case "minor": return "yellow";
-    default: return "green";
+    case "severe":
+      return "red";
+    case "moderate":
+      return "orange";
+    case "minor":
+      return "yellow";
+    default:
+      return "green";
   }
 }
 
@@ -49,7 +53,15 @@ interface Props {
  * Eine Favoriten-Reihe: Ort + Region, kleines Wettericon, aktuelle Temperatur und Warnampel.
  * Ampel kommt aus `buildHazards().worstSevere` und ist damit fachlich an die App-Analyse gekoppelt.
  */
-export function FavoriteRow({ location, isActive, canMoveUp, canMoveDown, onPick, onMove, onRemove }: Props) {
+export function FavoriteRow({
+  location,
+  isActive,
+  canMoveUp,
+  canMoveDown,
+  onPick,
+  onMove,
+  onRemove,
+}: Props) {
   const fc = useQuery(forecastQuery(location));
   const temp = fc.data?.current?.temperatureC;
   const code = fc.data?.current?.weatherCode ?? fc.data?.hourly[0]?.weatherCode;
@@ -101,7 +113,10 @@ export function FavoriteRow({ location, isActive, canMoveUp, canMoveDown, onPick
           variant="ghost"
           className="h-6 w-6"
           disabled={!canMoveUp}
-          onClick={(e) => { e.stopPropagation(); onMove(location.id, -1); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onMove(location.id, -1);
+          }}
           aria-label="Nach oben"
         >
           <ArrowUp className="h-3 w-3" />
@@ -111,19 +126,25 @@ export function FavoriteRow({ location, isActive, canMoveUp, canMoveDown, onPick
           variant="ghost"
           className="h-6 w-6"
           disabled={!canMoveDown}
-          onClick={(e) => { e.stopPropagation(); onMove(location.id, 1); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onMove(location.id, 1);
+          }}
           aria-label="Nach unten"
         >
           <ArrowDown className="h-3 w-3" />
         </Button>
         <Button
-            size="icon"
-            variant="ghost"
-            className="h-6 w-6"
-            onClick={(e) => { e.stopPropagation(); onRemove(location.id); }}
-            aria-label="Entfernen"
-          >
-            <X className="h-3 w-3" />
+          size="icon"
+          variant="ghost"
+          className="h-6 w-6"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove(location.id);
+          }}
+          aria-label="Entfernen"
+        >
+          <X className="h-3 w-3" />
         </Button>
       </div>
     </div>

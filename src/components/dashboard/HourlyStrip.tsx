@@ -19,15 +19,32 @@ export function HourlyStrip({ bundle }: { bundle: ForecastBundle }) {
           {hours.map((h) => {
             const precip = h.precipitationMm ?? 0;
             const heightPct = Math.round((precip / maxPrecip) * 100);
-            const hourOffset = Math.max(0, Math.round((new Date(h.time).getTime() - now.getTime()) / 3_600_000));
+            const hourOffset = Math.max(
+              0,
+              Math.round((new Date(h.time).getTime() - now.getTime()) / 3_600_000),
+            );
             return (
-              <div key={h.time} className={cn("flex w-16 shrink-0 flex-col items-center gap-1 rounded-md px-1 py-2 text-center hover:bg-accent/50", isCurrentHour(h.time, now) && "bg-accent")}> 
+              <div
+                key={h.time}
+                className={cn(
+                  "flex w-16 shrink-0 flex-col items-center gap-1 rounded-md px-1 py-2 text-center hover:bg-accent/50",
+                  isCurrentHour(h.time, now) && "bg-accent",
+                )}
+              >
                 <div className="h-7 text-[10px] leading-tight text-muted-foreground">
                   <div>{hourOffset === 0 ? "jetzt" : `+${hourOffset} h`}</div>
                   <div>{formatHour(h.time)}</div>
                 </div>
-                <MeteoconIcon code={h.weatherCode} isNight={isNightAt(h.time, bundle.daily)} className="h-10 w-10" label="Wetter" />
-                <div className="font-mono text-sm font-semibold" style={{ fontFamily: "var(--font-mono)" }}>
+                <MeteoconIcon
+                  code={h.weatherCode}
+                  isNight={isNightAt(h.time, bundle.daily)}
+                  className="h-10 w-10"
+                  label="Wetter"
+                />
+                <div
+                  className="font-mono text-sm font-semibold"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                >
                   {formatTemp(h.temperatureC, settings.tempUnit).split(" ")[0]}°
                 </div>
                 <div className="flex h-10 w-full items-end justify-center">

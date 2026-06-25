@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@/components/icons";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatRelative } from "@/lib/weather/format";
@@ -19,7 +19,13 @@ export interface SourceEntry {
  * Tertiärer System-Status: zeigt Quellen, Stand, Verzögerung, Hinweise.
  * Default kollabiert. Status-Indikator: grün/gelb/rot.
  */
-export function SystemStatus({ entries, defaultOpen = false }: { entries: SourceEntry[]; defaultOpen?: boolean }) {
+export function SystemStatus({
+  entries,
+  defaultOpen = false,
+}: {
+  entries: SourceEntry[];
+  defaultOpen?: boolean;
+}) {
   const [open, setOpen] = useState(defaultOpen);
   const now = useLiveNow();
   const status = overallStatus(entries, now);
@@ -34,17 +40,23 @@ export function SystemStatus({ entries, defaultOpen = false }: { entries: Source
       >
         <span className={cn("h-2.5 w-2.5 rounded-full", STATUS_DOT[status])} aria-hidden />
         <span className="min-w-0">
-          <span className="block text-[13px] font-semibold text-foreground">Datenquellen & System</span>
+          <span className="block text-[13px] font-semibold text-foreground">
+            Datenquellen & System
+          </span>
           <span className="block truncate text-[11px] text-muted-foreground">
             {entries.length} Quellen · Status {STATUS_LABEL[status]}
           </span>
         </span>
-        <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
+        <ChevronDown
+          className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")}
+        />
       </button>
 
       {open && (
         <div className="grid divide-y divide-border/60 border-t border-border">
-          {entries.map((e) => <Row key={e.id} entry={e} />)}
+          {entries.map((e) => (
+            <Row key={e.id} entry={e} />
+          ))}
         </div>
       )}
     </Card>
@@ -59,7 +71,10 @@ function Row({ entry }: { entry: SourceEntry }) {
       <span className={cn("h-2 w-2 rounded-full", STATUS_DOT[status])} aria-hidden />
       <div className="min-w-0">
         <div className="truncate text-[13px] font-medium text-foreground">{entry.label}</div>
-        <div className="truncate text-[11px] text-muted-foreground">{entry.description}{entry.note ? ` · ${entry.note}` : ""}</div>
+        <div className="truncate text-[11px] text-muted-foreground">
+          {entry.description}
+          {entry.note ? ` · ${entry.note}` : ""}
+        </div>
       </div>
       <div className="text-right font-mono text-[11px] tabular-nums text-muted-foreground">
         {entry.meta?.updatedAt ? formatRelative(entry.meta.updatedAt) : "—"}
@@ -99,7 +114,13 @@ function overallStatus(entries: SourceEntry[], now: Date): Status {
 }
 
 /** Header-Pill für den schnellen Status-Blick. */
-export function SystemStatusPill({ entries, onJump }: { entries: SourceEntry[]; onJump?: () => void }) {
+export function SystemStatusPill({
+  entries,
+  onJump,
+}: {
+  entries: SourceEntry[];
+  onJump?: () => void;
+}) {
   const now = useLiveNow();
   const status = overallStatus(entries, now);
   return (

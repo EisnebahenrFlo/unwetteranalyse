@@ -6,8 +6,17 @@ import { hailRisk, lowLevelShearMs, thunderProbability } from "./convection";
  * `category` trennt z. B. Hitze und Gewitter farblich und semantisch.
  */
 export type HazardCategory =
-  | "thunderstorm" | "hail" | "wind" | "rain" | "snow" | "ice"
-  | "fog" | "heat" | "cold" | "uv" | "tornado";
+  | "thunderstorm"
+  | "hail"
+  | "wind"
+  | "rain"
+  | "snow"
+  | "ice"
+  | "fog"
+  | "heat"
+  | "cold"
+  | "uv"
+  | "tornado";
 
 export type HazardKind = AlertSeverity | "info" | "heat" | "cold";
 
@@ -31,11 +40,16 @@ const RANK: AlertSeverity[] = ["minor", "moderate", "severe", "extreme"];
 const worse = (a: AlertSeverity, b: AlertSeverity) => (RANK.indexOf(a) > RANK.indexOf(b) ? a : b);
 
 function fmtHourRange(a: string, b: string) {
-  const f = (iso: string) => new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  const f = (iso: string) =>
+    new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
   return `${f(a)}–${f(b)} Uhr`;
 }
 
-function bucketRange(points: HourlyPoint[], pick: (p: HourlyPoint) => number | undefined, min: number) {
+function bucketRange(
+  points: HourlyPoint[],
+  pick: (p: HourlyPoint) => number | undefined,
+  min: number,
+) {
   let start: string | null = null;
   let end: string | null = null;
   let peak = 0;
@@ -105,24 +119,39 @@ export function buildHazards(bundle: ForecastBundle): HazardSet {
   const conf = confidenceFor(horizon);
 
   // 1) Gewitter
-  let tpMax = 0; let tpAt: HourlyPoint | null = null;
+  let tpMax = 0;
+  let tpAt: HourlyPoint | null = null;
   let mode: "single" | "multi" | "supercell" | "none" = "none";
   for (const p of horizon) {
     const tp = thunderProbability(p);
-    if (tp > tpMax) { tpMax = tp; tpAt = p; }
+    if (tp > tpMax) {
+      tpMax = tp;
+      tpAt = p;
+    }
     const m = thunderstormMode(p);
     if (m === "supercell" || (m === "multi" && mode !== "supercell")) mode = m;
     else if (mode === "none" && m !== "none") mode = m;
   }
   if (tpMax >= 0.3 && tpAt) {
     const sev: AlertSeverity =
-      mode === "supercell" ? "severe" : mode === "multi" ? "moderate" : tpMax >= 0.7 ? "moderate" : "minor";
+      mode === "supercell"
+        ? "severe"
+        : mode === "multi"
+          ? "moderate"
+          : tpMax >= 0.7
+            ? "moderate"
+            : "minor";
     list.push({
       id: "thunder",
       category: "thunderstorm",
       severity: sev,
       kind: sev,
-      title: mode === "supercell" ? "Superzellen-Potenzial" : mode === "multi" ? "Mehrzellige Gewitter" : "Einzelne Gewitter",
+      title:
+        mode === "supercell"
+          ? "Superzellen-Potenzial"
+          : mode === "multi"
+            ? "Mehrzellige Gewitter"
+            : "Einzelne Gewitter",
       description: `${Math.round(tpMax * 100)} % Gewitterwahrscheinlichkeit, Modus: ${mode === "supercell" ? "Superzelle" : mode === "multi" ? "Multizelle" : "Einzelzelle"}.`,
       windowStart: tpAt.time,
       windowEnd: tpAt.time,
@@ -137,7 +166,8 @@ export function buildHazards(bundle: ForecastBundle): HazardSet {
   for (const p of horizon) {
     const h = hailRisk(p);
     if (h !== "none" && (hailWorst === "none" || RANK.indexOf(h) > RANK.indexOf(hailWorst))) {
-      hailWorst = h; hailAt = p;
+      hailWorst = h;
+      hailAt = p;
     }
   }
   if (hailWorst !== "none" && hailAt) {
@@ -160,7 +190,8 @@ export function buildHazards(bundle: ForecastBundle): HazardSet {
   for (const p of horizon) {
     const t = tornadoProxyLevel(p);
     if (t !== "none" && (tornadoWorst === "none" || RANK.indexOf(t) > RANK.indexOf(tornadoWorst))) {
-      tornadoWorst = t; tornadoAt = p;
+      tornadoWorst = t;
+      tornadoAt = p;
     }
   }
   if (tornadoWorst !== "none" && tornadoAt) {
@@ -170,7 +201,8 @@ export function buildHazards(bundle: ForecastBundle): HazardSet {
       severity: tornadoWorst,
       kind: tornadoWorst,
       title: `Tornado-Indikatoren ${tornadoWorst === "severe" ? "deutlich" : tornadoWorst === "moderate" ? "erhöht" : "leicht erhöht"}`,
-      description: "Heuristik aus CAPE, Low-Level-Shear und Feuchte. Kein Ersatz für offizielle Warnung.",
+      description:
+        "Heuristik aus CAPE, Low-Level-Shear und Feuchte. Kein Ersatz für offizielle Warnung.",
       windowStart: tornadoAt.time,
       confidence: Math.max(1, conf - 1) as 1 | 2 | 3 | 4 | 5,
     });
@@ -182,13 +214,27 @@ export function buildHazards(bundle: ForecastBundle): HazardSet {
     return !b || v > b.v ? { v, t: p.time } : b;
   }, null);
   if (gustMax && gustMax.v >= 14) {
-    const sev: AlertSeverity = gustMax.v >= 33 ? "extreme" : gustMax.v >= 25 ? "severe" : gustMax.v >= 18 ? "moderate" : "minor";
+    const sev: AlertSeverity =
+      gustMax.v >= 33
+        ? "extreme"
+        : gustMax.v >= 25
+          ? "severe"
+          : gustMax.v >= 18
+            ? "moderate"
+            : "minor";
     list.push({
       id: "wind",
       category: "wind",
       severity: sev,
       kind: sev,
-      title: sev === "extreme" ? "Orkanböen" : sev === "severe" ? "Schwerer Sturm" : sev === "moderate" ? "Sturmböen" : "Windige Phase",
+      title:
+        sev === "extreme"
+          ? "Orkanböen"
+          : sev === "severe"
+            ? "Schwerer Sturm"
+            : sev === "moderate"
+              ? "Sturmböen"
+              : "Windige Phase",
       description: `Spitzenböen bis ${(gustMax.v * 3.6).toFixed(0)} km/h.`,
       windowStart: gustMax.t,
       peakValue: `${(gustMax.v * 3.6).toFixed(0)} km/h`,
@@ -202,13 +248,27 @@ export function buildHazards(bundle: ForecastBundle): HazardSet {
     return !b || v > b.v ? { v, t: p.time } : b;
   }, null);
   if (rainPeak && rainPeak.v >= 5) {
-    const sev: AlertSeverity = rainPeak.v >= 40 ? "severe" : rainPeak.v >= 25 ? "moderate" : rainPeak.v >= 15 ? "minor" : "minor";
+    const sev: AlertSeverity =
+      rainPeak.v >= 40
+        ? "severe"
+        : rainPeak.v >= 25
+          ? "moderate"
+          : rainPeak.v >= 15
+            ? "minor"
+            : "minor";
     list.push({
       id: "rain",
       category: "rain",
       severity: sev,
       kind: sev,
-      title: rainPeak.v >= 40 ? "Extremer Starkregen" : rainPeak.v >= 25 ? "Heftiger Starkregen" : rainPeak.v >= 15 ? "Starkregen markant" : "Schauerintensität",
+      title:
+        rainPeak.v >= 40
+          ? "Extremer Starkregen"
+          : rainPeak.v >= 25
+            ? "Heftiger Starkregen"
+            : rainPeak.v >= 15
+              ? "Starkregen markant"
+              : "Schauerintensität",
       description: `Bis ${rainPeak.v.toFixed(1)} mm in einer Stunde möglich.`,
       windowStart: rainPeak.t,
       peakValue: `${rainPeak.v.toFixed(1)} mm/h`,
@@ -216,10 +276,14 @@ export function buildHazards(bundle: ForecastBundle): HazardSet {
     });
   }
   const rain6 = (() => {
-    let max = 0; let at = "";
+    let max = 0;
+    let at = "";
     for (let i = 0; i + 6 <= horizon.length; i++) {
       const sum = horizon.slice(i, i + 6).reduce((s, p) => s + (p.precipitationMm ?? 0), 0);
-      if (sum > max) { max = sum; at = horizon[i].time; }
+      if (sum > max) {
+        max = sum;
+        at = horizon[i].time;
+      }
     }
     return { max, at };
   })();
@@ -239,7 +303,11 @@ export function buildHazards(bundle: ForecastBundle): HazardSet {
   }
 
   // 6) Glätte / gefrierender Regen / Schnee
-  const ice = bucketRange(horizon, (p) => ((p.precipitationMm ?? 0) > 0.1 && p.temperatureC <= 1 ? 1 : 0), 1);
+  const ice = bucketRange(
+    horizon,
+    (p) => ((p.precipitationMm ?? 0) > 0.1 && p.temperatureC <= 1 ? 1 : 0),
+    1,
+  );
   if (ice) {
     list.push({
       id: "ice",
@@ -248,7 +316,8 @@ export function buildHazards(bundle: ForecastBundle): HazardSet {
       kind: "cold",
       title: "Glättegefahr",
       description: "Niederschlag bei Temperaturen um den Gefrierpunkt.",
-      windowStart: ice.start, windowEnd: ice.end,
+      windowStart: ice.start,
+      windowEnd: ice.end,
       confidence: conf,
     });
   }
@@ -285,13 +354,19 @@ export function buildHazards(bundle: ForecastBundle): HazardSet {
   // 8) Hitze (eigene Kategorie, NICHT Unwetter)
   for (const d of days) {
     if (d.tempMaxC >= 28) {
-      const sev: AlertSeverity = d.tempMaxC >= 38 ? "severe" : d.tempMaxC >= 32 ? "moderate" : "minor";
+      const sev: AlertSeverity =
+        d.tempMaxC >= 38 ? "severe" : d.tempMaxC >= 32 ? "moderate" : "minor";
       list.push({
         id: `heat-${d.date}`,
         category: "heat",
         severity: sev,
         kind: "heat",
-        title: d.tempMaxC >= 38 ? "Extreme Hitze" : d.tempMaxC >= 32 ? "Starke Wärmebelastung" : "Wärmebelastung",
+        title:
+          d.tempMaxC >= 38
+            ? "Extreme Hitze"
+            : d.tempMaxC >= 32
+              ? "Starke Wärmebelastung"
+              : "Wärmebelastung",
         description: `Höchstwert ${d.tempMaxC.toFixed(0)} °C am ${new Date(d.date).toLocaleDateString("de-DE", { weekday: "short" })}.`,
         peakValue: `${d.tempMaxC.toFixed(0)} °C`,
         confidence: 4,
@@ -322,13 +397,18 @@ export function buildHazards(bundle: ForecastBundle): HazardSet {
       severity: "minor",
       kind: "info",
       title: `UV-Index hoch (${uvMax.toFixed(0)})`,
-      description: uvMax >= 8 ? "Sehr hohe UV-Belastung, Schutz dringend nötig." : "Hohe UV-Belastung, Schutz empfohlen.",
+      description:
+        uvMax >= 8
+          ? "Sehr hohe UV-Belastung, Schutz dringend nötig."
+          : "Hohe UV-Belastung, Schutz empfohlen.",
       confidence: 4,
     });
   }
 
   // Worst Severe (nur „echte" Unwetter)
-  const severeOnly = list.filter((h) => h.kind !== "heat" && h.kind !== "cold" && h.kind !== "info");
+  const severeOnly = list.filter(
+    (h) => h.kind !== "heat" && h.kind !== "cold" && h.kind !== "info",
+  );
   let worst: AlertSeverity | "none" = "none";
   for (const h of severeOnly) worst = worst === "none" ? h.severity : worse(worst, h.severity);
 
@@ -337,8 +417,10 @@ export function buildHazards(bundle: ForecastBundle): HazardSet {
 
   // Sortierung: zuerst echte Unwetter nach Schwere, dann Heat/Cold/Info
   list.sort((a, b) => {
-    const aSev = a.kind === "heat" || a.kind === "cold" || a.kind === "info" ? -1 : RANK.indexOf(a.severity);
-    const bSev = b.kind === "heat" || b.kind === "cold" || b.kind === "info" ? -1 : RANK.indexOf(b.severity);
+    const aSev =
+      a.kind === "heat" || a.kind === "cold" || a.kind === "info" ? -1 : RANK.indexOf(a.severity);
+    const bSev =
+      b.kind === "heat" || b.kind === "cold" || b.kind === "info" ? -1 : RANK.indexOf(b.severity);
     return bSev - aSev;
   });
 
@@ -358,15 +440,23 @@ function computePeakWindow(horizon: HourlyPoint[]): { start: string; end: string
     if (hailRisk(p) !== "none") v += 12;
     return { t: p.time, v };
   });
-  let bestStart = -1, bestEnd = -1, bestSum = 0;
-  let curStart = -1, curSum = 0;
+  let bestStart = -1,
+    bestEnd = -1,
+    bestSum = 0;
+  let curStart = -1,
+    curSum = 0;
   for (let i = 0; i < ranked.length; i++) {
     if (ranked[i].v >= 20) {
       if (curStart === -1) curStart = i;
       curSum += ranked[i].v;
-      if (curSum > bestSum) { bestSum = curSum; bestStart = curStart; bestEnd = i; }
+      if (curSum > bestSum) {
+        bestSum = curSum;
+        bestStart = curStart;
+        bestEnd = i;
+      }
     } else {
-      curStart = -1; curSum = 0;
+      curStart = -1;
+      curSum = 0;
     }
   }
   if (bestStart === -1) return null;
@@ -374,14 +464,19 @@ function computePeakWindow(horizon: HourlyPoint[]): { start: string; end: string
 }
 
 export function formatHazardWindow(h: Hazard): string {
-  if (h.windowStart && h.windowEnd && h.windowStart !== h.windowEnd) return fmtHourRange(h.windowStart, h.windowEnd);
-  if (h.windowStart) return `ab ${new Date(h.windowStart).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr`;
+  if (h.windowStart && h.windowEnd && h.windowStart !== h.windowEnd)
+    return fmtHourRange(h.windowStart, h.windowEnd);
+  if (h.windowStart)
+    return `ab ${new Date(h.windowStart).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr`;
   return "im Tagesverlauf";
 }
 
 export function dailyHazardPeak(daily: DailyPoint, hourly: HourlyPoint[]) {
   const dayPoints = hourly.filter((p) => p.time.slice(0, 10) === daily.date);
-  let cape = 0, gust = 0, rain = 0, tp = 0;
+  let cape = 0,
+    gust = 0,
+    rain = 0,
+    tp = 0;
   for (const p of dayPoints) {
     cape = Math.max(cape, p.cape ?? 0);
     gust = Math.max(gust, p.windGustMs ?? 0);
