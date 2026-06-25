@@ -10,6 +10,12 @@ export type HazardKind = "hail" | "flood" | "lightning";
 
 export type HazardLevel = "none" | "watch" | "elevated" | "high" | "extreme";
 
+import type { DisplayLevel } from "../thresholds/warn-level";
+
+/** HazardLevel → gemeinsame DWD-Anzeigestufe. */
+export const hazardToLevel = (l: HazardLevel): DisplayLevel =>
+  l === "extreme" ? 4 : l === "high" ? 3 : l === "elevated" ? 2 : l === "watch" ? 1 : 0;
+
 export const HAZARD_RANK: Record<HazardLevel, number> = {
   none: 0,
   watch: 1,

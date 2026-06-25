@@ -4,7 +4,7 @@
  * Severity wird mit CAPE/LI aus Open-Meteo am aktiven Ort angereichert.
  */
 
-export type StormSeverity = "calm" | "watch" | "serious" | "severe";
+export type StormSeverity = "calm" | "watch" | "serious" | "severe" | "extreme";
 
 export interface StormCentroidPoint {
   time: number;
@@ -124,4 +124,5 @@ export const SEVERITY_RANK: Record<StormSeverity, number> = {
   watch: 1,
   serious: 2,
   severe: 3,
+  extreme: 4,
 };
