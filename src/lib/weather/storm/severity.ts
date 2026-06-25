@@ -117,9 +117,23 @@ export function scoreCell(input: {
     }
   }
 
+  // Wind als eigenes Kriterium (kommt aus Open-Meteo, nicht aus Radar).
+  const wLevel = windLevelFromMs(input.env.windGustMs);
+  if (wLevel > 0 && input.env.windGustMs != null) {
+    const ms = input.env.windGustMs;
+    // Additiver Score-Beitrag: 1→6, 2→12, 3→20, 4→28 Punkte.
+    const windScore = wLevel === 4 ? 28 : wLevel === 3 ? 20 : wLevel === 2 ? 12 : 6;
+    score += windScore;
+    const bft = wLevel === 4 ? 12 : wLevel === 3 ? 10 : wLevel === 2 ? 8 : 7;
+    reasons.push(`Böen ${(ms * 3.6).toFixed(0)} km/h (Bft ${bft})`);
+  }
+
   score = clamp(Math.round(score), 0, 100);
   let level: StormSeverity =
     score >= 70 ? "severe" : score >= 45 ? "serious" : score >= 22 ? "watch" : "calm";
+
+  // DWD-Maximum-Prinzip: Wind-Kriterium hebt die Stufe an, wenn es höher liegt.
+  level = maxSeverity(level, windFloorSeverity(wLevel));
 
   // Stufe 4 (extrem) nur mit Umgebungs-Stütze. Ohne Daten Deckel bei severe.
   if (level === "severe") {
