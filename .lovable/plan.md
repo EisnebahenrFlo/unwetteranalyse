@@ -1,94 +1,79 @@
+# Stormtracking: Geo-Filter & Label-Refresh
+
 ## Ziel
+- Zellerkennung räumlich auf DACH (DE/AT/CH/LI) + Italien begrenzen, mit 50 km Puffer um Randzellen nicht zu verlieren.
+- Zell-Labels entrümpeln: weniger Zeilen, lesbar, sinnvolle Namen, keine erfundenen dBZ-Schätzwerte mehr.
+- ETA-Ziel klar benennen, sonst weglassen.
 
-Zwei Baustellen sauber lösen:
-1. **Aktuelle Lage** im Dashboard auf Tabs/Sektionen umbauen, damit Werte wirklich erfassbar werden.
-2. **Stormtracking auf der Radarkarte** mit klaren Labels und sauberer Zugbahn-Darstellung.
+## 1. Geo-Filter (DACH + IT, BBox + 50 km Puffer)
 
----
+**Neue Datei** `src/lib/weather/storm/region.ts`
+- Export `DACH_IT_BBOX = { west: 5.5, south: 35.5, east: 18.7, north: 55.5 }` (umfasst DE/AT/CH/LI/IT inkl. Inseln).
+- Export `DACH_IT_BUFFER_KM = 50`.
+- Helper `isInRegion(lat, lon, bufferKm = 50)`: BBox-Test mit `bufferKm` in Grad umgerechnet (lat: km/111.32, lon: km/(111.32·cos(lat))).
 
-## 1. Aktuelle Lage neu (`CurrentConditions.tsx`)
+**`src/lib/weather/storm/background.ts`** (`tick()`)
+- Vor Übergabe an `stepStormTracking`: `const strikes = this.buffer.filter(s => isInRegion(s.lat, s.lon))`.
+- Buffer selbst bleibt unverändert (volle Blitz-Darstellung weiterhin möglich); nur die Detection-Eingabe wird gefiltert.
+- Nach Tracking zusätzlich: `cells = cells.filter(c => isInRegion(c.centroid.lat, c.centroid.lon, 0))` — Zellen, deren Zentrum aus der Pufferzone heraus driftet, fallen sauber raus.
 
-Heute quetscht alles in eine Zeile mit Icon + Temp + 3 Mini-Felder. Wir trennen Themen.
+## 2. Zell-Namen (besser lesbar)
 
-**Aufbau:**
-- Header bleibt: Titel „Aktuelle Lage" + Wettercode-Subtitle + Meta (Quelle, Stand).
-- Darunter ein **Hero-Block** (immer sichtbar): großes Meteocon + Temperatur + gefühlt + Code-Label.
-- Darunter `SegmentedTabs` mit 4 Sektionen:
-  - **Temperatur** — aktuell, gefühlt, Taupunkt, rel. Feuchte, Schwülegrad-Hinweis falls Taupunkt ≥ 16 °C.
-  - **Wind** — Mittelwind (Wert + Einheit + Kompass-Badge), Böen, Richtung als kleine Windrose (SVG-Pfeil), DWD-Schwellen-Hinweis.
-  - **Niederschlag** — 10-min-Summe, Stunden-Tendenz aus `hourly`, Schauer/Gewitter-Wahrscheinlichkeit falls verfügbar.
-  - **Druck & Sicht** — Druck + Tendenz (Δ aus letzten 3 h), Sichtweite, Bewölkung.
-- Jede Sektion: `grid-cols-2 md:grid-cols-3`, Werte über `ValueWithUnit` size="lg", Hint klein darunter.
-- State merken pro Session via `useState`, default „Temperatur".
-- Leere Felder mit „—" statt Sektion auszublenden, damit Layout stabil bleibt.
+Aktuell sind IDs wie `C-1734567890-12` nicht scannbar. Stattdessen ein kurzer, stabiler Anzeigename:
+- Format: `Zelle DE-A1`, `Zelle IT-B3`, … (Landpräfix aus Centroid + Buchstabe/Zahl je Severity-Reihenfolge in der aktuellen Tick-Ausgabe).
+- Implementierung: in `background.ts` nach `cells.sort(...)` ein `displayName` ableiten (Land via grober BBox-Zuordnung DE/AT/CH/IT/—, Index nach Severity-Rang).
+- Feld `displayName?: string` in `StormCell` (`src/lib/weather/storm/types.ts`) ergänzen, ohne bestehende `id` zu brechen.
 
-**Mobile:** Tabs horizontal scrollbar, Hero stapelt über Tabs.
+## 3. Labels: zoom-abhängig (Smart)
 
----
+Bisher 4 Zeilen immer sichtbar → überladen, dBZ/Top sind Proxys. Neuer Aufbau in `RadarMap.tsx` (`renderStormCells` + Layer `storm-labels`):
 
-## 2. Stormtracking auf der Radarkarte
+**Daten pro Centroid-Feature**:
+- `labelShort`: `Zelle DE-A1 · SCHWER`
+- `labelLong`: zwei Zeilen, z. B.
+  - Zeile 1: `Zelle DE-A1 · SCHWER`
+  - Zeile 2: `38 km/h → NO` *(nur wenn `motion.speedKmh > 1`)*
+- `labelEta`: dritte Zeile *nur* wenn ETA ≤ 60 min UND Zielname vorhanden, Format `→ Ansbach 24 min`.
 
-### 2a. Zell-Labels (`RadarMap.tsx` → `setStormCells`)
-
-Aktuell zeigt das Label nur `id` + Motion. Neuer Label-Inhalt pro Zelle:
-
-```text
-C-204 · SCHWER
-~38 dBZ · Top 9 km
-38 km/h → NO
-ETA Ansbach: 24 min
+**Layer-Expression** (`text-field`):
 ```
+["step", ["zoom"],
+  ["get", "labelShort"],          // zoom < 7: Pill-Style
+  7, ["get", "labelMid"],         // 7..9: 2 Zeilen
+  9, ["get", "labelFull"]         // ≥ 9: bis 3 Zeilen inkl. ETA
+]
+```
+- `text-size`: `["interpolate", ["linear"], ["zoom"], 5, 10, 7, 11, 10, 13]`
+- `text-anchor: "top-left"`, `text-offset: [0.9, 0.5]`, `text-justify: "left"`, `text-line-height: 1.15`
+- `text-halo-width: 2`, `text-halo-color: #ffffff`
+- Kollision aktiv: `text-allow-overlap: false`, `text-ignore-placement: false`, `symbol-sort-key` nach Severity-Rang (höchste zuerst, niedrigere weichen).
 
-Umsetzung:
-- Mehrzeiliges `text-field` über MapLibre-Expression (`["format", ...]`) mit unterschiedlichen `text-size` und Farben pro Zeile.
-- Severity-Wort + Farbe aus `SEVERITY_COLOR` und Severity-Label-Tokens.
-- **dBZ-Proxy:** aus `strikeRatePerMin` und `radiusKm` ableiten (Mapping in `severity.ts`, klar dokumentiert als Schätzwert). Echotop-Proxy ebenso aus CAPE/Severity → in `StormCell` zwei neue optionale Felder `estReflectivityDbz`, `estEchoTopKm`.
-- **ETA nächster Ort:** kleine Helper-Funktion `nearestNamedPlace(cell, favorites, activeLocation)` — nimmt die nächste Favoriten- oder Aktiv-Location innerhalb des Cones, berechnet Distanz/Motion → Minuten. Liegt keine Location im Cone, Zeile weglassen.
-- Label-Anker `top-left` mit `text-offset [0.8, 0.4]` und `text-justify: left`, damit der Block neben dem Centroid hängt und nicht überlappt.
-- Bei Zoom < 7 nur Zeile 1 (`id + severity`) anzeigen, alles weitere über `text-size`-Stops und `symbol-sort-key` auf Severity-Rank (severe zuerst).
+**Entfernt**: dBZ/Top-Zeile sowie `estimateReflectivityDbz` / `estimateEchoTopKm` aus dem Label. Funktionen bleiben in `estimate.ts` für den Drawer (mit klarer „Schätzung“-Markierung), werden aber nicht mehr in der Karte gerendert.
 
-### 2b. Zugbahn (gemäß Auswahl: Linie + Cone + ETA-Punkte)
+## 4. ETA-Zeile (nur sinnvoll)
 
-Heute schon vorhanden, aber visuell laut. Wir räumen auf:
+`etaToNearestTarget` in `estimate.ts` strenger machen:
+- Liefert `null`, wenn:
+  - kein Zielort innerhalb 80 km vor der Zelle (in Bewegungsrichtung, Winkelabweichung ≤ 60°), oder
+  - ETA < 0 min oder > 90 min, oder
+  - `motion.speedKmh < 5` (driftende Zelle, ETA nicht aussagekräftig).
+- Sonst `{ target, minutes }` wie bisher.
 
-- **Vergangene Zugbahn** (`storm-past-line`/`-pts`):
-  - Linie: dezent in Zellfarbe, `line-width: 2`, `line-opacity: 0.55`, weißer 0.5 px Halo via zweite Linie darunter.
-  - Punkte nur jeden 2. Eintrag, älteste mit alpha 0.2, Größe 2.5.
-- **Forecast-Linie** (`storm-fc-line`): durchgehend kräftig in Severity-Farbe, `line-width: 3`, `line-dasharray: [2, 1.5]`.
-- **Cone** (`storm-cone`): Fill auf `0.10`, Outline gleiche Severity-Farbe `0.6` Opacity. Wenn Cone > sehr groß (Sigma hoch) auf max ~80 km abschneiden, damit nicht halb Bayern eingefärbt wird.
-- **ETA-Marker** (`storm-eta-pts`/`-labels`): nur +15 / +30 / +60. Label klar `+15 min`, weißer Halo 1.6, kleine Outline-Pille (Background-Rect über `text-padding` simulieren).
-- **Pfeilspitze** (`storm-fc-arrow`): bleibt, aber Größe an Zoom koppeln (`interpolate` zoom 6 → 12, 16 → 22) und Anker leicht zurücksetzen, damit Spitze auf dem Endpunkt sitzt.
-- **Layer-Reihenfolge fest:** past unten → cone → forecast → arrow → ETA-Punkte → Labels oben. `firstOverlayLayer` Liste entsprechend justieren.
+## 5. Severity-Drawer (`StormCellDrawer.tsx`)
 
-### 2c. Severity-Tokens & Helper
-
-- In `severity-tokens.ts` Severity-Label-Strings (`CALM / BEOBACHTEN / MARKANT / UNWETTER`) zentral halten.
-- In `storm/severity.ts` Helper `estimateReflectivity(cell)` und `estimateEchoTop(cell, env)` ergänzen, mit Kommentaren zur Herleitung und klarer Kennzeichnung „Schätzwert".
-- In `storm/forecast.ts` (oder neuer `eta.ts`) Helper `etaToPlace(cell, target)`.
-
----
+Da dBZ/Top aus dem Karten-Label fliegen, im Drawer als „Geschätzt aus Blitzrate & Radius“ deutlich kennzeichnen (Tooltip + Suffix `~`). Keine weiteren Änderungen.
 
 ## Technische Details
 
-- Keine API-Änderungen, keine neuen Dependencies.
-- Nur Frontend/Präsentation plus zwei reine Helper in `lib/weather/storm/`.
-- Datenfluss: `StormCell` bekommt zwei optionale Felder, gefüllt im Detection-Schritt (`detect.ts`/`severity.ts`). Wird nichts berechnet, bleiben Felder undefined und Labels lassen Zeilen einfach weg.
-- ETA-Berechnung läuft im RadarMap-Setter, da dort sowieso die Cells durchiteriert werden und Favoriten/Active-Location via Props reingereicht werden müssen → kleine Erweiterung der `RadarMap`-Props (`namedTargets: {name: string; lat: number; lon: number}[]`).
+**Geänderte Dateien**
+- neu: `src/lib/weather/storm/region.ts`
+- `src/lib/weather/storm/types.ts` — Feld `displayName?: string`
+- `src/lib/weather/storm/background.ts` — Region-Filter, Vergabe `displayName`
+- `src/lib/weather/storm/estimate.ts` — strengere ETA-Logik
+- `src/components/radar/RadarMap.tsx` — Label-Felder + zoom-step Expression, Kollision aktiv, dBZ raus
+- `src/components/storm/StormCellDrawer.tsx` — Schätz-Kennzeichnung
 
----
-
-## Offene Annahme
-
-Echte dBZ/Echotop-Werte liegen aus den aktuellen Quellen (Blitzortung + Open-Meteo) **nicht** pro Zelle vor. Wir labeln die abgeleiteten Werte deshalb als Schätzung („~38 dBZ"). Wenn Du das so nicht willst, schmeißen wir Zeile 2 raus und zeigen stattdessen `Strikes/min` + `Radius km` — sag kurz Bescheid, sonst läuft Variante mit Schätzwerten.
-
----
-
-## Liefergegenstand
-
-- `src/components/dashboard/CurrentConditions.tsx` — Hero + Tabs-Layout.
-- `src/components/radar/RadarMap.tsx` — Label-Format, Layer-Tuning, ETA-Targets.
-- `src/lib/weather/storm/types.ts` — neue optionale Felder.
-- `src/lib/weather/storm/severity.ts` — Reflectivity/Echotop-Schätzer.
-- `src/lib/weather/storm/forecast.ts` (oder neu `eta.ts`) — ETA-Helper.
-- `src/components/storm/severity-tokens.ts` — Severity-Labels.
-- Aufrufer von `RadarMap` (`RadarCockpit.tsx`) — Favoriten/Active-Location als `namedTargets` reichen.
+**Nicht-Ziele**
+- Kein Wechsel zu Polygon-Filter (BBox + Puffer reicht laut Entscheidung).
+- Keine Änderungen an Zugbahn/Cone/ETA-Punkten auf der Karte selbst.
+- Keine neue Datenquelle für echte dBZ-Werte (späterer Schritt).

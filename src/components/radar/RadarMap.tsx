@@ -7,8 +7,6 @@ import type { CellTrack } from "@/lib/weather/analysis/cockpit-diagnostics";
 import type { StormCell } from "@/lib/weather/storm/types";
 import { SEVERITY_COLOR, SEVERITY_BADGE } from "@/components/storm/severity-tokens";
 import {
-  estimateEchoTopKm,
-  estimateReflectivityDbz,
   etaToNearestTarget,
   type NamedTarget,
 } from "@/lib/weather/storm/estimate";
@@ -374,21 +372,27 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
         type: "symbol",
         source: "storm-centroid-src",
         layout: {
-          "text-field": ["get", "label"],
-          "text-size": ["interpolate", ["linear"], ["zoom"], 5, 9, 7, 10, 10, 13],
+          "text-field": [
+            "step", ["zoom"],
+            ["get", "labelShort"],
+            7, ["get", "labelMid"],
+            9, ["get", "labelFull"],
+          ],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 5, 10, 7, 11, 10, 13],
           "text-anchor": "top-left",
-          "text-offset": [0.8, 0.4],
+          "text-offset": [0.9, 0.5],
           "text-justify": "left",
-          "text-line-height": 1.2,
-          "text-allow-overlap": true,
+          "text-line-height": 1.15,
+          "text-padding": 4,
+          "text-allow-overlap": false,
           "text-ignore-placement": false,
-          "symbol-sort-key": ["coalesce", ["get", "rank"], 0],
+          "symbol-sort-key": ["coalesce", ["get", "sortKey"], 0],
           "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"],
         },
         paint: {
           "text-color": ["coalesce", ["get", "textColor"], "#0f172a"],
           "text-halo-color": "#ffffff",
-          "text-halo-width": 1.8,
+          "text-halo-width": 2,
         },
       });
     });
@@ -757,28 +761,31 @@ function renderStormCells(map: MlMap, cells: StormCell[], targets: NamedTarget[]
             properties: { color, bearing },
           });
         }
-        // Mehrzeiliges Label: ID + Severity / Reflektivität & Top / Motion / ETA.
-        const lines: string[] = [];
-        lines.push(`${cell.id} · ${SEVERITY_BADGE[cell.severity.level]}`);
-        const dbz = estimateReflectivityDbz(cell);
-        const top = estimateEchoTopKm(cell);
-        lines.push(`~${dbz} dBZ · Top ${top.toFixed(1)} km`);
-        if (cell.motion && cell.motion.speedKmh > 1) {
-          lines.push(`${Math.round(cell.motion.speedKmh)} km/h → ${cell.motion.bearingCompass}`);
-        }
+        // Zoom-abhängige Labels: kurz / mittel / lang.
+        const name = cell.displayName ?? cell.id;
+        const badge = SEVERITY_BADGE[cell.severity.level];
+        const labelShort = `${name} · ${badge}`;
+        const motionLine = cell.motion && cell.motion.speedKmh > 1
+          ? `${Math.round(cell.motion.speedKmh)} km/h → ${cell.motion.bearingCompass}`
+          : null;
+        const labelMid = motionLine ? `${labelShort}\n${motionLine}` : labelShort;
         const eta = etaToNearestTarget(cell, targets);
-        if (eta) {
-          lines.push(`ETA ${eta.target.name}: ${eta.minutes} min`);
-        }
+        const etaLine = eta ? `→ ${eta.target.name} ${eta.minutes} min` : null;
+        const labelFull = [labelShort, motionLine, etaLine].filter(Boolean).join("\n");
         centroids.push({
           type: "Feature",
           geometry: { type: "Point", coordinates: [cell.centroid.lon, cell.centroid.lat] },
           properties: {
             color,
             id: cell.id,
-            label: lines.join("\n"),
+            labelShort,
+            labelMid,
+            labelFull,
             textColor: cell.severity.level === "severe" ? "#7f1d1d" : "#0f172a",
+            // Höchste Severity zuerst platzieren (großer sort-key = höhere Priorität bei Kollision).
             rank: SEV_RANK[cell.severity.level] ?? 0,
+            // Negativer Sort-Key, damit MapLibre die wichtigsten zuerst rendert.
+            sortKey: -(SEV_RANK[cell.severity.level] ?? 0),
           },
         });
       }

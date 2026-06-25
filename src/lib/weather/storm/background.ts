@@ -4,6 +4,7 @@ import { stepStormTracking, exportTrackState, importTrackState, resetStormTracki
 import { computeStormAlerts } from "./alerts";
 import { gridKey, loadCellEnvironments, type CellEnvSample } from "./environment";
 import { scoreCell } from "./severity";
+import { isInRegion, regionCountryPrefix } from "./region";
 import {
   DEFAULT_STORM_THRESHOLDS,
   type StormAlert,
@@ -179,7 +180,10 @@ class StormBackgroundService {
     if (this.buffer.length) this.buffer = this.buffer.filter((s) => s.time >= cutoff);
 
     const regionalEnv: StormEnvironment = { ...this.config.environment, source: "region" };
-    const baseCells = stepStormTracking(this.buffer, regionalEnv, now, this.config.thresholds);
+    // Detection nur auf Strikes in DACH + Italien (mit Puffer). Der volle Buffer bleibt für
+    // die Lightning-Anzeige erhalten, lediglich die Cluster-Eingabe wird regional begrenzt.
+    const regionStrikes = this.buffer.filter((s) => isInRegion(s.lat, s.lon));
+    const baseCells = stepStormTracking(regionStrikes, regionalEnv, now, this.config.thresholds);
 
     const cells = baseCells.map((cell) => {
       const sample = this.cellEnv.get(gridKey(cell.centroid.lat, cell.centroid.lon));
@@ -199,21 +203,33 @@ class StormBackgroundService {
       });
       return { ...cell, severity };
     });
-    cells.sort((a, b) => b.severity.score - a.severity.score || b.strikeCount - a.strikeCount);
+    // Zellen, die durch Drift aus dem Pufferbereich gewandert sind, sauber droppen.
+    const inRegion = cells.filter((c) => isInRegion(c.centroid.lat, c.centroid.lon, 0));
+    inRegion.sort((a, b) => b.severity.score - a.severity.score || b.strikeCount - a.strikeCount);
 
-    if (cells.length && !this.envFetchPending) {
+    // Anzeigenamen vergeben: pro Land fortlaufender Index nach Severity-Rang.
+    const perCountry: Record<string, number> = {};
+    const named = inRegion.map((cell) => {
+      const prefix = regionCountryPrefix(cell.centroid.lat, cell.centroid.lon);
+      const idx = (perCountry[prefix] = (perCountry[prefix] ?? 0) + 1);
+      const letter = String.fromCharCode(64 + Math.min(26, idx)); // A..Z
+      const displayName = `Zelle ${prefix}-${letter}${idx > 26 ? idx - 26 : ""}`;
+      return { ...cell, displayName };
+    });
+
+    if (named.length && !this.envFetchPending) {
       this.envFetchPending = true;
-      const points = cells.map((c) => ({ lat: c.centroid.lat, lon: c.centroid.lon }));
+      const points = named.map((c) => ({ lat: c.centroid.lat, lon: c.centroid.lon }));
       loadCellEnvironments(points)
         .then((map) => { this.cellEnv = map; })
         .catch(() => { /* gehandhabt im Modul */ })
         .finally(() => { this.envFetchPending = false; });
     }
 
-    const alerts = computeStormAlerts(cells, this.config.favorites, now, this.config.thresholds);
+    const alerts = computeStormAlerts(named, this.config.favorites, now, this.config.thresholds);
 
     this.snapshot = {
-      cells,
+      cells: named,
       alerts,
       strikes: this.buffer.slice(),
       lastRun: now,
