@@ -52,7 +52,11 @@ function pohFromDeltaH(deltaKm: number): number {
 
 function meshsCm(dbz: number, deltaKm: number, cape: number | null, coreKm2: number): number {
   if (deltaKm < 1.6 && coreKm2 < 1) return 0;
-  const dbzPart = clamp((dbz - 45) / 20, 0, 1); // 45..65 dBZ
+  // dBZ-Spanne 40..52 angepasst an den realen Wertebereich der via Z-R
+  // (Aniol) aus RY-Niederschlagsrate ABGELEITETEN dBZ: Stufe 5 ≈ 48 dBZ,
+  // Stufe 6 ≈ 52 dBZ. Die alte 45..65-Spanne setzte echte 3D-Reflektivität
+  // voraus und hätte den dbzPart systematisch zu niedrig gehalten.
+  const dbzPart = clamp((dbz - 40) / 12, 0, 1);
   const dhPart = clamp((deltaKm - 1.6) / 4, 0, 1);
   const capePart = cape != null ? clamp(cape / 2500, 0, 1) : 0.3;
   const corePart = clamp(coreKm2 / 8, 0, 1);
