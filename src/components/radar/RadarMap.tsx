@@ -781,7 +781,7 @@ function renderStormCells(map: MlMap, cells: StormCell[], targets: NamedTarget[]
             labelShort,
             labelMid,
             labelFull,
-            textColor: cell.severity.level === "severe" ? "#7f1d1d" : "#0f172a",
+            textColor: cell.severity.level === "severe" || cell.severity.level === "extreme" ? "#7f1d1d" : "#0f172a",
             // Höchste Severity zuerst platzieren (großer sort-key = höhere Priorität bei Kollision).
             rank: SEV_RANK[cell.severity.level] ?? 0,
             // Negativer Sort-Key, damit MapLibre die wichtigsten zuerst rendert.

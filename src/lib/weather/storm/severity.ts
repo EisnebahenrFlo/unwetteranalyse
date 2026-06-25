@@ -1,4 +1,5 @@
 import type { StormEnvironment, StormSeverity, StormSeverityBreakdown } from "./types";
+import type { DisplayLevel } from "../thresholds/warn-level";
 
 function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
@@ -59,9 +60,29 @@ export function scoreCell(input: {
   }
 
   score = clamp(Math.round(score), 0, 100);
-  const level: StormSeverity =
+  let level: StormSeverity =
     score >= 70 ? "severe" : score >= 45 ? "serious" : score >= 22 ? "watch" : "calm";
+
+  // Stufe 4 (extrem) nur mit Umgebungs-Stütze (CAPE/LI). Ohne Daten Deckel bei severe.
+  if (level === "severe") {
+    const scoreGate = input.env.source === "region" ? 85 : 80;
+    const cape = input.env.cape;
+    const li = input.env.liftedIndex;
+    const supports = (cape != null && cape >= 2500) || (li != null && li <= -8);
+    if (score >= scoreGate && supports) {
+      level = "extreme";
+      const tag = input.env.source === "cell" ? "lokal" : "Region";
+      const parts: string[] = [];
+      if (cape != null) parts.push(`CAPE ${Math.round(cape)} J/kg`);
+      if (li != null) parts.push(`LI ${li.toFixed(1)}`);
+      reasons.push(`Stufe 4: extrem labile Umgebung (${parts.join("/")}, ${tag})`);
+    }
+  }
 
   if (reasons.length === 0) reasons.push("schwache Aktivität");
   return { score, level, reasons };
 }
+
+/** StormSeverity → gemeinsame DWD-Anzeigestufe. */
+export const stormToLevel = (s: StormSeverity): DisplayLevel =>
+  s === "extreme" ? 4 : s === "severe" ? 3 : s === "serious" ? 2 : s === "watch" ? 1 : 0;
