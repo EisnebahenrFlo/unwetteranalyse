@@ -48,13 +48,13 @@ export function SituationHeadline({ bundle, officialAlerts }: Props) {
   const stufe = scoreToLevel(score);
 
   return (
-    <Card className="grid grid-cols-1 gap-4 p-4 md:p-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-      {/* Primärblock */}
-      <div className="flex flex-col gap-3">
-        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+    <Card className="grid grid-cols-1 gap-6 p-5 md:p-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-10">
+      {/* Primärblock: lauter Hero */}
+      <div className="flex min-w-0 flex-col gap-5">
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-4">
           <div
             className={cn(
-              "grid h-14 w-14 shrink-0 place-items-center rounded-xl ring-1",
+              "grid h-16 w-16 shrink-0 place-items-center rounded-2xl ring-1 md:h-20 md:w-20",
               scoreRing(score),
             )}
           >
@@ -63,18 +63,19 @@ export function SituationHeadline({ bundle, officialAlerts }: Props) {
               isNight={night}
               name={worst === "none" ? undefined : "thunderstorms-day-rain"}
               label="Lage"
-              className="h-12 w-12"
+              className="h-14 w-14 md:h-16 md:w-16"
             />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span
-                className="font-mono text-3xl font-semibold leading-none tabular-nums text-foreground"
-                style={{ fontFamily: "var(--font-mono)" }}
-              >
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Aktuelle Lage · {bundle.point.name}
+              {bundle.point.admin ? ` · ${bundle.point.admin}` : ""}
+            </div>
+            <div className="mt-1 flex flex-wrap items-baseline gap-2">
+              <span className="font-mono text-5xl font-semibold leading-none tabular-nums text-foreground md:text-6xl">
                 {score}
               </span>
-              <span className="text-xs text-muted-foreground">/100</span>
+              <span className="text-sm text-muted-foreground">/100</span>
               <span
                 className={cn(
                   "rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
@@ -84,22 +85,23 @@ export function SituationHeadline({ bundle, officialAlerts }: Props) {
                 {label}
               </span>
             </div>
-            <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
-              {bundle.point.name}
-              {bundle.point.admin ? ` · ${bundle.point.admin}` : ""}
-            </div>
           </div>
-          <SeverityRail
-            level={stufe}
-            orientation="vertical"
-            label={stufe ? `S${stufe}` : "S0"}
-            className="hidden sm:flex"
-          />
         </div>
 
-        <p className="text-[15px] leading-snug text-foreground">{kernSatz}</p>
+        {/* Klartext-Lagesatz, dominant in Display-Font */}
+        <p className="font-display text-2xl font-semibold leading-[1.18] tracking-tight text-foreground md:text-[28px] lg:text-[32px]">
+          {kernSatz}
+        </p>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Stufenband horizontal, voll prominent */}
+        <SeverityRail
+          level={stufe}
+          orientation="horizontal"
+          label={stufe ? `Stufe ${stufe}` : "Stufe 0 · ruhig"}
+          className="w-full"
+        />
+
+        <div className="flex flex-wrap items-center gap-2 pt-1">
           {worst !== "none" && <WarnBadge severity={worst} />}
           <TendencyBadge tendency={tendency} />
           {officialAlerts.length > 0 && (
@@ -111,7 +113,7 @@ export function SituationHeadline({ bundle, officialAlerts }: Props) {
       </div>
 
       {/* Sekundärblock: Hauptgefahr + Fenster */}
-      <div className="grid grid-cols-1 gap-2 rounded-lg border border-border bg-muted/30 p-3 sm:grid-cols-2 lg:grid-cols-1">
+      <div className="grid grid-cols-1 gap-3 rounded-xl border border-border/70 bg-muted/30 p-4 sm:grid-cols-2 lg:grid-cols-1">
         <Kpi
           label="Hauptgefahr"
           value={lead?.title ?? "Keine"}
