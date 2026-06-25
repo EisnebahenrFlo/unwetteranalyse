@@ -1,79 +1,51 @@
-# Stormtracking: Geo-Filter & Label-Refresh
+# Fix: Severity-Mapping + amtliche DWD-Warnstufen
 
-## Ziel
-- Zellerkennung räumlich auf DACH (DE/AT/CH/LI) + Italien begrenzen, mit 50 km Puffer um Randzellen nicht zu verlieren.
-- Zell-Labels entrümpeln: weniger Zeilen, lesbar, sinnvolle Namen, keine erfundenen dBZ-Schätzwerte mehr.
-- ETA-Ziel klar benennen, sonst weglassen.
+Zwei Bugs, beide fachlich relevant.
 
-## 1. Geo-Filter (DACH + IT, BBox + 50 km Puffer)
+## A — Severity immer „minor"
+`mapBrightSkyAlerts` liest `a.level` (existiert in der Bright-Sky-Antwort nicht). Das CAP-Feld ist der String `severity` (`minor|moderate|severe|extreme`). Folge: alle Warnungen landen auf `minor`.
 
-**Neue Datei** `src/lib/weather/storm/region.ts`
-- Export `DACH_IT_BBOX = { west: 5.5, south: 35.5, east: 18.7, north: 55.5 }` (umfasst DE/AT/CH/LI/IT inkl. Inseln).
-- Export `DACH_IT_BUFFER_KM = 50`.
-- Helper `isInRegion(lat, lon, bufferKm = 50)`: BBox-Test mit `bufferKm` in Grad umgerechnet (lat: km/111.32, lon: km/(111.32·cos(lat))).
+## B — Falsche Stufen-Namen im `WarnBadge`
+Aktuell: `minor=„Markant"`, `moderate=„Unwetter"`. Amtlich (DWD):
+- Stufe 1 = Wetterwarnung (Gelb)
+- Stufe 2 = Markantes Wetter (Orange)
+- Stufe 3 = Unwetterwarnung (Rot)
+- Stufe 4 = Extremes Unwetter (Violett)
 
-**`src/lib/weather/storm/background.ts`** (`tick()`)
-- Vor Übergabe an `stepStormTracking`: `const strikes = this.buffer.filter(s => isInRegion(s.lat, s.lon))`.
-- Buffer selbst bleibt unverändert (volle Blitz-Darstellung weiterhin möglich); nur die Detection-Eingabe wird gefiltert.
-- Nach Tracking zusätzlich: `cells = cells.filter(c => isInRegion(c.centroid.lat, c.centroid.lon, 0))` — Zellen, deren Zentrum aus der Pufferzone heraus driftet, fallen sauber raus.
+Alles ist um eine Stufe verschoben.
 
-## 2. Zell-Namen (besser lesbar)
+## Änderungen
 
-Aktuell sind IDs wie `C-1734567890-12` nicht scannbar. Stattdessen ein kurzer, stabiler Anzeigename:
-- Format: `Zelle DE-A1`, `Zelle IT-B3`, … (Landpräfix aus Centroid + Buchstabe/Zahl je Severity-Reihenfolge in der aktuellen Tick-Ausgabe).
-- Implementierung: in `background.ts` nach `cells.sort(...)` ein `displayName` ableiten (Land via grober BBox-Zuordnung DE/AT/CH/IT/—, Index nach Severity-Rang).
-- Feld `displayName?: string` in `StormCell` (`src/lib/weather/storm/types.ts`) ergänzen, ohne bestehende `id` zu brechen.
+### 1) Neu: `src/lib/weather/thresholds/warn-level.ts`
+Kanonische DWD-Stufen 1–4 plus Mapper:
+- `WARN_LEVEL` (Name + Farbe je Stufe)
+- `capSeverityToLevel(s)` und `capSeverityToAlert(s)` für den CAP-String
+- `severityToLevel(s)` für interne `AlertSeverity`
 
-## 3. Labels: zoom-abhängig (Smart)
+### 2) `src/lib/weather/types.ts`
+Feld `warnLevel: 1 | 2 | 3 | 4` zu `WeatherAlert` ergänzen (optional, damit bestehende Stellen nicht brechen — wird in Mapper gesetzt).
 
-Bisher 4 Zeilen immer sichtbar → überladen, dBZ/Top sind Proxys. Neuer Aufbau in `RadarMap.tsx` (`renderStormCells` + Layer `storm-labels`):
+### 3) `src/lib/weather/mappers/bright-sky.ts`
+- Alte `mapSeverity(level)`-Funktion löschen.
+- `mapBrightSkyAlerts` benutzt `capSeverityToAlert(a.severity)` und setzt `warnLevel: capSeverityToLevel(a.severity)`.
+- `level?: number` aus dem Input-Typ entfernen.
 
-**Daten pro Centroid-Feature**:
-- `labelShort`: `Zelle DE-A1 · SCHWER`
-- `labelLong`: zwei Zeilen, z. B.
-  - Zeile 1: `Zelle DE-A1 · SCHWER`
-  - Zeile 2: `38 km/h → NO` *(nur wenn `motion.speedKmh > 1`)*
-- `labelEta`: dritte Zeile *nur* wenn ETA ≤ 60 min UND Zielname vorhanden, Format `→ Ansbach 24 min`.
+### 4) `src/components/common/WarnBadge.tsx`
+- Hardcoded `LABEL`-Map ersetzen durch Lookup über `severityToLevel` + `WARN_LEVEL.name`.
+- Neue Prop `showLevel?: boolean` zeigt zusätzlich „Stufe X · Name".
+- Bestehende Aufrufer bleiben kompatibel (keine API-Bruch).
 
-**Layer-Expression** (`text-field`):
-```
-["step", ["zoom"],
-  ["get", "labelShort"],          // zoom < 7: Pill-Style
-  7, ["get", "labelMid"],         // 7..9: 2 Zeilen
-  9, ["get", "labelFull"]         // ≥ 9: bis 3 Zeilen inkl. ETA
-]
-```
-- `text-size`: `["interpolate", ["linear"], ["zoom"], 5, 10, 7, 11, 10, 13]`
-- `text-anchor: "top-left"`, `text-offset: [0.9, 0.5]`, `text-justify: "left"`, `text-line-height: 1.15`
-- `text-halo-width: 2`, `text-halo-color: #ffffff`
-- Kollision aktiv: `text-allow-overlap: false`, `text-ignore-placement: false`, `symbol-sort-key` nach Severity-Rang (höchste zuerst, niedrigere weichen).
-
-**Entfernt**: dBZ/Top-Zeile sowie `estimateReflectivityDbz` / `estimateEchoTopKm` aus dem Label. Funktionen bleiben in `estimate.ts` für den Drawer (mit klarer „Schätzung“-Markierung), werden aber nicht mehr in der Karte gerendert.
-
-## 4. ETA-Zeile (nur sinnvoll)
-
-`etaToNearestTarget` in `estimate.ts` strenger machen:
-- Liefert `null`, wenn:
-  - kein Zielort innerhalb 80 km vor der Zelle (in Bewegungsrichtung, Winkelabweichung ≤ 60°), oder
-  - ETA < 0 min oder > 90 min, oder
-  - `motion.speedKmh < 5` (driftende Zelle, ETA nicht aussagekräftig).
-- Sonst `{ target, minutes }` wie bisher.
-
-## 5. Severity-Drawer (`StormCellDrawer.tsx`)
-
-Da dBZ/Top aus dem Karten-Label fliegen, im Drawer als „Geschätzt aus Blitzrate & Radius“ deutlich kennzeichnen (Tooltip + Suffix `~`). Keine weiteren Änderungen.
+### 5) Amtlich vs. eigene Analyse
+- `src/routes/alerts.tsx`: bei der amtlichen Liste `<WarnBadge severity={a.severity} showLevel />` setzen.
+- Bei der eigenen Schwellen-/Modell-Analyse (`SevereOverview`, `ThreatBoard`, `NowcastPanel`, `ModelSeverityGrid`, etc.) **kein** `showLevel` — diese Badges bleiben Worte ohne „Stufe X", weil sie keine amtliche Einstufung sind.
 
 ## Technische Details
 
-**Geänderte Dateien**
-- neu: `src/lib/weather/storm/region.ts`
-- `src/lib/weather/storm/types.ts` — Feld `displayName?: string`
-- `src/lib/weather/storm/background.ts` — Region-Filter, Vergabe `displayName`
-- `src/lib/weather/storm/estimate.ts` — strengere ETA-Logik
-- `src/components/radar/RadarMap.tsx` — Label-Felder + zoom-step Expression, Kollision aktiv, dBZ raus
-- `src/components/storm/StormCellDrawer.tsx` — Schätz-Kennzeichnung
+- `warnLevel` als optional typisieren, damit nicht jedes Mock/Test-Objekt brechen muss.
+- `AlertSeverity` bleibt unverändert (`minor|moderate|severe|extreme`).
+- Mapping bleibt CAP-konform: minor=1, moderate=2, severe=3, extreme=4. Verfeinerung per `event_code` ist später möglich, aktuell out of scope.
 
-**Nicht-Ziele**
-- Kein Wechsel zu Polygon-Filter (BBox + Puffer reicht laut Entscheidung).
-- Keine Änderungen an Zugbahn/Cone/ETA-Punkten auf der Karte selbst.
-- Keine neue Datenquelle für echte dBZ-Werte (späterer Schritt).
+## Nicht im Scope
+
+- Andere Mapper (Open-Meteo, DWD) — die liefern aktuell keine Alerts via diesen Pfad.
+- Refactor der eigenen Schwellen-Analyse-Komponenten (nur Beschriftung wird über `showLevel` gesteuert).

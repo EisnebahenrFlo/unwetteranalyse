@@ -52,7 +52,7 @@ function AlertsPage() {
             .map((a) => (
               <article key={a.id} className="rounded-md border border-border bg-background/50 p-3">
                 <header className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
-                  <WarnBadge severity={a.severity} />
+                  <WarnBadge severity={a.severity} showLevel />
                   <div className="min-w-0">
                     <h3 className="truncate text-sm font-semibold">{a.headline}</h3>
                     <div className="text-[10px] text-muted-foreground">
