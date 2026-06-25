@@ -1,4 +1,5 @@
-import type { CurrentConditions, StationObservation, WeatherAlert, AlertSeverity } from "../types";
+import type { CurrentConditions, StationObservation, WeatherAlert } from "../types";
+import { capSeverityToAlert, capSeverityToLevel } from "@/lib/weather/thresholds/warn-level";
 
 /** Bright Sky liefert standardmäßig DWD-Einheiten: Temperatur °C, Wind km/h,
  *  Druck hPa, Niederschlag mm. Wir rechnen Wind in m/s, damit der Rest der App
@@ -108,20 +109,11 @@ export function mapBrightSkyStations(raw: {
   return stations;
 }
 
-function mapSeverity(level?: number): AlertSeverity {
-  switch (level) {
-    case 4: return "extreme";
-    case 3: return "severe";
-    case 2: return "moderate";
-    default: return "minor";
-  }
-}
-
 export function mapBrightSkyAlerts(raw: {
   alerts?: Array<{
     id?: string | number; alert_id?: string;
     event_en?: string; event_de?: string; event_code?: number;
-    severity?: string; level?: number;
+    severity?: string;
     headline_de?: string; headline_en?: string;
     description_de?: string; instruction_de?: string;
     onset?: string; expires?: string; effective?: string;
@@ -132,7 +124,8 @@ export function mapBrightSkyAlerts(raw: {
     headline: a.headline_de ?? a.headline_en ?? a.event_de ?? a.event_en ?? "Wetterwarnung",
     description: a.description_de,
     instruction: a.instruction_de,
-    severity: mapSeverity(a.level),
+    severity: capSeverityToAlert(a.severity),
+    warnLevel: capSeverityToLevel(a.severity),
     event: a.event_de ?? a.event_en ?? "Wetterereignis",
     eventCode: a.event_code,
     onset: a.onset ?? a.effective ?? new Date().toISOString(),
