@@ -20,6 +20,8 @@ export interface PixelCell {
   topLevel: IntensityLevel;
   /** Pixelzahl im Hagelkern (Stufe ≥ HAIL_CORE_LEVEL). */
   hailCorePixels: number;
+  /** Summe der Intensitätsstufen aller Pixel (für Mittelwertbildung). */
+  sumLevel: number;
   /** Vereinfachter Außenring (Pixel-Koordinaten, geschlossen). */
   polygon: Array<[number, number]>;
 }
@@ -88,6 +90,7 @@ export function detectCells(
     maxY: number;
     topLevel: IntensityLevel;
     hailCorePixels: number;
+    sumLevel: number;
     coords: Array<[number, number]>;
   }
   const acc = new Map<number, Acc>();
@@ -109,6 +112,7 @@ export function detectCells(
           maxY: y,
           topLevel: 0,
           hailCorePixels: 0,
+          sumLevel: 0,
           coords: [],
         };
         acc.set(root, a);
@@ -123,6 +127,7 @@ export function detectCells(
       const lvl = mask[i] as IntensityLevel;
       if (lvl > a.topLevel) a.topLevel = lvl;
       if (lvl >= HAIL_CORE_LEVEL) a.hailCorePixels++;
+      a.sumLevel += lvl;
       a.coords.push([x, y]);
     }
   }
@@ -140,6 +145,7 @@ export function detectCells(
       cy: a.sumY / a.pixels,
       topLevel: a.topLevel,
       hailCorePixels: a.hailCorePixels,
+      sumLevel: a.sumLevel,
       polygon: convexHullPixels(a.coords),
     });
   }
