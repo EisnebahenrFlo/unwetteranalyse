@@ -1,51 +1,52 @@
-# Fix: Severity-Mapping + amtliche DWD-Warnstufen
-
-Zwei Bugs, beide fachlich relevant.
-
-## A — Severity immer „minor"
-`mapBrightSkyAlerts` liest `a.level` (existiert in der Bright-Sky-Antwort nicht). Das CAP-Feld ist der String `severity` (`minor|moderate|severe|extreme`). Folge: alle Warnungen landen auf `minor`.
-
-## B — Falsche Stufen-Namen im `WarnBadge`
-Aktuell: `minor=„Markant"`, `moderate=„Unwetter"`. Amtlich (DWD):
-- Stufe 1 = Wetterwarnung (Gelb)
-- Stufe 2 = Markantes Wetter (Orange)
-- Stufe 3 = Unwetterwarnung (Rot)
-- Stufe 4 = Extremes Unwetter (Violett)
-
-Alles ist um eine Stufe verschoben.
+## Ziel
+Eine gemeinsame Anzeige-Währung `DisplayLevel = 0|1|2|3|4` (DWD-Stufen, 0 = keine Warnung). `AlertSeverity`, `StormSeverity`, `HazardLevel` mappen verlustfrei darauf. `StormSeverity` kann jetzt `extreme` (Stufe 4) ausdrücken, aber nur mit Umgebungs-Stütze (CAPE/LI).
 
 ## Änderungen
 
-### 1) Neu: `src/lib/weather/thresholds/warn-level.ts`
-Kanonische DWD-Stufen 1–4 plus Mapper:
-- `WARN_LEVEL` (Name + Farbe je Stufe)
-- `capSeverityToLevel(s)` und `capSeverityToAlert(s)` für den CAP-String
-- `severityToLevel(s)` für interne `AlertSeverity`
+### 1) `src/lib/weather/thresholds/warn-level.ts`
+- Neuer Typ `export type DisplayLevel = 0 | WarnLevel`.
+- Neuer Export `WARN_DISPLAY: Record<DisplayLevel, { name; color }>` — übernimmt 1–4 aus `WARN_LEVEL`, ergänzt `0: { name: "keine Warnung", color: "Grün" }`.
+- Bestehende Exporte unverändert.
 
-### 2) `src/lib/weather/types.ts`
-Feld `warnLevel: 1 | 2 | 3 | 4` zu `WeatherAlert` ergänzen (optional, damit bestehende Stellen nicht brechen — wird in Mapper gesetzt).
+### 2) `src/lib/weather/storm/types.ts`
+- `StormSeverity` um `"extreme"` erweitern.
+- `SEVERITY_RANK.extreme = 4`.
+- `DEFAULT_STORM_THRESHOLDS` unverändert.
 
-### 3) `src/lib/weather/mappers/bright-sky.ts`
-- Alte `mapSeverity(level)`-Funktion löschen.
-- `mapBrightSkyAlerts` benutzt `capSeverityToAlert(a.severity)` und setzt `warnLevel: capSeverityToLevel(a.severity)`.
-- `level?: number` aus dem Input-Typ entfernen.
+### 3) `src/lib/weather/storm/severity.ts`
+- Nach Stufenbestimmung Extrem-Block:
+  - `scoreGate = env.source === "region" ? 85 : 80`.
+  - Stütze: `cape >= 2500` ODER `liftedIndex <= -8`.
+  - Bei `score >= scoreGate` und Stütze → `level = "extreme"` + Reason `"Stufe 4: extrem labile Umgebung (CAPE …/LI …, lokal|Region)"`.
+  - Ohne CAPE/LI: Deckel bei `severe`.
+- Neuer Export `stormToLevel(s: StormSeverity): DisplayLevel` mit `import type { DisplayLevel } from "../thresholds/warn-level"`.
 
-### 4) `src/components/common/WarnBadge.tsx`
-- Hardcoded `LABEL`-Map ersetzen durch Lookup über `severityToLevel` + `WARN_LEVEL.name`.
-- Neue Prop `showLevel?: boolean` zeigt zusätzlich „Stufe X · Name".
-- Bestehende Aufrufer bleiben kompatibel (keine API-Bruch).
+### 4) `src/components/storm/severity-tokens.ts`
+- `extreme` in allen vier Records:
+  - `SEVERITY_COLOR.extreme = "#7c3aed"`.
+  - `SEVERITY_LABEL.extreme = "extrem"`.
+  - `SEVERITY_BADGE.extreme = "EXTREM"`.
+  - `SEVERITY_TONE.extreme = "bg-violet-500/15 text-violet-700 dark:text-violet-300"`.
 
-### 5) Amtlich vs. eigene Analyse
-- `src/routes/alerts.tsx`: bei der amtlichen Liste `<WarnBadge severity={a.severity} showLevel />` setzen.
-- Bei der eigenen Schwellen-/Modell-Analyse (`SevereOverview`, `ThreatBoard`, `NowcastPanel`, `ModelSeverityGrid`, etc.) **kein** `showLevel` — diese Badges bleiben Worte ohne „Stufe X", weil sie keine amtliche Einstufung sind.
+### 5) `src/lib/weather/hazards/types.ts`
+- `hazardToLevel(l: HazardLevel): DisplayLevel` mit `import type { DisplayLevel } from "../thresholds/warn-level"`.
 
-## Technische Details
-
-- `warnLevel` als optional typisieren, damit nicht jedes Mock/Test-Objekt brechen muss.
-- `AlertSeverity` bleibt unverändert (`minor|moderate|severe|extreme`).
-- Mapping bleibt CAP-konform: minor=1, moderate=2, severe=3, extreme=4. Verfeinerung per `event_code` ist später möglich, aktuell out of scope.
+### 6) Anzeige-Konsistenz
+- `src/components/storm/StormAlertBanner.tsx`: `extreme`-Arm vor `severe` ergänzen → violett (`border-violet-500/50 bg-violet-500/10 text-violet-700 dark:text-violet-300`).
+- `src/components/radar/RadarMap.tsx` (Label-Textfarbe): `textColor: level === "severe" || level === "extreme" ? "#7f1d1d" : "#0f172a"`.
 
 ## Nicht im Scope
+- `StormAlertLevel`-Default in `settings.ts`.
+- Scherung/Helicity als Extrem-Zutat (nicht in `StormEnvironment`).
+- Refactor der `scoreCell`-Grundformel.
 
-- Andere Mapper (Open-Meteo, DWD) — die liefern aktuell keine Alerts via diesen Pfad.
-- Refactor der eigenen Schwellen-Analyse-Komponenten (nur Beschriftung wird über `showLevel` gesteuert).
+## Risiken
+- `StormSeverity`-Union: nach Apply `tsgo` laufen lassen, falls weitere `Record<StormSeverity, …>` existieren.
+- Mapper als reine Funktionen mit `import type` → keine Laufzeit-Zyklen.
+
+## Testfälle
+1. Hohe Blitzrate ohne CAPE/LI → max. `severe`.
+2. `score ≥ 80` + `cape ≥ 2500`, `source = "cell"` → `extreme` mit Begründung.
+3. Gleiche Werte mit `source = "region"` + `score 80–84` → bleibt `severe` (Gate 85).
+4. `WarnBadge` Stufe 3 und Storm-Badge `UNWETTER` identisches Rot.
+5. Favorit im Pfad einer Stufe-4-Zelle → `StormAlertBanner` violett, nicht amber.
