@@ -33,6 +33,33 @@ describe("scoreCell — Extrem-Gating", () => {
   });
 });
 
+describe("scoreCell — Wind-Kriterium (DWD-Maximum)", () => {
+  const weak = {
+    topDbz: 38,
+    hailCoreAreaKm2: 0,
+    areaKm2: 20,
+    dbzTrend: 0,
+    areaTrend: 1,
+  };
+  it("Böen ≥25 m/s hebt schwache Zelle auf mindestens 'severe'", () => {
+    const r = scoreCell({ ...weak, env: { windGustMs: 26, source: "cell" } });
+    expect(SEVERITY_RANK[r.level]).toBeGreaterThanOrEqual(SEVERITY_RANK.severe);
+    expect(r.reasons.join(" ")).toMatch(/B[öo]en/);
+  });
+  it("Böen ≥18 m/s → mindestens 'serious'", () => {
+    const r = scoreCell({ ...weak, env: { windGustMs: 20, source: "cell" } });
+    expect(SEVERITY_RANK[r.level]).toBeGreaterThanOrEqual(SEVERITY_RANK.serious);
+  });
+  it("Orkanböen ohne CAPE/LI-Stütze bleiben bei 'severe' (Gate aktiv)", () => {
+    const r = scoreCell({ ...weak, env: { windGustMs: 35, source: "cell" } });
+    expect(r.level).toBe("severe");
+  });
+  it("kein Wind → keine Stufenanhebung", () => {
+    const r = scoreCell({ ...weak, env: {} });
+    expect(SEVERITY_RANK[r.level]).toBeLessThan(SEVERITY_RANK.serious);
+  });
+});
+
 describe("stormToLevel", () => {
   it("mappt auf DisplayLevel 0–4", () => {
     expect(stormToLevel("calm")).toBe(0);
