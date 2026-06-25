@@ -104,14 +104,24 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
       // Fokusringe
       map.addSource("focus-rings-src", { type: "geojson", data: emptyFC });
       map.addLayer({
+        id: "focus-rings-casing",
+        type: "line",
+        source: "focus-rings-src",
+        paint: {
+          "line-color": "#ffffff",
+          "line-width": 4,
+          "line-opacity": 0.85,
+        },
+      });
+      map.addLayer({
         id: "focus-rings-line",
         type: "line",
         source: "focus-rings-src",
         paint: {
-          "line-color": "#0b1220",
+          "line-color": "#e11d48",
           "line-width": 2,
           "line-dasharray": [3, 2],
-          "line-opacity": 0.9,
+          "line-opacity": 0.95,
         },
       });
       map.addSource("focus-labels-src", { type: "geojson", data: emptyFC });
