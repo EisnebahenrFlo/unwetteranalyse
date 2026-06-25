@@ -10,11 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StationsRouteImport } from './routes/stations'
-import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ModelsRouteImport } from './routes/models'
-import { Route as MapRouteImport } from './routes/map'
 import { Route as LearnRouteImport } from './routes/learn'
-import { Route as AnalysisRouteImport } from './routes/analysis'
 import { Route as AlertsRouteImport } from './routes/alerts'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -23,29 +20,14 @@ const StationsRoute = StationsRouteImport.update({
   path: '/stations',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ModelsRoute = ModelsRouteImport.update({
   id: '/models',
   path: '/models',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MapRoute = MapRouteImport.update({
-  id: '/map',
-  path: '/map',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LearnRoute = LearnRouteImport.update({
   id: '/learn',
   path: '/learn',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AnalysisRoute = AnalysisRouteImport.update({
-  id: '/analysis',
-  path: '/analysis',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AlertsRoute = AlertsRouteImport.update({
@@ -62,75 +44,38 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/alerts': typeof AlertsRoute
-  '/analysis': typeof AnalysisRoute
   '/learn': typeof LearnRoute
-  '/map': typeof MapRoute
   '/models': typeof ModelsRoute
-  '/settings': typeof SettingsRoute
   '/stations': typeof StationsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/alerts': typeof AlertsRoute
-  '/analysis': typeof AnalysisRoute
   '/learn': typeof LearnRoute
-  '/map': typeof MapRoute
   '/models': typeof ModelsRoute
-  '/settings': typeof SettingsRoute
   '/stations': typeof StationsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/alerts': typeof AlertsRoute
-  '/analysis': typeof AnalysisRoute
   '/learn': typeof LearnRoute
-  '/map': typeof MapRoute
   '/models': typeof ModelsRoute
-  '/settings': typeof SettingsRoute
   '/stations': typeof StationsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/alerts'
-    | '/analysis'
-    | '/learn'
-    | '/map'
-    | '/models'
-    | '/settings'
-    | '/stations'
+  fullPaths: '/' | '/alerts' | '/learn' | '/models' | '/stations'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/alerts'
-    | '/analysis'
-    | '/learn'
-    | '/map'
-    | '/models'
-    | '/settings'
-    | '/stations'
-  id:
-    | '__root__'
-    | '/'
-    | '/alerts'
-    | '/analysis'
-    | '/learn'
-    | '/map'
-    | '/models'
-    | '/settings'
-    | '/stations'
+  to: '/' | '/alerts' | '/learn' | '/models' | '/stations'
+  id: '__root__' | '/' | '/alerts' | '/learn' | '/models' | '/stations'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AlertsRoute: typeof AlertsRoute
-  AnalysisRoute: typeof AnalysisRoute
   LearnRoute: typeof LearnRoute
-  MapRoute: typeof MapRoute
   ModelsRoute: typeof ModelsRoute
-  SettingsRoute: typeof SettingsRoute
   StationsRoute: typeof StationsRoute
 }
 
@@ -143,13 +88,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StationsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/models': {
       id: '/models'
       path: '/models'
@@ -157,25 +95,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModelsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/map': {
-      id: '/map'
-      path: '/map'
-      fullPath: '/map'
-      preLoaderRoute: typeof MapRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/learn': {
       id: '/learn'
       path: '/learn'
       fullPath: '/learn'
       preLoaderRoute: typeof LearnRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/analysis': {
-      id: '/analysis'
-      path: '/analysis'
-      fullPath: '/analysis'
-      preLoaderRoute: typeof AnalysisRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/alerts': {
@@ -198,11 +122,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AlertsRoute: AlertsRoute,
-  AnalysisRoute: AnalysisRoute,
   LearnRoute: LearnRoute,
-  MapRoute: MapRoute,
   ModelsRoute: ModelsRoute,
-  SettingsRoute: SettingsRoute,
   StationsRoute: StationsRoute,
 }
 export const routeTree = rootRouteImport
