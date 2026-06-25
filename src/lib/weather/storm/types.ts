@@ -88,6 +88,8 @@ export interface StormEnvironment {
   cape?: number;
   /** Lifted Index (°C). */
   liftedIndex?: number;
+  /** Spitzenböe 10 m (m/s, Open-Meteo Forecast am Zellort/Region). */
+  windGustMs?: number;
   /** Modell-Stunde, auf die sich CAPE/LI beziehen. */
   validFor?: string;
   /** 'cell' = am Zellen-Centroid, 'region' = aktiver Ort/Proxy. */
