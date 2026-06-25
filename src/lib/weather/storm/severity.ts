@@ -135,19 +135,31 @@ export function scoreCell(input: {
   // DWD-Maximum-Prinzip: Wind-Kriterium hebt die Stufe an, wenn es höher liegt.
   level = maxSeverity(level, windFloorSeverity(wLevel));
 
-  // Stufe 4 (extrem) nur mit Umgebungs-Stütze. Ohne Daten Deckel bei severe.
+  // Stufe 4 (extrem) nur bei Mehrquellen-Konsens: Radar-Score erreicht das
+  // scoreGate UND mindestens eine ECHTE Umgebungs-Stütze (CAPE/LI aus dem
+  // Modell ODER Orkanböen aus dem Forecast) liegt vor. Die Hagelkern-Fläche
+  // ist eine Farb-Rückrechnung aus dem WMS-Bild — als alleiniger Auslöser
+  // für „lebensbedrohlich" zu unsicher. Sie darf nur noch verstärken.
+  // (Konsistent zum Wettergefahren-Fusionsprinzip: Multi-Source-Confidence
+  // für die höchste Stufe.)
   if (level === "severe") {
     const scoreGate = input.env.source === "region" ? 85 : 80;
     const cape = input.env.cape;
     const li = input.env.liftedIndex;
-    const supports = (cape != null && cape >= 2500) || (li != null && li <= -8);
-    const hailGate = input.hailCoreAreaKm2 >= 4;
-    if (score >= scoreGate && (supports || hailGate)) {
+    const gust = input.env.windGustMs;
+    const capeSupport = cape != null && cape >= 2500;
+    const liSupport = li != null && li <= -8;
+    const windSupport = gust != null && gust >= 33;
+    const envSupport = capeSupport || liSupport || windSupport;
+    const hailBoost = input.hailCoreAreaKm2 >= 4;
+    if (score >= scoreGate && envSupport) {
       level = "extreme";
       const parts: string[] = [];
-      if (cape != null) parts.push(`CAPE ${Math.round(cape)} J/kg`);
-      if (li != null) parts.push(`LI ${li.toFixed(1)}`);
-      if (hailGate) parts.push(`Hagelkern ${input.hailCoreAreaKm2.toFixed(0)} km²`);
+      if (capeSupport && cape != null) parts.push(`CAPE ${Math.round(cape)} J/kg`);
+      if (liSupport && li != null) parts.push(`LI ${li.toFixed(1)}`);
+      if (windSupport && gust != null)
+        parts.push(`Orkanböen ${(gust * 3.6).toFixed(0)} km/h`);
+      if (hailBoost) parts.push(`Hagelkern ${input.hailCoreAreaKm2.toFixed(0)} km²`);
       reasons.push(`Stufe 4: ${parts.join(" / ")}`);
     }
   }
