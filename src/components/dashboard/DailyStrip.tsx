@@ -25,22 +25,22 @@ export function DailyStrip({ bundle }: { bundle: ForecastBundle }) {
           return (
             <div
               key={d.date}
-              className="grid grid-cols-[132px_auto_minmax(0,1fr)_70px] items-center gap-3 border-b border-border/50 py-2 last:border-0"
+              className="grid grid-cols-[minmax(96px,120px)_auto_minmax(40px,1fr)_minmax(64px,72px)] items-center gap-2 border-b border-border/50 py-2 last:border-0 sm:gap-3"
             >
               <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 text-sm">
                 <MeteoconIcon
                   code={d.weatherCode}
-                  className="h-10 w-10"
+                  className="h-9 w-9 shrink-0"
                   label={weatherCodeLabel(d.weatherCode)}
                 />
                 <div className="min-w-0">
-                  <div className="font-medium text-foreground">{formatDate(d.date)}</div>
-                  <div className="text-[10px] text-muted-foreground">
+                  <div className="truncate font-medium text-foreground">{formatDate(d.date)}</div>
+                  <div className="truncate text-[10px] text-muted-foreground">
                     {weatherCodeLabel(d.weatherCode)}
                   </div>
                 </div>
               </div>
-              <div className="min-w-[80px]">
+              <div className="min-w-0 shrink-0">
                 {severity.level !== "none" ? (
                   <WarnBadge severity={severity.level} label={severityPillLabel(severity.level)} />
                 ) : (
@@ -56,7 +56,7 @@ export function DailyStrip({ bundle }: { bundle: ForecastBundle }) {
                 />
               </div>
               <div
-                className="text-right font-mono text-xs"
+                className="min-w-0 text-right font-mono text-xs"
                 style={{ fontFamily: "var(--font-mono)" }}
               >
                 <span className="text-muted-foreground">
@@ -66,7 +66,7 @@ export function DailyStrip({ bundle }: { bundle: ForecastBundle }) {
                 <span className="font-semibold text-foreground">
                   {formatTemp(d.tempMaxC, settings.tempUnit).split(" ")[0]}°
                 </span>
-                <div className="mt-0.5 text-[10px] text-primary">
+                <div className="mt-0.5 truncate text-[10px] text-primary">
                   {formatPrecip(d.precipitationSumMm)}
                 </div>
               </div>

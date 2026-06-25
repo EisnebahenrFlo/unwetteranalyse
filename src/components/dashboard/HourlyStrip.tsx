@@ -14,8 +14,8 @@ export function HourlyStrip({ bundle }: { bundle: ForecastBundle }) {
   const maxPrecip = Math.max(0.5, ...hours.map((h) => h.precipitationMm ?? 0));
   return (
     <DataCard title="Nächste 24 Stunden" meta={bundle.meta}>
-      <div className="-mx-1 overflow-x-auto">
-        <div className="flex min-w-full gap-1 px-1">
+      <div className="-mx-4 overflow-x-auto px-4 md:-mx-5 md:px-5">
+        <div className="flex w-max gap-1">
           {hours.map((h) => {
             const precip = h.precipitationMm ?? 0;
             const heightPct = Math.round((precip / maxPrecip) * 100);
