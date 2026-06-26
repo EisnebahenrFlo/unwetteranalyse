@@ -21,6 +21,7 @@ import { ParamCardPro } from "@/components/analysis/ParamCardPro";
 import { SevereTimeline } from "@/components/analysis/SevereTimeline";
 import { bandFromScore } from "@/lib/weather/scoring/labels";
 import { useStormSnapshot } from "@/lib/weather/storm/use-storm-tracking";
+import { distanceKm } from "@/lib/weather/storm/geo";
 
 export const Route = createFileRoute("/analysis")({
   head: () => ({
@@ -57,7 +58,13 @@ function AnalysisPage() {
     return dT <= 3;
   })();
 
-  const radarTopDbz = storm.cells.reduce((m, c) => Math.max(m, c.topDbz), 0) || null;
+  // Nur Zellen über/nahe dem aktiven Ort zählen — nicht das regionsweite Maximum.
+  const LOCAL_RADAR_KM = 25;
+  const radarTopDbz =
+    storm.cells.reduce((m, c) => {
+      const d = distanceKm(c.centroid, { lat: point.lat, lon: point.lon });
+      return d <= LOCAL_RADAR_KM + c.radiusKm ? Math.max(m, c.topDbz) : m;
+    }, 0) || null;
   const radarAgeMinutes = storm.lastFrameTime
     ? Math.round((Date.now() - new Date(storm.lastFrameTime).getTime()) / 60_000)
     : null;
