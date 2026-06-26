@@ -43,7 +43,8 @@ describe("analyzeEnsemble", () => {
     expect(p0.pThunder).toBeCloseTo(0.75, 2);
     expect(p0.pStrong).toBeCloseTo(0.25, 2);
     expect(p0.pHeavyRain).toBeCloseTo(0.5, 2);
-    expect(p0.pStorm).toBeCloseTo(0.75, 2);
+    // 2 von 4 Member mit Böen ≥ 25 m/s (26, 30)
+    expect(p0.pStorm).toBeCloseTo(0.5, 2);
     expect(p0.members).toBe(4);
     expect(summary.memberCount).toBe(4);
     expect(summary.headline).toMatch(/Hohe Gewitterwahrscheinlichkeit/);
