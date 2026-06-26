@@ -6,7 +6,6 @@ import {
   SkipBack,
   SkipForward,
   Radar,
-  Globe2,
   MapPin,
   Activity,
   Target,
@@ -46,14 +45,13 @@ import { useSavedLocations } from "@/hooks/use-saved-locations";
 import { useSettings } from "@/hooks/use-settings";
 import { DEFAULT_STORM_THRESHOLDS } from "@/lib/weather/storm/types";
 
-type Mode = "focus" | "europe" | "ground";
+type Mode = "focus" | "ground";
 
 const MODE_DEFS: Record<
   Mode,
   { label: string; icon: typeof Radar; baseLayer: WmsLayerKey; zoom: number; opacity: number }
 > = {
   focus: { label: "Fokus DE", icon: Radar, baseLayer: "ry", zoom: 6.5, opacity: 0.75 },
-  europe: { label: "Mitteleuropa", icon: Globe2, baseLayer: "pi", zoom: 5.0, opacity: 0.7 },
   ground: { label: "Bodencheck", icon: MapPin, baseLayer: "ry", zoom: 7.5, opacity: 0.35 },
 };
 
@@ -81,28 +79,18 @@ export function RadarCockpit() {
     staleTime: 4 * 60_000,
     enabled: showWnNowcast || scrub > 0,
   });
-  const piQ = useQuery({
-    queryKey: ["wms", "pi"],
-    queryFn: () => fetchWmsTimeline("pi"),
-    refetchInterval: 10 * 60_000,
-    staleTime: 9 * 60_000,
-    enabled: mode === "europe",
-  });
   const forecastQ = useQuery(forecastQuery(point));
 
-  const baseKey = MODE_DEFS[mode].baseLayer;
-  const baseTimeline = baseKey === "pi" ? piQ.data : ryQ.data;
   const ryFrames = ryQ.data?.frames ?? [];
   const wnFrames = wnQ.data?.frames ?? [];
 
   const activeFrame = useMemo(() => {
-    if (mode === "europe") return baseTimeline?.latest ?? null;
     if (scrub === 0) return ryFrames[ryFrames.length - 1] ?? null;
     if (scrub < 0) return ryFrames[Math.max(0, ryFrames.length - 1 + scrub)] ?? null;
     return wnFrames[Math.min(wnFrames.length - 1, scrub - 1)] ?? null;
-  }, [mode, scrub, baseTimeline, ryFrames, wnFrames]);
+  }, [scrub, ryFrames, wnFrames]);
 
-  const activeLayer: WmsLayerKey = mode === "europe" ? "pi" : scrub > 0 ? "wn" : "ry";
+  const activeLayer: WmsLayerKey = scrub > 0 ? "wn" : "ry";
 
   useEffect(() => {
     const def = MODE_DEFS[mode];
@@ -113,15 +101,6 @@ export function RadarCockpit() {
   useEffect(() => {
     const m = mapRef.current;
     if (!m) return;
-    if (mode === "europe") {
-      m.setFrameStack("radar-ry", [], null, MODE_DEFS[mode].opacity);
-      m.setFrameStack("radar-wn", [], null, MODE_DEFS[mode].opacity);
-      if (activeFrame)
-        m.setRasterTiles("radar-pi", wmsTileUrl("pi", activeFrame), MODE_DEFS[mode].opacity);
-      else m.setRasterTiles("radar-pi", null);
-      return;
-    }
-    m.setRasterTiles("radar-pi", null);
     const ryEntries = ryFrames.map((t) => ({ time: t, url: wmsTileUrl("ry", t) }));
     const wnEntries = (showWnNowcast ? wnFrames : []).map((t) => ({
       time: t,
@@ -304,7 +283,6 @@ export function RadarCockpit() {
                 : { label: "RY", confidence: "missing", detail: "lädt…" }
             }
             wn={wnQ.data ? assessTimeline("WN", wnQ.data, WMS_LAYERS.wn.stepMinutes) : null}
-            pi={piQ.data ? assessTimeline("PI", piQ.data, WMS_LAYERS.pi.stepMinutes) : null}
           />
         </div>
 
@@ -381,13 +359,11 @@ function TopBar({
   onModeChange,
   ry,
   wn,
-  pi,
 }: {
   mode: Mode;
   onModeChange: (m: Mode) => void;
   ry: { label: string; confidence: Confidence; detail: string };
   wn: { label: string; confidence: Confidence; detail: string } | null;
-  pi: { label: string; confidence: Confidence; detail: string } | null;
 }) {
   return (
     <div className="grid grid-cols-1 items-center gap-2 rounded-xl border border-border/60 bg-card/70 p-2 shadow-elegant backdrop-blur-xl md:grid-cols-[auto_1fr_auto]">
@@ -417,7 +393,6 @@ function TopBar({
       <div className="flex flex-wrap items-center gap-1">
         <HealthPill h={ry} />
         {wn && <HealthPill h={wn} />}
-        {pi && <HealthPill h={pi} />}
       </div>
     </div>
   );
