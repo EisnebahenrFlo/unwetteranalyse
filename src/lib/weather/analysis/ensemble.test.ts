@@ -47,7 +47,7 @@ describe("analyzeEnsemble", () => {
     expect(p0.pStorm).toBeCloseTo(0.5, 2);
     expect(p0.members).toBe(4);
     expect(summary.memberCount).toBe(4);
-    expect(summary.headline).toMatch(/Hohe Gewitterwahrscheinlichkeit/);
+    expect(summary.headline).toMatch(/Hohes Gewitterpotenzial/);
   });
 
   it("liefert leere Timeline bei fehlendem hourly", () => {
