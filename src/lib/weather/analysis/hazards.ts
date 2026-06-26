@@ -45,25 +45,6 @@ function fmtHourRange(a: string, b: string) {
   return `${f(a)}–${f(b)} Uhr`;
 }
 
-function bucketRange(
-  points: HourlyPoint[],
-  pick: (p: HourlyPoint) => number | undefined,
-  min: number,
-) {
-  let start: string | null = null;
-  let end: string | null = null;
-  let peak = 0;
-  for (const p of points) {
-    const v = pick(p);
-    if (v != null && v >= min) {
-      start ??= p.time;
-      end = p.time;
-      if (v > peak) peak = v;
-    }
-  }
-  return start && end ? { start, end, peak } : null;
-}
-
 /** Confidence aus verfügbaren Feldern ableiten. */
 function confidenceFor(p: HourlyPoint[]): 1 | 2 | 3 | 4 | 5 {
   const has = (k: keyof HourlyPoint) => p.some((x) => x[k] != null);
@@ -287,15 +268,16 @@ export function buildHazards(bundle: ForecastBundle): HazardSet {
     }
     return { max, at };
   })();
-  if (rain6.max >= 30) {
-    const sev: AlertSeverity = rain6.max >= 70 ? "severe" : rain6.max >= 50 ? "moderate" : "minor";
+  if (rain6.max >= 20) {
+    const sev: AlertSeverity =
+      rain6.max >= 60 ? "extreme" : rain6.max >= 35 ? "severe" : "moderate";
     list.push({
       id: "rain-6h",
       category: "rain",
       severity: sev,
       kind: sev,
-      title: "Dauerregen",
-      description: `Summe ${rain6.max.toFixed(0)} mm in 6 Stunden möglich.`,
+      title: "Starkregen mehrstündig (6 h)",
+      description: `Summe bis ${rain6.max.toFixed(0)} mm in 6 Stunden möglich.`,
       windowStart: rain6.at,
       peakValue: `${rain6.max.toFixed(0)} mm/6h`,
       confidence: conf,
@@ -303,21 +285,31 @@ export function buildHazards(bundle: ForecastBundle): HazardSet {
   }
 
   // 6) Glätte / gefrierender Regen / Schnee
-  const ice = bucketRange(
-    horizon,
-    (p) => ((p.precipitationMm ?? 0) > 0.1 && p.temperatureC <= 1 ? 1 : 0),
-    1,
-  );
-  if (ice) {
+  let iceStart: string | null = null;
+  let iceEnd: string | null = null;
+  let icePeak = 0;
+  let iceMinTemp = Infinity;
+  for (const p of horizon) {
+    const precip = p.precipitationMm ?? 0;
+    if (precip > 0.1 && p.temperatureC <= 1) {
+      iceStart ??= p.time;
+      iceEnd = p.time;
+      if (precip > icePeak) icePeak = precip;
+      if (p.temperatureC < iceMinTemp) iceMinTemp = p.temperatureC;
+    }
+  }
+  if (iceStart && iceEnd) {
+    const iceSev: AlertSeverity = icePeak >= 0.5 ? "moderate" : "minor";
+    const minTemp = Number.isFinite(iceMinTemp) ? iceMinTemp : 0;
     list.push({
       id: "ice",
       category: "ice",
-      severity: "moderate",
+      severity: iceSev,
       kind: "cold",
       title: "Glättegefahr",
-      description: "Niederschlag bei Temperaturen um den Gefrierpunkt.",
-      windowStart: ice.start,
-      windowEnd: ice.end,
+      description: `Niederschlag bei ${minTemp.toFixed(0)} °C, Glätte möglich.`,
+      windowStart: iceStart,
+      windowEnd: iceEnd,
       confidence: conf,
     });
   }
