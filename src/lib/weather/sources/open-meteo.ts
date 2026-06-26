@@ -133,7 +133,7 @@ export async function fetchOpenMeteoSingleModel(input: {
       "uv_index",
     ].join(","),
   );
-  url.searchParams.set("forecast_days", String(input.forecastDays ?? 3));
+  url.searchParams.set("forecast_days", String(Math.min(16, input.forecastDays ?? 3)));
   url.searchParams.set("models", input.model);
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`Open-Meteo Model ${input.model} HTTP ${res.status}`);
