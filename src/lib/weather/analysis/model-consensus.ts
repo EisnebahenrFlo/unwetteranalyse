@@ -198,3 +198,10 @@ export const CORE_MODEL_IDS: ModelSeries["model"][] = [
   "ecmwf_ifs025",
   "gfs_seamless",
 ];
+
+/** Modelle mit langem CAPE-Horizont für den 7–14-Tage-Gewittertrend. */
+export const LONG_RANGE_MODEL_IDS: ModelSeries["model"][] = [
+  "gfs_seamless",
+  "ecmwf_ifs025",
+  "icon_seamless",
+];
