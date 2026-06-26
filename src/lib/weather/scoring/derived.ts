@@ -100,7 +100,7 @@ export function thunderProbability(p: HourlyPoint): number {
     else if (tt >= 50) prob = Math.max(prob, 0.65);
     else if (tt >= 44) prob = Math.max(prob, 0.4);
   }
-  if (p.convectiveInhibition != null && p.convectiveInhibition <= -150) prob *= 0.5;
+  if (p.convectiveInhibition != null && p.convectiveInhibition >= 150) prob *= 0.5;
   if (p.weatherCode != null && p.weatherCode >= 95) prob = Math.max(prob, 0.85);
   return Math.min(1, prob);
 }

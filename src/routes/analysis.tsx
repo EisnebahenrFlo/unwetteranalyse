@@ -11,6 +11,7 @@ import { liveHourly } from "@/lib/weather/live";
 import { buildNowcast } from "@/lib/weather/scoring/nowcast";
 import { buildToday } from "@/lib/weather/scoring/today";
 import { deriveAll, thunderProbability } from "@/lib/weather/scoring/derived";
+import { normCape } from "@/lib/weather/scoring/normalize";
 import { ScoreHeadline } from "@/components/analysis/ScoreHeadline";
 import { SubscoreBars } from "@/components/analysis/SubscoreBars";
 import { NowcastTable } from "@/components/analysis/NowcastTable";
@@ -61,6 +62,10 @@ function AnalysisPage() {
     ? Math.round((Date.now() - new Date(storm.lastFrameTime).getTime()) / 60_000)
     : null;
 
+  const forecastAgeMinutes = bundle.meta?.updatedAt
+    ? Math.max(0, (now.getTime() - new Date(bundle.meta.updatedAt).getTime()) / 60_000)
+    : null;
+
   const nowcast = buildNowcast({
     hourly: bundle.hourly,
     minutely: bundle.minutely,
@@ -79,7 +84,12 @@ function AnalysisPage() {
   });
 
   const dataStatus: DataStatus[] = [
-    { label: "Forecast", source: "Open-Meteo", ageMinutes: 0, ok: true },
+    {
+      label: "Forecast",
+      source: "Open-Meteo",
+      ageMinutes: forecastAgeMinutes,
+      ok: forecastAgeMinutes == null || forecastAgeMinutes <= 180,
+    },
     {
       label: "Beobachtung",
       source: bundle.current ? "Open-Meteo Current" : "—",
@@ -229,7 +239,7 @@ function AnalysisPage() {
             label: "LI / CIN",
             value: `${li != null ? li.toFixed(1) : "—"} / ${cin != null ? cin.toFixed(0) : "—"}`,
           }}
-          band={cape != null ? bandFromScore(Math.min(100, cape / 25)) : undefined}
+          band={cape != null ? bandFromScore(Math.min(75, normCape(cape))) : undefined}
         />
         <ParamCardPro
           title="Gewitterwahrscheinlichkeit"
