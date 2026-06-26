@@ -14,6 +14,7 @@ import {
 } from "@/lib/weather/analysis/model-consensus";
 import { ModelSummaryCard } from "@/components/models/ModelSummaryCard";
 import { ConsensusPanel } from "@/components/models/ConsensusPanel";
+import { ThunderstormTrendPanel } from "@/components/models/ThunderstormTrendPanel";
 import { ParameterFilterStrip, PARAMETERS } from "@/components/models/ParameterFilterStrip";
 import { FocusedCompareChart } from "@/components/models/FocusedCompareChart";
 import { ModelRiskRanking } from "@/components/models/ModelRiskRanking";
@@ -63,6 +64,9 @@ function ModelsPage() {
 
       {/* Block 2: Konsens */}
       {summary && <ConsensusPanel summary={summary} />}
+
+      {/* Block 2b: Langfrist-Gewittertrend */}
+      {series.length > 0 && <ThunderstormTrendPanel series={series} />}
 
       {/* Block 3: Parameter-Filter (sticky) */}
       {series.length > 0 && <ParameterFilterStrip active={metric} onChange={setMetric} />}
