@@ -202,10 +202,10 @@ function headlineFor(
   if (hail !== "none" && SEVERITY_ORDER.indexOf(hail) >= 3)
     return "Hagelgefahr in den nächsten 2 Stunden";
   if (level === "severe") return "Schweres Unwetter in den nächsten 2 Stunden möglich";
-  if (level === "moderate") return "Unwettersignal im 2-Stunden-Nowcast";
+  if (level === "moderate") return "Markantes Wetter im 2-Stunden-Nowcast";
   if (thunderProb >= 0.5) return "Gewitter im 2-Stunden-Nowcast wahrscheinlich";
   if (rainMmPerH >= 5) return "Schauerstaffel im Anflug";
-  if (level === "minor") return "Markante Entwicklung möglich";
+  if (level === "minor") return "Erhöhte Gewitterneigung in den nächsten 2 Stunden";
   return "Ruhige Kurzfristlage in den nächsten 2 Stunden";
 }
 
