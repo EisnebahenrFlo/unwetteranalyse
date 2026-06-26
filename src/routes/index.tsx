@@ -9,9 +9,9 @@ import {
 } from "@/lib/weather/queries";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/ErrorState";
-import { deriveAlertsFromForecast, derivedToAlert } from "@/lib/weather/analysis/situation";
 import { useLiveNow } from "@/hooks/use-live-now";
 import { liveDaily, liveHourly } from "@/lib/weather/live";
+import { buildHazards } from "@/lib/weather/analysis/hazards";
 import { StickySubnav } from "@/components/cockpit/StickySubnav";
 import { SectionHeader } from "@/components/cockpit/SectionHeader";
 import { SituationHeadline } from "@/components/cockpit/SituationHeadline";
@@ -69,7 +69,7 @@ function Dashboard() {
     daily: liveDaily(forecast.data.daily, now),
   };
   const officialAlerts = bsAlerts.data ?? [];
-  const derived = deriveAlertsFromForecast(bundle).map(derivedToAlert);
+  const hazardSet = buildHazards(bundle);
 
   const bsMeta = bsCurrent.data
     ? {
@@ -128,7 +128,7 @@ function Dashboard() {
     {
       id: "rules",
       label: "DWD · Eigene Schwellen",
-      description: `${derived.length} abgeleitete Hinweise aus Forecast-Schwellen.`,
+      description: `${hazardSet.hazards.length} abgeleitete Gefahren aus eigenen Schwellen (24 h).`,
       meta: { source: "dwd", updatedAt: bundle.meta.updatedAt },
       ok: true,
     },
@@ -181,7 +181,7 @@ function Dashboard() {
             title="Gefahrenbewertung"
             question="Welche Risiken sind priorisiert relevant, mit welcher Konfidenz?"
           />
-          <HazardPriorityList bundle={bundle} officialAlerts={officialAlerts} />
+          <HazardPriorityList hazards={hazardSet.hazards} officialAlerts={officialAlerts} />
         </section>
 
         <section className="flex min-w-0 flex-col gap-3">

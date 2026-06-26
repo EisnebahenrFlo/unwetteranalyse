@@ -4,13 +4,8 @@ import { MeteoconIcon } from "@/components/weather/MeteoconIcon";
 import { Card } from "@/components/ui/card";
 import { WarnBadge } from "@/components/common/WarnBadge";
 import { SeverityRail, hazardKindToLevel } from "@/components/common/SeverityRail";
-import {
-  buildHazards,
-  formatHazardWindow,
-  type Hazard,
-  type HazardKind,
-} from "@/lib/weather/analysis/hazards";
-import type { ForecastBundle, WeatherAlert } from "@/lib/weather/types";
+import { formatHazardWindow, type Hazard, type HazardKind } from "@/lib/weather/analysis/hazards";
+import type { WeatherAlert } from "@/lib/weather/types";
 import { cn } from "@/lib/utils";
 
 const KIND_BAR: Record<HazardKind, string> = {
@@ -64,14 +59,13 @@ const METEOCON_BY_CAT: Record<
  * Sortierung kommt aus `buildHazards`: echte Unwetter zuerst, Heat/Cold/Info danach.
  */
 export function HazardPriorityList({
-  bundle,
+  hazards,
   officialAlerts,
 }: {
-  bundle: ForecastBundle;
+  hazards: Hazard[];
   officialAlerts: WeatherAlert[];
 }) {
-  const set = buildHazards(bundle);
-  const items = set.hazards.slice(0, 6);
+  const items = hazards.slice(0, 6);
 
   if (items.length === 0 && officialAlerts.length === 0) {
     return (
