@@ -40,6 +40,7 @@ const METEOCON_BY_CAT: Record<
   | "thermometer"
   | "clear-day"
   | "wind"
+  | "tornado"
 > = {
   thunderstorm: "thunderstorms-day-rain",
   hail: "hail",
@@ -51,7 +52,7 @@ const METEOCON_BY_CAT: Record<
   heat: "thermometer",
   cold: "thermometer",
   uv: "clear-day",
-  tornado: "wind",
+  tornado: "tornado",
 };
 
 /**
