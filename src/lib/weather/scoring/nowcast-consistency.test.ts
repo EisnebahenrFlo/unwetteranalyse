@@ -24,12 +24,12 @@ function makeHourly(over: Partial<HourlyPoint> = {}): HourlyPoint[] {
 }
 
 const baseCtx: DataContextInput = {
-  hasMinutely: true,
-  hasUpperLevels: true,
-  hasConvective: true,
-  liveObsAgeMinutes: 5,
-  radarAgeMinutes: 5,
-  modelObsConsistent: true,
+  hasMinutely: false,
+  hasUpperLevels: false,
+  hasConvective: false,
+  liveObsAgeMinutes: null,
+  radarAgeMinutes: null,
+  modelObsConsistent: null,
 };
 
 describe("combine — Multi-Source-Gate (via buildNowcast)", () => {
@@ -59,18 +59,20 @@ describe("combine — Multi-Source-Gate (via buildNowcast)", () => {
     // Hoher Regen + starkes Gewittersignal.
     const hourly = makeHourly({
       weatherCode: 95,
-      precipitationMm: 12, // klarer Regen
+      precipitationMm: 40,
+      cape: 2200,
+      liftedIndex: -5,
     });
     const r = buildNowcast({
       hourly,
       minutely: Array.from({ length: 8 }, (_, i) => ({
         time: new Date(Date.now() + i * 15 * 60_000).toISOString(),
-        precipitationMm: 3, // -> 12 mm/h
+        precipitationMm: 10, // -> 40 mm/h
         precipitationProbability: 90,
         weatherCode: 95,
       })),
       now: new Date(),
-      radarTopDbz: 55,
+      radarTopDbz: 60,
     });
     expect(r.subs.rain.value).toBeGreaterThanOrEqual(45);
     expect(r.subs.thunder.value).toBeGreaterThanOrEqual(45);
@@ -86,12 +88,13 @@ describe("thunderSubscore — Radar-Echo gegen Niederschlag", () => {
     weatherCode: code,
   });
 
-  it("radarTopDbz=55 ohne Niederschlag -> 0 Radar-Punkte, Label 'unbestätigt'", () => {
+  it("radarTopDbz=55 ohne Niederschlag -> Radar trägt 0 Punkte bei", () => {
     const s = thunderSubscore(point(0), { radarTopDbz: 55 });
-    const radar = s.contributors.find((x) => x.label.startsWith("Radar-Echo"));
-    expect(radar).toBeDefined();
-    expect(radar!.label).toContain("unbestätigt");
-    expect(radar!.points).toBe(0);
+    // Subscore-Value sollte 0 sein, da nur Radar verfügbar wäre und es nicht zählt.
+    expect(s.value).toBe(0);
+    // pickTop blendet 0-Punkt-Beiträge aus, also dürfen keine Radar-Punkte sichtbar sein.
+    const radarVisible = s.contributors.find((x) => x.label.startsWith("Radar-Echo"));
+    expect(radarVisible).toBeUndefined();
   });
 
   it("radarTopDbz=55 mit Niederschlag 3 mm -> 40 Radar-Punkte", () => {
