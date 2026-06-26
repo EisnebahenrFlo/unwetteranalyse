@@ -14,6 +14,7 @@ import { ShieldCheck, ShieldAlert } from "@/components/icons";
 import { formatHour, formatRelative } from "@/lib/weather/format";
 import { deriveAlertsFromForecast, derivedToAlert } from "@/lib/weather/analysis/situation";
 import { severityWeight } from "@/lib/weather/thresholds/dwd";
+import { WARN_LEVEL } from "@/lib/weather/thresholds/warn-level";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLiveNow } from "@/hooks/use-live-now";
 import { liveHourly } from "@/lib/weather/live";
@@ -62,8 +63,8 @@ function AlertsPage() {
           Aktive Warnungen, höchste Stufe zuerst
         </h1>
         <p className="text-sm text-muted-foreground">
-          Offizielle DWD-Warnungen via Bright Sky (DACH) plus eigene Schwellen aus der
-          Forecast-Analyse.
+          Offizielle DWD-Warnungen für Deutschland via Bright Sky plus eigene Schwellen
+          aus der Forecast-Analyse. (AT/CH/IT: amtliche Warnungen folgen über MeteoAlarm.)
         </p>
       </header>
 
@@ -164,13 +165,6 @@ function AlertsPage() {
 
 /* ---------------- Gruppierung nach Stufe ---------------- */
 
-const STUFE_LABEL: Record<SeverityLevel, string> = {
-  4: "Stufe 4 · extrem",
-  3: "Stufe 3 · schwer",
-  2: "Stufe 2 · unwetter",
-  1: "Stufe 1 · markant",
-};
-
 interface GroupedAlertsProps<T extends { severity: AlertSeverity }> {
   alerts: T[];
   renderItem: (a: T) => ReactNode;
@@ -198,7 +192,7 @@ function GroupedAlerts<T extends { severity: AlertSeverity }>({
           <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             <SeverityRail level={g.level} orientation="horizontal" showLabel={false} className="w-10" />
             <span>
-              {STUFE_LABEL[g.level]} · {g.items.length}
+              {`Stufe ${g.level} · ${WARN_LEVEL[g.level].name}`} · {g.items.length}
             </span>
           </div>
           <div className="flex flex-col gap-2">{g.items.map((a) => renderItem(a))}</div>
