@@ -27,21 +27,32 @@ export function thunderProbability(p: HourlyPoint): number {
     else if (p.liftedIndex <= -3) prob = Math.max(prob, 0.7);
     else if (p.liftedIndex <= -1) prob = Math.max(prob, 0.45);
   }
-  // Konvektive Inhibition (CIN) dämpft alles. CIN ist negativ in J/kg.
-  if (p.convectiveInhibition != null && p.convectiveInhibition <= -150) prob *= 0.5;
+  // CIN ist positiv in J/kg (Open-Meteo: 0…765); ≥150 = spürbarer Deckel, dämpft.
+  if (p.convectiveInhibition != null && p.convectiveInhibition >= 150) prob *= 0.5;
   // WMO-Codes 95–99 sind Gewitter — wenn das Modell sie meldet, hochziehen.
   if (p.weatherCode != null && p.weatherCode >= 95) prob = Math.max(prob, 0.85);
   return Math.min(1, prob);
 }
 
-/** Hagel-Risiko: hohe CAPE + sehr negativer LI + kalte Höhenluft (proxy: gefr. Höhe niedrig). */
+/** Hagel-Risiko: Modellsignal (WMO 96/99) oder CAPE + LI/Freezing-Level-Proxy. */
 export function hailRisk(p: HourlyPoint): AlertSeverity | "none" {
+  const code = p.weatherCode;
+  // Direktes Modellsignal (Mitteleuropa / ICON): Gewitter mit Hagel.
+  if (code === 99) return "severe"; // schwerer Hagel
+  if (code === 96) return "moderate"; // leichter Hagel
   if (p.cape == null) return "none";
-  const li = p.liftedIndex ?? 0;
+  const li = p.liftedIndex; // nur GFS liefert LI
   const fl = p.freezingLevelM ?? 4000;
-  if (p.cape >= 2000 && li <= -5 && fl <= 3500) return "severe";
-  if (p.cape >= 1500 && li <= -3) return "moderate";
-  if (p.cape >= 800 && li <= -2) return "minor";
+  if (li != null) {
+    // LI-gestützter Pfad (schärfer, wenn vorhanden)
+    if (p.cape >= 2000 && li <= -5 && fl <= 3500) return "severe";
+    if (p.cape >= 1500 && li <= -3) return "moderate";
+    if (p.cape >= 800 && li <= -2) return "minor";
+    return "none";
+  }
+  // Ohne LI: konservativer CAPE + Freezing-Level-Proxy (deckelt auf moderate).
+  if (p.cape >= 2500 && fl <= 3500) return "moderate";
+  if (p.cape >= 1500 && fl <= 3800) return "minor";
   return "none";
 }
 
