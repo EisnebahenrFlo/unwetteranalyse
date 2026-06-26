@@ -412,7 +412,7 @@ function TopBar({
         })}
       </div>
       <div className="hidden text-[11px] text-muted-foreground md:block">
-        Quelle: DWD GeoServer · Stormtrack aus RY-Niederschlag (dBZ via Z-R)
+        Quelle: DWD GeoServer · Stormtrack aus RY-Niederschlag (DE, dBZ via Z-R)
       </div>
       <div className="flex flex-wrap items-center gap-1">
         <HealthPill h={ry} />
@@ -476,10 +476,10 @@ function Legend({ layer }: { layer: WmsLayerKey }) {
   return (
     <div className="pointer-events-none absolute bottom-3 right-3 rounded-md border border-border bg-background/90 px-2.5 py-1.5 text-[10px] backdrop-blur">
       <div className="mb-1 font-semibold uppercase tracking-wide text-muted-foreground">
-        {WMS_LAYERS[layer].label} · Niederschlag
+        {WMS_LAYERS[layer].label} · Niederschlag (RY, mm/5min)
       </div>
       <div className="flex items-center gap-1">
-        {["#bbdefb", "#42a5f5", "#1976d2", "#f59e0b", "#dc2626"].map((c) => (
+        {["#fbff5c", "#a0d626", "#00d6d8", "#0702fc", "#da28c6", "#e70d0c", "#880e0d"].map((c) => (
           <span key={c} className="h-2.5 w-5 rounded-sm" style={{ backgroundColor: c }} />
         ))}
       </div>

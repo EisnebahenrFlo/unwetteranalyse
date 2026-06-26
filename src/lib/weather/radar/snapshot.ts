@@ -148,7 +148,16 @@ async function loadImageData(url: string): Promise<ImageData> {
 
 /** Voller Snapshot: WMS-Frame laden, klassifizieren, Zellen detektieren. */
 export async function fetchRadarSnapshot(frameTime: string | null = null): Promise<RadarSnapshot> {
-  const url = wmsImageUrl(frameTime);
+  let resolvedTime: string | null = frameTime;
+  if (resolvedTime == null) {
+    try {
+      const tl = await fetchWmsTimeline("ry");
+      resolvedTime = tl.latest ?? null;
+    } catch {
+      resolvedTime = null;
+    }
+  }
+  const url = wmsImageUrl(resolvedTime);
   const img = await loadImageData(url);
   const mask = new Uint8Array(WIDTH * HEIGHT);
   const data = img.data;
@@ -185,7 +194,7 @@ export async function fetchRadarSnapshot(frameTime: string | null = null): Promi
   });
 
   return {
-    frameTime: frameTime ?? new Date().toISOString(),
+    frameTime: resolvedTime ?? new Date().toISOString(),
     fetchedAt: Date.now(),
     cells,
     bbox: [
