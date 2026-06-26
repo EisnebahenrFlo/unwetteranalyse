@@ -1,10 +1,12 @@
 import { cn } from "@/lib/utils";
+import { WARN_LEVEL } from "@/lib/weather/thresholds/warn-level";
 
 /**
  * Signature-Element „Stufenband": schmaler Balken mit den vier DWD-Warnfarben,
- * der die aktuelle Stufe markiert. An Radar-dBZ kalibriert (Stufe 1 markant,
- * 2 Unwetter, 3 schwer, 4 extrem). Dezenter Pulse nur ab Stufe 3, respektiert
- * `prefers-reduced-motion` (Animationen werden global gedämpft).
+ * der die aktuelle Stufe markiert (Stufe 1 Wetterwarnung/gelb,
+ * 2 Markantes Wetter/orange, 3 Unwetterwarnung/rot, 4 Extremes Unwetter/violett).
+ * Dezenter Pulse nur ab Stufe 3, respektiert `prefers-reduced-motion`
+ * (Animationen werden global gedämpft).
  */
 export type SeverityLevel = 1 | 2 | 3 | 4;
 
@@ -16,10 +18,10 @@ const LEVEL_COLOR: Record<SeverityLevel, string> = {
 };
 
 const LEVEL_LABEL: Record<SeverityLevel, string> = {
-  1: "Stufe 1 · markant",
-  2: "Stufe 2 · unwetter",
-  3: "Stufe 3 · schwer",
-  4: "Stufe 4 · extrem",
+  1: `Stufe 1 · ${WARN_LEVEL[1].name}`,
+  2: `Stufe 2 · ${WARN_LEVEL[2].name}`,
+  3: `Stufe 3 · ${WARN_LEVEL[3].name}`,
+  4: `Stufe 4 · ${WARN_LEVEL[4].name}`,
 };
 
 interface Props {
@@ -44,7 +46,7 @@ export function SeverityRail({
     <div
       className={cn(
         "flex items-center gap-2",
-        isV && "flex-col items-stretch",
+        isV && "flex-col items-stretch h-24",
         className,
       )}
       role="img"
@@ -53,7 +55,7 @@ export function SeverityRail({
       <div
         className={cn(
           "flex overflow-hidden rounded-full bg-border/40",
-          isV ? "h-24 w-1.5 flex-col" : "h-1.5 w-full min-w-[80px] flex-row",
+          isV ? "h-full w-1.5 flex-col" : "h-1.5 w-full min-w-[80px] flex-row",
         )}
       >
         {segments.map((s) => {
