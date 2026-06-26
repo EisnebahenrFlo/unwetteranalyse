@@ -7,7 +7,7 @@ const DWD_OWS = "https://maps.dwd.de/geoserver/dwd/ows";
 const DWD_WMS = "https://maps.dwd.de/geoserver/dwd/wms";
 import { parseWmsTimeDimension } from "./wms-capabilities";
 
-export type WmsLayerKey = "ry" | "wn" | "pi";
+export type WmsLayerKey = "ry" | "wn";
 
 interface WmsLayerDef {
   /** WMS-Layer-Name laut Capabilities. */
@@ -36,13 +36,6 @@ export const WMS_LAYERS: Record<WmsLayerKey, WmsLayerDef> = {
     blurb: "Radar-Nowcast bis +2 h, 5 min, 1 km.",
     stepMinutes: 5,
     maxFrames: 24,
-  },
-  pi: {
-    name: "Radar_eucom_zeros",
-    label: "PI",
-    blurb: "Mitteleuropa-Composite, ca. 15 min.",
-    stepMinutes: 15,
-    maxFrames: 12,
   },
 };
 
