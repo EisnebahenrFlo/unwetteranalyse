@@ -1,7 +1,7 @@
 /**
  * Bright Sky greift auf DWD Open Data zu (kostenlos, kein API-Key).
  * Docs: https://brightsky.dev/docs
- * Hinweis: Stationsdaten und Alerts sind nur für DACH zuverlässig.
+ * Hinweis: Stationsdaten und Alerts sind nur für Deutschland (DWD) zuverlässig.
  */
 const BASE = "https://api.brightsky.dev";
 

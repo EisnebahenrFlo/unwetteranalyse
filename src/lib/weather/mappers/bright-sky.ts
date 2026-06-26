@@ -94,6 +94,7 @@ export function mapBrightSkyStations(raw: {
     lat: number;
     lon: number;
     distance?: number;
+    observation_type?: string;
   }>;
 }): StationObservation[] {
   const sources = raw.sources ?? [];
@@ -107,6 +108,7 @@ export function mapBrightSkyStations(raw: {
   }
   const stations: StationObservation[] = [];
   for (const src of sources) {
+    if (src.observation_type === "forecast") continue;
     const w = latestPerSource.get(src.id);
     if (!w) continue;
     stations.push({

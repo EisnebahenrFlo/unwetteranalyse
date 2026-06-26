@@ -31,7 +31,7 @@ function StationsPage() {
     <div className="flex flex-col gap-4 pb-6">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">Stationen</h1>
-        <p className="text-sm text-muted-foreground">DWD Messstationen im 50 km Umkreis</p>
+        <p className="text-sm text-muted-foreground">Nächstgelegene DWD-Stationen (max. 50 km)</p>
         {q.data && (
           <p className="text-xs text-muted-foreground/80">{stations.length} Stationen gefunden</p>
         )}
@@ -54,7 +54,10 @@ function StationsPage() {
       )}
 
       <ul className="flex flex-col gap-3">
-        {stations.map((s) => (
+        {stations.map((s) => {
+          const ageMin = (Date.now() - new Date(s.observedAt).getTime()) / 60000;
+          const stale = ageMin > 120;
+          return (
           <li
             key={`${s.stationId}-${s.observedAt}`}
             className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm transition-colors hover:bg-accent/30"
@@ -69,7 +72,7 @@ function StationsPage() {
             </div>
 
             <div className="mt-3 text-4xl font-semibold tracking-tight tabular-nums text-foreground">
-              {formatTemp(s.temperatureC, settings.tempUnit)}
+              {s.temperatureC == null ? "—" : formatTemp(s.temperatureC, settings.tempUnit)}
             </div>
 
             <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-muted/30 p-3">
@@ -80,14 +83,16 @@ function StationsPage() {
 
             <p className="mt-3 text-[11px] text-muted-foreground/80">
               ID {s.stationId} · Aktualisiert {formatRelative(s.observedAt)}
+              {stale && <span className="text-warn-moderate"> · veraltet</span>}
             </p>
           </li>
-        ))}
+          );
+        })}
       </ul>
 
       {stations.length > 0 && (
         <p className="pt-2 text-center text-[11px] text-muted-foreground/70">
-          Quelle: Bright Sky / DWD · Auflösung ca. 1 km
+          Quelle: Bright Sky / DWD · Beobachtungen der letzten 6 h, max. 50 km
         </p>
       )}
     </div>
