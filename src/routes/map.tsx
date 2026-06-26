@@ -8,7 +8,7 @@ export const Route = createFileRoute("/map")({
       {
         name: "description",
         content:
-          "DWD RY/WN/PI mit Stormtracking direkt aus der Radar-Reflektivität, Hagelkern-Erkennung und Kurzfrist-Nowcast.",
+          "DWD RY/WN/PI mit Stormtracking aus dem DWD RY-Niederschlagskomposit (dBZ via Z-R abgeleitet), Hagelkern-Näherung und Kurzfrist-Nowcast.",
       },
     ],
   }),
