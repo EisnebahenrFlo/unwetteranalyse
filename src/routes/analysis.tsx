@@ -11,6 +11,7 @@ import { liveHourly } from "@/lib/weather/live";
 import { buildNowcast } from "@/lib/weather/scoring/nowcast";
 import { buildToday } from "@/lib/weather/scoring/today";
 import { deriveAll, thunderProbability } from "@/lib/weather/scoring/derived";
+import { normCape } from "@/lib/weather/scoring/normalize";
 import { ScoreHeadline } from "@/components/analysis/ScoreHeadline";
 import { SubscoreBars } from "@/components/analysis/SubscoreBars";
 import { NowcastTable } from "@/components/analysis/NowcastTable";
@@ -79,7 +80,12 @@ function AnalysisPage() {
   });
 
   const dataStatus: DataStatus[] = [
-    { label: "Forecast", source: "Open-Meteo", ageMinutes: 0, ok: true },
+    {
+      label: "Forecast",
+      source: "Open-Meteo",
+      ageMinutes: forecastAgeMinutes,
+      ok: forecastAgeMinutes == null || forecastAgeMinutes <= 180,
+    },
     {
       label: "Beobachtung",
       source: bundle.current ? "Open-Meteo Current" : "—",

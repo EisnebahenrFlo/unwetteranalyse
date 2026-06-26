@@ -42,7 +42,8 @@ export const normGustKmh = (kmh: number) =>
     [65, 50],
     [80, 70],
     [100, 85],
-    [120, 100],
+    [120, 95],
+    [140, 100],
   ]);
 
 export const normWindKmh = (kmh: number) =>
@@ -67,13 +68,13 @@ export const normCape = (jkg: number) =>
 
 export const normLiftedIndex = (li: number) =>
   piecewise(li, [
-    [4, 0],
-    [0, 10],
-    [-1, 22],
-    [-3, 45],
-    [-5, 70],
-    [-7, 88],
     [-10, 100],
+    [-7, 88],
+    [-5, 70],
+    [-3, 45],
+    [-1, 22],
+    [0, 10],
+    [4, 0],
   ]);
 
 export const normKIndex = (k: number) =>
