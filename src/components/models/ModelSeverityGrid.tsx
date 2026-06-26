@@ -6,6 +6,7 @@ import type { ModelSeries } from "@/lib/weather/types";
 import { cn } from "@/lib/utils";
 import { useLiveNow } from "@/hooks/use-live-now";
 import { liveHourly } from "@/lib/weather/live";
+import { getModelInfo } from "@/lib/weather/models";
 
 /**
  * Zeigt für jedes Modell die wichtigsten Unwetter-Kennzahlen der nächsten 24 h.
@@ -41,6 +42,9 @@ export function ModelSeverityGrid({ series }: { series: ModelSeries[] }) {
           </thead>
           <tbody>
             {series.map((s) => {
+              const info = getModelInfo(s.model);
+              // AIFS hat keine Konvektions-Parameter — gar nicht erst zeigen.
+              if (!info?.hazards.cape) return null;
               const live = liveHourly(s.hourly, now);
               const sum = summarizeModelSevere(live);
               const dewMax = Math.max(0, ...live.slice(0, 24).map((p) => p.dewPointC ?? 0));
@@ -60,10 +64,10 @@ export function ModelSeverityGrid({ series }: { series: ModelSeries[] }) {
                     {sum.capeMax != null ? `${sum.capeMax.toFixed(0)} J/kg` : "—"}
                   </td>
                   <td className="py-2 pr-3 font-mono" style={{ fontFamily: "var(--font-mono)" }}>
-                    {sum.liMin != null ? sum.liMin.toFixed(1) : "—"}
+                    {info.hazards.liftedIndex && sum.liMin != null ? sum.liMin.toFixed(1) : "—"}
                   </td>
                   <td className="py-2 pr-3 font-mono" style={{ fontFamily: "var(--font-mono)" }}>
-                    {(sum.gustMaxMs * 3.6).toFixed(0)} km/h
+                    {info.hazards.gusts ? `${(sum.gustMaxMs * 3.6).toFixed(0)} km/h` : "—"}
                   </td>
                   <td className="py-2 pr-3 font-mono" style={{ fontFamily: "var(--font-mono)" }}>
                     {dewMax > 0 ? `${dewMax.toFixed(1)} °C` : "—"}

@@ -1,6 +1,11 @@
 import type { ModelSeries, HourlyPoint } from "../types";
 import { thunderProbability, summarizeModelSevere } from "./convection";
 import { liveHourly } from "../live";
+import { getModelInfo } from "../models";
+
+function hazardCapable(series: ModelSeries[]): ModelSeries[] {
+  return series.filter((s) => getModelInfo(s.model)?.hazards.cape);
+}
 
 export type ConsensusMetric =
   | "temperatureC"
@@ -65,7 +70,8 @@ export interface ConsensusSummary {
 }
 
 export function buildConsensus(series: ModelSeries[], now: Date): ConsensusSummary {
-  const live = series.map((s) => ({ s, h: liveHourly(s.hourly, now).slice(0, 24) }));
+  const usable = hazardCapable(series);
+  const live = usable.map((s) => ({ s, h: liveHourly(s.hourly, now).slice(0, 24) }));
   const summaries = live.map(({ h }) => summarizeModelSevere(h));
   const scores = summaries.map((x) => x.worstScore);
   const signaling = summaries.filter((x) => x.level !== "none").length;
@@ -119,12 +125,12 @@ export function buildConsensus(series: ModelSeries[], now: Date): ConsensusSumma
   else if (riskMax >= 45)
     headline = `Einige Modelle zeigen markantes Gewitter- oder Sturmpotenzial${window ? ` (${fmtH(window.start)}–${fmtH(window.end)} Uhr)` : ""}, Unsicherheit ${uncertaintyLabel(uncertainty)}.`;
   else if (riskMax >= 20)
-    headline = `Schwache konvektive Signale, ${signaling} von ${series.length} Modellen mit Wetteraktivität.`;
+    headline = `Schwache konvektive Signale, ${signaling} von ${usable.length} Modellen mit Wetteraktivität.`;
 
   return {
-    modelCount: series.length,
+    modelCount: usable.length,
     signalingCount: signaling,
-    signalingRatio: ratio,
+    signalingRatio: usable.length ? signaling / usable.length : ratio,
     signalWindow: window,
     riskMax,
     scoreSpread: spread,
@@ -157,7 +163,7 @@ export interface ModelRankRow {
 }
 
 export function buildRanking(series: ModelSeries[], now: Date): ModelRankRow[] {
-  return series
+  return hazardCapable(series)
     .map((s) => {
       const live = liveHourly(s.hourly, now).slice(0, 24);
       const sum = summarizeModelSevere(live);
