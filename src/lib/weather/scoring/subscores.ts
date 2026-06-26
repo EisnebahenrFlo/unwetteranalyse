@@ -79,12 +79,23 @@ export function thunderSubscore(
     c.push({ label: "Modell meldet Gewitter", raw: `Code ${p.weatherCode}`, points: 15 });
   }
   if (opts?.radarTopDbz != null && opts.radarTopDbz >= 40) {
-    const pts = Math.min(40, (opts.radarTopDbz - 35) * 3);
-    c.push({
-      label: "Radar-Echo",
-      raw: `${Math.round(opts.radarTopDbz)} dBZ`,
-      points: pts,
-    });
+    const precipMm = p.precipitationMm ?? 0;
+    // >=40 dBZ impliziert messbaren Niederschlag (Z-R). Fehlt der lokal,
+    // ist das Echo nicht vertrauenswürdig (Fremdzelle/Stale) -> kein Beitrag.
+    if (precipMm >= 0.5) {
+      const pts = Math.min(40, (opts.radarTopDbz - 35) * 3);
+      c.push({
+        label: "Radar-Echo",
+        raw: `${Math.round(opts.radarTopDbz)} dBZ`,
+        points: pts,
+      });
+    } else {
+      c.push({
+        label: "Radar-Echo (unbestätigt)",
+        raw: `${Math.round(opts.radarTopDbz)} dBZ · kein lokaler Niederschlag`,
+        points: 0,
+      });
+    }
   }
   const total = c.reduce((s, x) => s + x.points, 0);
   const conf =
@@ -132,6 +143,7 @@ export interface DataContextInput {
   liveObsAgeMinutes: number | null;
   radarAgeMinutes: number | null;
   modelObsConsistent: boolean | null;
+  radarPrecipConflict?: boolean;
 }
 
 export function dataConfidence(input: DataContextInput): Subscore {
@@ -178,6 +190,10 @@ export function dataConfidence(input: DataContextInput): Subscore {
   if (input.modelObsConsistent === true) {
     score += 5;
     c.push({ label: "Modell ↔ Live", raw: "konsistent", points: 5 });
+  }
+  if (input.radarPrecipConflict) {
+    score -= 25;
+    c.push({ label: "Radar ↔ Niederschlag", raw: "widersprüchlich", points: -25 });
   }
   score = Math.max(0, Math.min(100, score));
   return { value: Math.round(score), band: bandFromScore(score), contributors: c, confidence: 100 };
