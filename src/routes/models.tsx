@@ -15,6 +15,7 @@ import {
 import { ModelSummaryCard } from "@/components/models/ModelSummaryCard";
 import { ConsensusPanel } from "@/components/models/ConsensusPanel";
 import { ThunderstormTrendPanel } from "@/components/models/ThunderstormTrendPanel";
+import { EnsembleProbabilityPanel } from "@/components/models/EnsembleProbabilityPanel";
 import { ParameterFilterStrip, PARAMETERS } from "@/components/models/ParameterFilterStrip";
 import { FocusedCompareChart } from "@/components/models/FocusedCompareChart";
 import { ModelRiskRanking } from "@/components/models/ModelRiskRanking";
@@ -67,6 +68,9 @@ function ModelsPage() {
 
       {/* Block 2b: Langfrist-Gewittertrend */}
       {series.length > 0 && <ThunderstormTrendPanel series={series} />}
+
+      {/* Block 2c: Ensemble-Wahrscheinlichkeiten */}
+      <EnsembleProbabilityPanel point={point} />
 
       {/* Block 3: Parameter-Filter (sticky) */}
       {series.length > 0 && <ParameterFilterStrip active={metric} onChange={setMetric} />}

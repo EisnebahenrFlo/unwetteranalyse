@@ -6,6 +6,7 @@ import {
   fetchBrightSkyStations,
 } from "./sources/bright-sky";
 import { fetchDwdRadarFrames } from "./sources/dwd-radar";
+import { fetchEnsemble } from "./sources/open-meteo-ensemble";
 import { mapForecastBundle, mapModelSeries } from "./mappers/open-meteo";
 import {
   mapBrightSkyCurrent,
@@ -121,5 +122,14 @@ export function geocodingQuery(query: string) {
     queryFn: () => searchLocations(query),
     enabled: query.trim().length >= 2,
     staleTime: 60 * 60 * 1000,
+  });
+}
+
+export function ensembleQuery(point: GeoPoint) {
+  return queryOptions({
+    queryKey: ["ensemble", point.lat, point.lon] as const,
+    queryFn: () => fetchEnsemble({ lat: point.lat, lon: point.lon }),
+    staleTime: STALE,
+    refetchInterval: STALE,
   });
 }
