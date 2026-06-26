@@ -7,10 +7,12 @@ describe("DWD-Schwellen — Grenzen", () => {
   it("Wind (Bft-Mapping)", () => {
     expect(byId(WIND_GUST_RULES, "wind-minor").evaluate(13.9)).toBe(false);
     expect(byId(WIND_GUST_RULES, "wind-minor").evaluate(14)).toBe(true);
-    expect(byId(WIND_GUST_RULES, "wind-moderate").evaluate(18)).toBe(true);
-    expect(byId(WIND_GUST_RULES, "wind-severe").evaluate(25)).toBe(true);
-    expect(byId(WIND_GUST_RULES, "wind-severe").evaluate(33)).toBe(false);
-    expect(byId(WIND_GUST_RULES, "wind-extreme").evaluate(33)).toBe(true);
+    expect(byId(WIND_GUST_RULES, "wind-minor").evaluate(20.8)).toBe(false);
+    expect(byId(WIND_GUST_RULES, "wind-moderate").evaluate(20.8)).toBe(true);
+    expect(byId(WIND_GUST_RULES, "wind-moderate").evaluate(28.4)).toBe(false);
+    expect(byId(WIND_GUST_RULES, "wind-severe").evaluate(28.4)).toBe(true);
+    expect(byId(WIND_GUST_RULES, "wind-severe").evaluate(38.9)).toBe(false);
+    expect(byId(WIND_GUST_RULES, "wind-extreme").evaluate(38.9)).toBe(true);
   });
   it("Starkregen", () => {
     expect(byId(PRECIP_RULES, "rain-minor").evaluate(14.9)).toBe(false);

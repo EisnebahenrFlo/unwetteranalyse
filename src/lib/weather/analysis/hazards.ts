@@ -215,11 +215,11 @@ export function buildHazards(bundle: ForecastBundle): HazardSet {
   }, null);
   if (gustMax && gustMax.v >= 14) {
     const sev: AlertSeverity =
-      gustMax.v >= 33
+      gustMax.v >= 38.9
         ? "extreme"
-        : gustMax.v >= 25
+        : gustMax.v >= 28.4
           ? "severe"
-          : gustMax.v >= 18
+          : gustMax.v >= 20.8
             ? "moderate"
             : "minor";
     list.push({
@@ -231,7 +231,7 @@ export function buildHazards(bundle: ForecastBundle): HazardSet {
         sev === "extreme"
           ? "Orkanböen"
           : sev === "severe"
-            ? "Schwerer Sturm"
+            ? "Schwere Sturm- bis Orkanböen"
             : sev === "moderate"
               ? "Sturmböen"
               : "Windige Phase",
@@ -250,11 +250,11 @@ export function buildHazards(bundle: ForecastBundle): HazardSet {
   if (rainPeak && rainPeak.v >= 5) {
     const sev: AlertSeverity =
       rainPeak.v >= 40
-        ? "severe"
+        ? "extreme"
         : rainPeak.v >= 25
-          ? "moderate"
+          ? "severe"
           : rainPeak.v >= 15
-            ? "minor"
+            ? "moderate"
             : "minor";
     list.push({
       id: "rain",
