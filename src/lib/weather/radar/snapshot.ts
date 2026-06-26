@@ -1,27 +1,32 @@
 /**
  * Radar-Snapshot aus dem DWD-WMS.
  *
- * Wir holen ein einzelnes RY-Composite-Bild für ein Großraum-BBox (DACH +
- * Italien), decodieren die Pixel via Canvas und detektieren konvektive Zellen
- * über Threshold + Connected-Component-Labeling. Anschließend werden Pixel-
- * Koordinaten zurück in Lon/Lat projiziert (EPSG:3857 Mercator).
+ * Wir holen ein einzelnes RY-Composite-Bild für eine DE-BBox (RADOLAN-RY
+ * ist ein Deutschland-Komposit), decodieren die Pixel via Canvas und
+ * detektieren konvektive Zellen über Threshold + Connected-Component-
+ * Labeling. Anschließend werden Pixel-Koordinaten zurück in Lon/Lat
+ * projiziert (EPSG:3857 Mercator).
  *
  * Primärgröße: Niederschlagsrate aus RY-Farbskala (Näherung). dBZ ist daraus
  * abgeleitet via Z-R (Aniol, a=256, b=1.42) — RADOLAN-RY ist ein
  * Niederschlagsrate-Produkt, kein dBZ-Composite.
  */
 
-import { wmsTileUrl } from "@/lib/weather/sources/dwd-wms";
+import { fetchWmsTimeline, wmsTileUrl } from "@/lib/weather/sources/dwd-wms";
 import { classifyPixel, RATE_FOR_LEVEL } from "./palette";
 import { rainRateToDbz } from "./zr";
 import { detectCells } from "./cell-detect";
 
-/** Großraum-Detektionsbereich: DACH + Italien, in Lon/Lat. */
+/**
+ * Detektionsbereich in Lon/Lat. RADOLAN-RY-Komposit ist auf Deutschland
+ * begrenzt; BBox entsprechend, damit DE die volle 1024px-Auflösung
+ * erhält und keine Pseudo-Abdeckung für AT/CH/IT suggeriert wird.
+ */
 export const DETECTION_BBOX_LL = {
   west: 5.5,
-  south: 35.5,
-  east: 19.0,
-  north: 55.8,
+  south: 47.0,
+  east: 15.5,
+  north: 55.1,
 } as const;
 
 const WIDTH = 1024;
