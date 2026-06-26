@@ -62,6 +62,10 @@ function AnalysisPage() {
     ? Math.round((Date.now() - new Date(storm.lastFrameTime).getTime()) / 60_000)
     : null;
 
+  const forecastAgeMinutes = bundle.meta?.updatedAt
+    ? Math.max(0, (now.getTime() - new Date(bundle.meta.updatedAt).getTime()) / 60_000)
+    : null;
+
   const nowcast = buildNowcast({
     hourly: bundle.hourly,
     minutely: bundle.minutely,
@@ -235,7 +239,7 @@ function AnalysisPage() {
             label: "LI / CIN",
             value: `${li != null ? li.toFixed(1) : "—"} / ${cin != null ? cin.toFixed(0) : "—"}`,
           }}
-          band={cape != null ? bandFromScore(Math.min(100, cape / 25)) : undefined}
+          band={cape != null ? bandFromScore(Math.min(75, normCape(cape))) : undefined}
         />
         <ParamCardPro
           title="Gewitterwahrscheinlichkeit"
