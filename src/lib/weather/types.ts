@@ -114,7 +114,10 @@ export type WeatherModelId =
   | "knmi_seamless"
   | "dmi_seamless"
   | "gem_seamless"
-  | "ukmo_seamless";
+  | "ukmo_seamless"
+  | "meteoswiss_icon_ch1"
+  | "meteoswiss_icon_ch2"
+  | "italia_meteo_arpae_icon_2i";
 
 export interface ModelSeries {
   model: WeatherModelId;
@@ -130,6 +133,12 @@ export interface WeatherModelInfo {
   resolutionKm: number;
   region: string;
   horizonHours: number;
+  hazards: {
+    cape: boolean;
+    liftedIndex: boolean;
+    cin: boolean;
+    gusts: boolean;
+  };
 }
 
 export type AlertSeverity = "minor" | "moderate" | "severe" | "extreme";
