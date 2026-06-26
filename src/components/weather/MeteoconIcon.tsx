@@ -18,6 +18,7 @@ import barometer from "@/assets/meteocons/barometer.svg";
 import compass from "@/assets/meteocons/compass.svg";
 import hail from "@/assets/meteocons/hail.svg";
 import sleet from "@/assets/meteocons/sleet.svg";
+import tornado from "@/assets/meteocons/tornado.svg";
 import { cn } from "@/lib/utils";
 
 type MeteoconName =
@@ -40,7 +41,8 @@ type MeteoconName =
   | "windsock"
   | "raindrop"
   | "barometer"
-  | "compass";
+  | "compass"
+  | "tornado";
 
 const ICONS: Record<MeteoconName, string> = {
   "clear-day": clearDay,
@@ -63,6 +65,7 @@ const ICONS: Record<MeteoconName, string> = {
   raindrop,
   barometer,
   compass,
+  tornado,
 };
 
 export function MeteoconIcon({

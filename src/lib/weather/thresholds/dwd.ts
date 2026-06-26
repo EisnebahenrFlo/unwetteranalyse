@@ -26,7 +26,7 @@ export const WIND_GUST_RULES: ThresholdRule[] = [
       "DWD-Warnschwelle für markante Windböen: ab ca. 50 km/h sind lose Gegenstände betroffen.",
     severity: "minor",
     evaluate: (v) => v >= 14 && v < 20.8,
-    reason: (v) => `Spitzenböen um ${(v * 3.6).toFixed(0)} km/h (≥ 50 km/h, Bft 7).`,
+    reason: (v) => `Spitzenböen um ${(v * 3.6).toFixed(0)} km/h (50–74 km/h, Bft 7–8).`,
     unit: "m/s",
   }),
   r({
@@ -36,7 +36,7 @@ export const WIND_GUST_RULES: ThresholdRule[] = [
     explain: "Sturmböen ab ca. 65 km/h, Äste können brechen.",
     severity: "moderate",
     evaluate: (v) => v >= 20.8 && v < 28.4,
-    reason: (v) => `Spitzenböen um ${(v * 3.6).toFixed(0)} km/h (Sturm, Bft 8–9).`,
+    reason: (v) => `Spitzenböen um ${(v * 3.6).toFixed(0)} km/h (Sturmböen, Bft 9–10).`,
     unit: "m/s",
   }),
   r({
@@ -46,7 +46,7 @@ export const WIND_GUST_RULES: ThresholdRule[] = [
     explain: "Schwere Sturm- bis Orkanböen ab ca. 90 km/h, Bäume können entwurzelt werden.",
     severity: "severe",
     evaluate: (v) => v >= 28.4 && v < 38.9,
-    reason: (v) => `Spitzenböen um ${(v * 3.6).toFixed(0)} km/h (schwerer Sturm).`,
+    reason: (v) => `Spitzenböen um ${(v * 3.6).toFixed(0)} km/h (schwerer Sturm bis Orkan, Bft 11–12).`,
     unit: "m/s",
   }),
   r({
@@ -56,7 +56,7 @@ export const WIND_GUST_RULES: ThresholdRule[] = [
     explain: "Orkan ab ca. 118 km/h, verbreitet Schäden möglich.",
     severity: "extreme",
     evaluate: (v) => v >= 38.9,
-    reason: (v) => `Spitzenböen um ${(v * 3.6).toFixed(0)} km/h (Orkan).`,
+    reason: (v) => `Spitzenböen um ${(v * 3.6).toFixed(0)} km/h (extreme Orkanböen).`,
     unit: "m/s",
   }),
 ];
