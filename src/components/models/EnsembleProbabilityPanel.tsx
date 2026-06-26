@@ -145,7 +145,7 @@ export function EnsembleProbabilityPanel({ point }: Props) {
                   <Line
                     type="monotone"
                     dataKey="gewitter"
-                    name="Gewitter"
+                    name="Gewitterpotenzial"
                     stroke="var(--chart-1)"
                     strokeWidth={1.8}
                     dot={false}
@@ -173,7 +173,7 @@ export function EnsembleProbabilityPanel({ point }: Props) {
               </ResponsiveContainer>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
-              <LegendDot color="var(--chart-1)" label="Gewitter (CAPE ≥ 500)" />
+              <LegendDot color="var(--chart-1)" label="Gewitterpotenzial (CAPE ≥ 500)" />
               <LegendDot color="var(--chart-2)" label="Starkregen (≥ 15 mm/h)" />
               <LegendDot color="var(--chart-3)" label="Sturm (Böen ≥ 25 m/s)" />
             </div>

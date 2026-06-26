@@ -116,7 +116,7 @@ export function convectionSubscore(p: HourlyPoint): Subscore {
     const pts = normTotalTotals(tt) * 0.1 * damp;
     if (pts > 0.5) c.push({ label: "Total Totals", raw: tt.toFixed(1), points: pts });
   }
-  if (p.convectiveInhibition != null && p.convectiveInhibition <= -100) {
+  if (p.convectiveInhibition != null && p.convectiveInhibition >= 100) {
     c.push({ label: "CIN dämpft", raw: `${p.convectiveInhibition.toFixed(0)} J/kg`, points: 0 });
   }
   const total = c.reduce((s, x) => s + x.points, 0);

@@ -156,7 +156,7 @@ export function analyzeEnsemble(
   const windowLabel = peakWindow ? fmtWindowLabel(peakWindow.start, peakWindow.end) : "";
   let headline = "Geringe Gewitterneigung im Ensemble.";
   if (peakThunder >= 0.6)
-    headline = `Hohe Gewitterwahrscheinlichkeit (${pct(peakThunder)}% der Member)${windowLabel}.`;
+    headline = `Hohes Gewitterpotenzial (${pct(peakThunder)}% der Member)${windowLabel}.`;
   else if (peakThunder >= 0.3)
     headline = `Erhöhte Gewitterneigung (${pct(peakThunder)}% der Member)${windowLabel}.`;
 

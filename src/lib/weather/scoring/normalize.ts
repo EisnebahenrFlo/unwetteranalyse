@@ -102,10 +102,14 @@ export const normThunderProb = (p: number) => clamp(p * 100);
 
 export const normRadarDbz = (mmh: number) => normRainMmH(mmh);
 
+/**
+ * CIN-Dämpfung. Open-Meteo liefert convective_inhibition als POSITIVEN Wert
+ * in J/kg (0…~765). Höhere Zahl = stärkerer Deckel = stärkere Dämpfung.
+ */
 export function cinDamping(cin: number | undefined): number {
   if (cin == null) return 1;
-  if (cin <= -200) return 0.4;
-  if (cin <= -100) return 0.65;
-  if (cin <= -50) return 0.85;
+  if (cin >= 200) return 0.5;
+  if (cin >= 100) return 0.7;
+  if (cin >= 50) return 0.85;
   return 1;
 }
