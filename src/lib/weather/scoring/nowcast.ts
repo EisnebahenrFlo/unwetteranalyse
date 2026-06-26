@@ -46,8 +46,16 @@ const W = { rain: 0.35, wind: 0.2, thunder: 0.3, convection: 0.15 };
 
 function combine(rain: number, wind: number, thunder: number, convection: number): number {
   const linear = rain * W.rain + wind * W.wind + thunder * W.thunder + convection * W.convection;
-  const maxSub = Math.max(rain, wind, thunder, convection);
-  return Math.round(Math.max(linear, maxSub * 0.85));
+  const subs = [rain, wind, thunder, convection];
+  const maxSub = Math.max(...subs);
+  let score = Math.max(linear, maxSub * 0.85);
+  // Multi-Source-Gate: die kritische Stufe (>=60) braucht >=2 korrelierende Achsen.
+  // Eine einzelne starke Achse wird auf das obere Ende von "markant" (59) gedeckelt.
+  const corroborating = subs.filter((v) => v >= 45).length;
+  if (score >= 60 && corroborating < 2) {
+    score = Math.min(score, 59);
+  }
+  return Math.round(score);
 }
 
 function floorTo(date: Date, minutes: number) {
@@ -181,6 +189,10 @@ export function buildNowcast(input: NowcastInput): NowcastResult {
   const convAgg = aggregateSub(steps.map((s) => s.convection));
   const total = combine(rainAgg.value, windAgg.value, thunderAgg.value, convAgg.value);
 
+  const step0Precip = steps[0]?.point.precipitationMm ?? 0;
+  const radarPrecipConflict =
+    input.radarTopDbz != null && input.radarTopDbz >= 40 && step0Precip < 0.5;
+
   const ctx: DataContextInput = {
     hasMinutely: minutely.length > 0,
     hasUpperLevels: hourly.some((h) => h.temperature850hPa != null),
@@ -188,6 +200,7 @@ export function buildNowcast(input: NowcastInput): NowcastResult {
     liveObsAgeMinutes: input.liveObsAgeMinutes ?? null,
     radarAgeMinutes: input.radarAgeMinutes ?? null,
     modelObsConsistent: input.modelObsConsistent ?? null,
+    radarPrecipConflict,
   };
   const data = dataConfidence(ctx);
 
