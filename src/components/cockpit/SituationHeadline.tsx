@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { WarnBadge } from "@/components/common/WarnBadge";
-import { SeverityRail, scoreToLevel } from "@/components/common/SeverityRail";
+import { SeverityRail, scoreToLevel, alertSeverityToLevel } from "@/components/common/SeverityRail";
 import { TendencyBadge, deriveTendency } from "./TendencyBadge";
 import { MeteoconIcon, isNightAt } from "@/components/weather/MeteoconIcon";
 import { severeScore, summarizeModelSevere } from "@/lib/weather/analysis/convection";
@@ -45,7 +45,7 @@ export function SituationHeadline({ bundle, officialAlerts }: Props) {
     nowcastHeadline: nc.headline,
     officialCount: officialAlerts.length,
   });
-  const stufe = scoreToLevel(score);
+  const stufe = worst === "none" ? scoreToLevel(score) : alertSeverityToLevel(worst);
 
   return (
     <Card className="grid grid-cols-1 gap-6 p-5 md:p-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-10">
@@ -202,12 +202,12 @@ function composeStatement({
       : worst === "severe"
         ? "Schwere Unwetterlage"
         : worst === "moderate"
-          ? "Unwetterpotenzial vorhanden"
+          ? "Markante Wetterlage"
           : worst === "minor"
-            ? "Markante Wetterlage"
+            ? "Erhöhte Gewitterlage"
             : "Erhöhte Lage";
   const leadText = lead
-    ? `${lead.title.toLowerCase()} führend (${leadWindow ?? "im Tagesverlauf"})`
+    ? `${lead.title} führend (${leadWindow ?? "im Tagesverlauf"})`
     : "ohne klare Einzelgefahr";
   const offText =
     officialCount > 0
