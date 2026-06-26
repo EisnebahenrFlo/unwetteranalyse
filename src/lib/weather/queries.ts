@@ -94,12 +94,13 @@ export function modelComparisonQuery(point: GeoPoint) {
     queryFn: async () => {
       const results = await Promise.all(
         WEATHER_MODELS.map(async (info) => {
+          const forecastDays = Math.min(16, Math.ceil(info.horizonHours / 24));
           try {
             const raw = await fetchOpenMeteoSingleModel({
               lat: point.lat,
               lon: point.lon,
               model: info.id,
-              forecastDays: 5,
+              forecastDays,
             });
             return mapModelSeries(raw, info.id, info.label, info.resolutionKm);
           } catch {
