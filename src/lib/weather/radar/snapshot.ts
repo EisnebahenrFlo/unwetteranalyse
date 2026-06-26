@@ -37,9 +37,17 @@ export interface RadarCell {
   rainRateMmH: number;
   /** Mittlere Niederschlagsrate über alle Zellpixel (mm/h). */
   meanRateMmH: number;
-  /** Aus rainRateMmH abgeleitete äquivalente Top-Reflektivität (dBZ, Z-R Aniol). */
+  /**
+   * Aus `rainRateMmH` via Z-R (Aniol) abgeleitete äquivalente Reflektivität
+   * der Top-Stufe (dBZ). Kein direkt gemessenes Radar-dBZ — RY ist ein
+   * Niederschlagsprodukt, kein Reflektivitäts-Composite.
+   */
   topDbz: number;
-  /** Pixelzahl im Hagelkern (≥57 dBZ). */
+  /**
+   * Pixelzahl in der obersten RY-Intensitätsstufe (NÄHERUNGS-„Hagelkern"
+   * aus Niederschlag, kein echtes Reflektivitäts-Hagelsignal — markiert
+   * den stärksten Niederschlagskern, siehe `HAIL_CORE_LEVEL`).
+   */
   hailCorePixels: number;
   /** Hagelkern-Fläche in km². */
   hailCoreAreaKm2: number;

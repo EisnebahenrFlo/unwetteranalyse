@@ -412,7 +412,7 @@ function TopBar({
         })}
       </div>
       <div className="hidden text-[11px] text-muted-foreground md:block">
-        Quelle: DWD GeoServer · Stormtrack aus RY-Reflektivität
+        Quelle: DWD GeoServer · Stormtrack aus RY-Niederschlag (dBZ via Z-R)
       </div>
       <div className="flex flex-wrap items-center gap-1">
         <HealthPill h={ry} />
