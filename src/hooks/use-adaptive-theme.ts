@@ -12,6 +12,7 @@ import type { ThemeMode } from "@/lib/storage/settings";
  */
 function routeDefault(pathname: string, hour: number): "light" | "dark" {
   if (pathname.startsWith("/map")) return "dark";
+  if (pathname.startsWith("/forecast-maps")) return "dark";
   if (pathname === "/") return hour >= 6 && hour < 19 ? "light" : "dark";
   return "light";
 }
