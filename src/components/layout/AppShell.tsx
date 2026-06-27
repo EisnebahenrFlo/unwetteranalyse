@@ -28,12 +28,12 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 const PRIMARY_NAV = [
   { to: "/", label: "Dashboard", icon: Compass },
   { to: "/map", label: "Radar", icon: Map },
-  { to: "/forecast-maps", label: "Vorhersagekarten", icon: Thermometer },
   { to: "/analysis", label: "Analyse", icon: LineChart },
   { to: "/alerts", label: "Warnungen", icon: AlertTriangle },
 ] as const;
 
 const SECONDARY_NAV = [
+  { to: "/forecast-maps", label: "Vorhersagekarten", icon: Thermometer },
   { to: "/models", label: "Modelle", icon: Layers },
   { to: "/stations", label: "Stationen", icon: Radio },
   { to: "/learn", label: "Lernen", icon: GraduationCap },
