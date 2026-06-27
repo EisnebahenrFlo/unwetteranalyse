@@ -77,7 +77,9 @@ export function fieldDimensions(field: TempField, width = 700): { width: number;
   return { width, height: Math.max(1, Math.round(width * aspect)) };
 }
 
-export function fieldCorners(field: TempField): [number, number][] {
+export function fieldCorners(
+  field: TempField,
+): [[number, number], [number, number], [number, number], [number, number]] {
   const north = field.lats[field.nLat - 1];
   const south = field.lats[0];
   const west = field.lons[0];
