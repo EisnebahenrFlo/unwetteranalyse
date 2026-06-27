@@ -10,6 +10,7 @@ import {
   Map,
   Compass,
   MoreHorizontal,
+  Thermometer,
 } from "@/components/icons";
 import type { ComponentType } from "react";
 import { LocationSwitcher } from "./LocationSwitcher";
@@ -32,6 +33,7 @@ const PRIMARY_NAV = [
 ] as const;
 
 const SECONDARY_NAV = [
+  { to: "/forecast-maps", label: "Vorhersagekarten", icon: Thermometer },
   { to: "/models", label: "Modelle", icon: Layers },
   { to: "/stations", label: "Stationen", icon: Radio },
   { to: "/learn", label: "Lernen", icon: GraduationCap },

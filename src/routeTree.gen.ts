@@ -14,6 +14,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ModelsRouteImport } from './routes/models'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as LearnRouteImport } from './routes/learn'
+import { Route as ForecastMapsRouteImport } from './routes/forecast-maps'
 import { Route as AnalysisRouteImport } from './routes/analysis'
 import { Route as AlertsRouteImport } from './routes/alerts'
 import { Route as IndexRouteImport } from './routes/index'
@@ -43,6 +44,11 @@ const LearnRoute = LearnRouteImport.update({
   path: '/learn',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForecastMapsRoute = ForecastMapsRouteImport.update({
+  id: '/forecast-maps',
+  path: '/forecast-maps',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AnalysisRoute = AnalysisRouteImport.update({
   id: '/analysis',
   path: '/analysis',
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/alerts': typeof AlertsRoute
   '/analysis': typeof AnalysisRoute
+  '/forecast-maps': typeof ForecastMapsRoute
   '/learn': typeof LearnRoute
   '/map': typeof MapRoute
   '/models': typeof ModelsRoute
@@ -73,6 +80,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/alerts': typeof AlertsRoute
   '/analysis': typeof AnalysisRoute
+  '/forecast-maps': typeof ForecastMapsRoute
   '/learn': typeof LearnRoute
   '/map': typeof MapRoute
   '/models': typeof ModelsRoute
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/alerts': typeof AlertsRoute
   '/analysis': typeof AnalysisRoute
+  '/forecast-maps': typeof ForecastMapsRoute
   '/learn': typeof LearnRoute
   '/map': typeof MapRoute
   '/models': typeof ModelsRoute
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/alerts'
     | '/analysis'
+    | '/forecast-maps'
     | '/learn'
     | '/map'
     | '/models'
@@ -106,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/alerts'
     | '/analysis'
+    | '/forecast-maps'
     | '/learn'
     | '/map'
     | '/models'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '/'
     | '/alerts'
     | '/analysis'
+    | '/forecast-maps'
     | '/learn'
     | '/map'
     | '/models'
@@ -127,6 +139,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AlertsRoute: typeof AlertsRoute
   AnalysisRoute: typeof AnalysisRoute
+  ForecastMapsRoute: typeof ForecastMapsRoute
   LearnRoute: typeof LearnRoute
   MapRoute: typeof MapRoute
   ModelsRoute: typeof ModelsRoute
@@ -171,6 +184,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LearnRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forecast-maps': {
+      id: '/forecast-maps'
+      path: '/forecast-maps'
+      fullPath: '/forecast-maps'
+      preLoaderRoute: typeof ForecastMapsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/analysis': {
       id: '/analysis'
       path: '/analysis'
@@ -199,6 +219,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AlertsRoute: AlertsRoute,
   AnalysisRoute: AnalysisRoute,
+  ForecastMapsRoute: ForecastMapsRoute,
   LearnRoute: LearnRoute,
   MapRoute: MapRoute,
   ModelsRoute: ModelsRoute,
