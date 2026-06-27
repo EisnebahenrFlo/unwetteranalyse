@@ -10,6 +10,7 @@ import {
   Map,
   Compass,
   MoreHorizontal,
+  Thermometer,
 } from "@/components/icons";
 import type { ComponentType } from "react";
 import { LocationSwitcher } from "./LocationSwitcher";
@@ -27,6 +28,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 const PRIMARY_NAV = [
   { to: "/", label: "Dashboard", icon: Compass },
   { to: "/map", label: "Radar", icon: Map },
+  { to: "/forecast-maps", label: "Vorhersagekarten", icon: Thermometer },
   { to: "/analysis", label: "Analyse", icon: LineChart },
   { to: "/alerts", label: "Warnungen", icon: AlertTriangle },
 ] as const;
