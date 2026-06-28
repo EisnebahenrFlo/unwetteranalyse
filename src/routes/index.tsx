@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useActivePoint } from "@/components/layout/LocationSwitcher";
@@ -47,6 +48,7 @@ const SECTIONS = [
 
 function Dashboard() {
   const point = useActivePoint();
+  const [activeSection, setActiveSection] = useState<string>(SECTIONS[0].id);
   const now = useLiveNow();
   const forecast = useQuery(forecastQuery(point));
   const bsCurrent = useQuery(brightSkyCurrentQuery(point));
