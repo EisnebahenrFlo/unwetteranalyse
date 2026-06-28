@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 export interface AnchorItem {
@@ -9,55 +9,58 @@ export interface AnchorItem {
 
 interface Props {
   items: AnchorItem[];
-  /** Offset oberhalb in px für Sticky-Header. */
-  scrollOffset?: number;
+  value: string;
+  onChange: (id: string) => void;
 }
 
-/**
- * Sekundärnavigation mit Sprungankern und einfachem Scroll-Spy.
- * Mobile: horizontal scrollbar mit Snap. Desktop: gleichmäßige Verteilung.
- */
-export function StickySubnav({ items, scrollOffset = 96 }: Props) {
-  const [active, setActive] = useState<string>(items[0]?.id ?? "");
+export function StickySubnav({ items, value, onChange }: Props) {
+  const listRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
-    const handler = () => {
-      const probe = scrollOffset + 24;
-      let current = items[0]?.id ?? "";
-      for (const it of items) {
-        const el = document.getElementById(it.id);
-        if (!el) continue;
-        const top = el.getBoundingClientRect().top;
-        if (top - probe <= 0) current = it.id;
-      }
-      setActive(current);
-    };
-    handler();
-    window.addEventListener("scroll", handler, { passive: true });
-    window.addEventListener("resize", handler);
-    return () => {
-      window.removeEventListener("scroll", handler);
-      window.removeEventListener("resize", handler);
-    };
-  }, [items, scrollOffset]);
+    const active = listRef.current?.querySelector<HTMLElement>('[data-active="true"]');
+    active?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }, [value]);
 
-  const jump = (id: string) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const top = el.getBoundingClientRect().top + window.scrollY - scrollOffset;
-    window.scrollTo({ top, behavior: "smooth" });
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    const idx = items.findIndex((it) => it.id === value);
+    if (idx === -1) return;
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      e.preventDefault();
+      onChange(items[(idx + 1) % items.length].id);
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      e.preventDefault();
+      onChange(items[(idx - 1 + items.length) % items.length].id);
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      onChange(items[0].id);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      onChange(items[items.length - 1].id);
+    }
   };
 
   return (
     <nav className="sticky top-[57px] z-30 -mx-3 border-b border-border bg-background/95 px-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/85 md:-mx-6 md:px-6">
-      <ul className="scroll-snap-x flex min-w-0 gap-1 overflow-x-auto py-1.5 md:gap-2">
+      <ul
+        ref={listRef}
+        role="tablist"
+        aria-label="Cockpit-Bereiche"
+        onKeyDown={onKeyDown}
+        className="flex min-w-0 gap-1 overflow-x-auto py-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:gap-2"
+      >
         {items.map((it, idx) => {
-          const isActive = active === it.id;
+          const isActive = value === it.id;
           return (
             <li key={it.id} className="shrink-0">
               <button
                 type="button"
-                onClick={() => jump(it.id)}
+                role="tab"
+                id={`tab-${it.id}`}
+                aria-selected={isActive}
+                aria-controls={`panel-${it.id}`}
+                tabIndex={isActive ? 0 : -1}
+                data-active={isActive}
+                onClick={() => onChange(it.id)}
                 className={cn(
                   "group inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] transition-colors",
                   isActive
