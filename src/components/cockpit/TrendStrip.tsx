@@ -8,13 +8,9 @@ import type { ForecastBundle } from "@/lib/weather/types";
  */
 export function TrendStrip({ bundle }: { bundle: ForecastBundle }) {
   return (
-    <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
-      <div className="lg:col-span-7">
-        <HourlyStrip bundle={bundle} />
-      </div>
-      <div className="lg:col-span-5">
-        <DailyStrip bundle={bundle} />
-      </div>
+    <div className="flex flex-col gap-3">
+      <HourlyStrip bundle={bundle} />
+      <DailyStrip bundle={bundle} />
     </div>
   );
 }
