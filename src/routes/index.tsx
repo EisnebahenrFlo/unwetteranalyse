@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useActivePoint } from "@/components/layout/LocationSwitcher";
@@ -47,6 +48,7 @@ const SECTIONS = [
 
 function Dashboard() {
   const point = useActivePoint();
+  const [activeSection, setActiveSection] = useState<string>(SECTIONS[0].id);
   const now = useLiveNow();
   const forecast = useQuery(forecastQuery(point));
   const bsCurrent = useQuery(brightSkyCurrentQuery(point));
@@ -159,74 +161,57 @@ function Dashboard() {
           },
         ]}
       />
-      <StickySubnav items={SECTIONS} />
+      <StickySubnav items={SECTIONS} value={activeSection} onChange={setActiveSection} />
 
-      {/* 1. Lage */}
-      <section className="flex flex-col gap-4">
-        <SectionHeader
-          id="lage"
-          eyebrow="01 · Lage"
-          title="Gesamtlage"
-          question="Was ist gerade los, wo liegt die Hauptgefahr, wie relevant?"
-        />
-        <SituationHeadline bundle={bundle} officialAlerts={officialAlerts} />
-      </section>
+      <div className="min-w-0">
+        {activeSection === "lage" && (
+          <section role="tabpanel" id="panel-lage" aria-labelledby="tab-lage" className="flex min-w-0 flex-col gap-4">
+            <SectionHeader id="lage" eyebrow="01 · Lage" title="Gesamtlage"
+              question="Was ist gerade los, wo liegt die Hauptgefahr, wie relevant?" />
+            <SituationHeadline bundle={bundle} officialAlerts={officialAlerts} />
+          </section>
+        )}
 
-      {/* 2./3. Gefahren + Nowcast zweispaltig (kompakte Karten) */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
-        <section className="flex min-w-0 flex-col gap-3">
-          <SectionHeader
-            id="gefahren"
-            eyebrow="02 · Gefahren"
-            title="Gefahrenbewertung"
-            question="Welche Risiken sind priorisiert relevant, mit welcher Konfidenz?"
-          />
-          <HazardPriorityList hazards={hazardSet.hazards} officialAlerts={officialAlerts} />
-        </section>
+        {activeSection === "gefahren" && (
+          <section role="tabpanel" id="panel-gefahren" aria-labelledby="tab-gefahren" className="flex min-w-0 flex-col gap-3">
+            <SectionHeader id="gefahren" eyebrow="02 · Gefahren" title="Gefahrenbewertung"
+              question="Welche Risiken sind priorisiert relevant, mit welcher Konfidenz?" />
+            <HazardPriorityList hazards={hazardSet.hazards} officialAlerts={officialAlerts} />
+          </section>
+        )}
 
-        <section className="flex min-w-0 flex-col gap-3">
-          <SectionHeader
-            id="nowcast"
-            eyebrow="03 · Nowcast"
-            title="Kurzfrist 0–2 Stunden"
-            question="Verschärft sich die Lage, entspannt sie sich, verlagert sie sich?"
-          />
-          <ShortTermPanel bundle={bundle} />
-        </section>
+        {activeSection === "nowcast" && (
+          <section role="tabpanel" id="panel-nowcast" aria-labelledby="tab-nowcast" className="flex min-w-0 flex-col gap-3">
+            <SectionHeader id="nowcast" eyebrow="03 · Nowcast" title="Kurzfrist 0–2 Stunden"
+              question="Verschärft sich die Lage, entspannt sie sich, verlagert sie sich?" />
+            <ShortTermPanel bundle={bundle} />
+          </section>
+        )}
+
+        {activeSection === "live" && (
+          <section role="tabpanel" id="panel-live" aria-labelledby="tab-live" className="flex min-w-0 flex-col gap-3">
+            <SectionHeader id="live" eyebrow="04 · Live" title="Live-Signale"
+              question="Was bestätigen Radar und Beobachtung gerade?" />
+            <LiveSignals point={point} bundle={bundle} bsCurrent={bsCurrent.data} bsMeta={bsMeta} />
+          </section>
+        )}
+
+        {activeSection === "trend" && (
+          <section role="tabpanel" id="panel-trend" aria-labelledby="tab-trend" className="flex min-w-0 flex-col gap-3">
+            <SectionHeader id="trend" eyebrow="05 · Trend" title="Trend & Ausblick"
+              question="Wie entwickelt sich die Lage über die nächsten Stunden und Tage?" />
+            <TrendStrip bundle={bundle} />
+          </section>
+        )}
+
+        {activeSection === "system" && (
+          <section role="tabpanel" id="panel-system" aria-labelledby="tab-system" className="flex min-w-0 flex-col gap-3">
+            <SectionHeader id="system" eyebrow="06 · System" title="Datenstatus & Quellen"
+              question="Welche Quellen liefern aktuell, wo gibt es Verzögerungen oder Lücken?" />
+            <SystemStatus entries={sources} />
+          </section>
+        )}
       </div>
-
-      {/* 4. Live: braucht volle Breite (Radar + Kennzahl-Spalte) */}
-      <section className="flex min-w-0 flex-col gap-3">
-        <SectionHeader
-          id="live"
-          eyebrow="04 · Live"
-          title="Live-Signale"
-          question="Was bestätigen Radar und Beobachtung gerade?"
-        />
-        <LiveSignals point={point} bundle={bundle} bsCurrent={bsCurrent.data} bsMeta={bsMeta} />
-      </section>
-
-      {/* 5. Trend: braucht volle Breite (24 h-Strip + 7-Tage) */}
-      <section className="flex min-w-0 flex-col gap-3">
-        <SectionHeader
-          id="trend"
-          eyebrow="05 · Trend"
-          title="Trend & Ausblick"
-          question="Wie entwickelt sich die Lage über die nächsten Stunden und Tage?"
-        />
-        <TrendStrip bundle={bundle} />
-      </section>
-
-      {/* 6. System spannt volle Breite */}
-      <section className="flex min-w-0 flex-col gap-3">
-        <SectionHeader
-          id="system"
-          eyebrow="06 · System"
-          title="Datenstatus & Quellen"
-          question="Welche Quellen liefern aktuell, wo gibt es Verzögerungen oder Lücken?"
-        />
-        <SystemStatus entries={sources} />
-      </section>
     </div>
   );
 }

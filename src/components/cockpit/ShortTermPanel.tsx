@@ -23,7 +23,9 @@ export function ShortTermPanel({ bundle }: { bundle: ForecastBundle }) {
         <div className="min-w-0 text-[12px] text-muted-foreground">{consistency}</div>
         <TendencyBadge tendency={tendency} />
       </div>
-      <NowcastPanel bundle={bundle} />
+      <div className="overflow-x-auto">
+        <NowcastPanel bundle={bundle} />
+      </div>
     </div>
   );
 }
