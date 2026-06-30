@@ -1,7 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Pause, Play, SkipBack, SkipForward } from "@/components/icons";
+import {
+  ChevronDown,
+  ChevronUp,
+  Info,
+  Lock,
+  Pause,
+  Play,
+  SkipBack,
+  SkipForward,
+  SlidersHorizontal,
+} from "@/components/icons";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ForecastFieldMap, type ForecastFieldMapHandle } from "./ForecastFieldMap";
 import { fetchTemperatureField } from "@/lib/weather/maps/temperature-field";
 import { sampleField, TEMP_STOPS } from "@/lib/weather/maps/field-render";
@@ -58,6 +75,7 @@ export function TemperatureMapCockpit() {
   const [param, setParam] = useState<ParamKey>("t2m");
   const [domain, setDomain] = useState<DomainKey>(DEFAULT_DOMAIN);
   const [playing, setPlaying] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(true);
 
   const q = useQuery({
     queryKey: ["temp-field"],
@@ -115,104 +133,144 @@ export function TemperatureMapCockpit() {
   const freshDot = q.isFetching ? "bg-muted-foreground" : "bg-primary";
 
   return (
-    <div className="relative -mx-3 md:-mx-6">
-      <div className="relative h-[calc(100vh-12rem)] min-h-[520px] w-full overflow-hidden bg-muted md:h-[calc(100vh-10rem)]">
-        <ForecastFieldMap
-          ref={mapRef}
-          initialCenter={{ lat: initialDomain.lat, lon: initialDomain.lon }}
-          initialZoom={initialDomain.zoom}
-          onPick={(lat, lon) => setPick({ lat, lon })}
-        />
-
-        {/* Pivotal-Header: Parameter · Zeit-Label · Frische */}
-        <div className="pointer-events-auto absolute left-3 right-3 top-3 z-10 md:left-6 md:right-auto md:max-w-[720px]">
-          <div className="flex flex-col gap-2 rounded-xl border border-border/60 bg-card/70 p-2 shadow-elegant backdrop-blur-xl">
-            <div className="flex flex-wrap items-center gap-1.5">
-              {PARAMS.map((p) => {
-                const active = p.key === param && p.available;
-                return (
-                  <button
-                    key={p.key}
-                    onClick={() => p.available && setParam(p.key)}
-                    disabled={!p.available}
-                    title={p.available ? p.label : `${p.label} — bald verfügbar`}
-                    aria-disabled={!p.available}
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 font-display text-[11px] font-semibold uppercase tracking-wider transition-colors",
-                      active
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : p.available
-                          ? "border-border text-muted-foreground hover:bg-muted"
-                          : "cursor-not-allowed border-dashed border-border/60 text-muted-foreground/60",
-                    )}
-                  >
-                    {p.label}
-                    {!p.available && (
-                      <span className="rounded-sm bg-muted px-1 font-mono text-[9px] tracking-normal text-muted-foreground">
-                        bald
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-              <div className="ml-auto flex items-center gap-2">
-                {activeTime && (
-                  <span className="rounded-md bg-muted/60 px-2 py-1 font-mono text-[11px] tabular-nums text-foreground">
-                    {fmtTime(activeTime)}
-                  </span>
-                )}
-                <span className="inline-flex items-center gap-1.5 rounded-md bg-muted/60 px-2 py-1 font-mono text-[10px] tabular-nums text-muted-foreground">
-                  <span className={cn("h-1.5 w-1.5 rounded-full", freshDot)} aria-hidden />
-                  {updated
-                    ? `Stand ${updated}`
-                    : q.isLoading
-                      ? "lädt …"
-                      : q.isError
-                        ? "offline"
-                        : "–"}
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-1">
-              <span className="font-display text-[10px] uppercase tracking-wider text-muted-foreground">
-                Domain
+    <div className="-mx-3 md:-mx-6">
+      <div className="flex h-[calc(100vh-12rem)] min-h-[520px] w-full flex-col overflow-hidden bg-background md:h-[calc(100vh-10rem)]">
+        {/* TOP-STREIFEN */}
+        <div className="flex flex-col gap-2 border-b border-border bg-card px-3 py-2 md:flex-row md:items-center md:gap-3 md:px-6">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {PARAMS.map((p) => {
+              const active = p.key === param && p.available;
+              return (
+                <button
+                  key={p.key}
+                  onClick={() => p.available && setParam(p.key)}
+                  disabled={!p.available}
+                  title={p.available ? p.label : `${p.label} — bald verfügbar`}
+                  aria-disabled={!p.available}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 font-display text-[11px] font-semibold uppercase tracking-wider transition-colors",
+                    active
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : p.available
+                        ? "border-border text-muted-foreground hover:bg-muted"
+                        : "cursor-not-allowed border-dashed border-border/60 text-muted-foreground/60",
+                  )}
+                >
+                  {!p.available && <Lock className="h-3 w-3" />}
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex flex-wrap items-center gap-1 md:ml-3">
+            <span className="font-display text-[10px] uppercase tracking-wider text-muted-foreground">
+              Domain
+            </span>
+            {DOMAINS.map((d) => {
+              const active = d.key === domain;
+              return (
+                <button
+                  key={d.key}
+                  onClick={() => selectDomain(d.key)}
+                  className={cn(
+                    "rounded-md border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider transition-colors",
+                    active
+                      ? "border-primary bg-primary/15 text-primary"
+                      : "border-border text-muted-foreground hover:bg-muted",
+                  )}
+                >
+                  {d.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 md:ml-auto">
+            {activeTime && (
+              <span className="rounded-md bg-muted/60 px-2 py-1 font-mono text-[11px] tabular-nums text-foreground">
+                {fmtTime(activeTime)}
               </span>
-              {DOMAINS.map((d) => {
-                const active = d.key === domain;
-                return (
-                  <button
-                    key={d.key}
-                    onClick={() => selectDomain(d.key)}
-                    className={cn(
-                      "rounded-md border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider transition-colors",
-                      active
-                        ? "border-primary bg-primary/15 text-primary"
-                        : "border-border text-muted-foreground hover:bg-muted",
-                    )}
-                  >
-                    {d.label}
-                  </button>
-                );
-              })}
-            </div>
+            )}
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-muted/60 px-2 py-1 font-mono text-[10px] tabular-nums text-muted-foreground">
+              <span className={cn("h-1.5 w-1.5 rounded-full", freshDot)} aria-hidden />
+              {updated
+                ? `Stand ${updated}`
+                : q.isLoading
+                  ? "lädt …"
+                  : q.isError
+                    ? "offline"
+                    : "–"}
+            </span>
           </div>
         </div>
 
-        {pick && (
-          <div className="pointer-events-none absolute right-3 top-3 z-10 rounded-md border border-border/60 bg-card/70 px-2.5 py-1.5 text-[11px] shadow-elegant backdrop-blur-xl md:right-6">
-            <div className="font-mono tabular-nums text-muted-foreground">
-              {pick.lat.toFixed(2)}°N {pick.lon.toFixed(2)}°E
-            </div>
-            <div className="font-display text-sm font-semibold tabular-nums text-foreground">
-              {pickVal != null && !Number.isNaN(pickVal)
-                ? `${pickVal.toFixed(1)} °C`
-                : "keine Daten"}
-            </div>
-          </div>
-        )}
+        {/* KARTE */}
+        <div className="relative min-h-0 flex-1 bg-muted">
+          <ForecastFieldMap
+            ref={mapRef}
+            initialCenter={{ lat: initialDomain.lat, lon: initialDomain.lon }}
+            initialZoom={initialDomain.zoom}
+            onPick={(lat, lon) => setPick({ lat, lon })}
+          />
 
-        <div className="pointer-events-auto absolute inset-x-3 bottom-3 z-10 flex flex-col gap-2 md:inset-x-6">
-          <div className="grid grid-cols-[auto_auto_auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-border/60 bg-card/70 px-2 py-2 shadow-elegant backdrop-blur-xl">
+          {/* Kompakte, einklappbare Legende */}
+          <div className="pointer-events-auto absolute bottom-3 right-3 z-10 rounded-md border border-border/60 bg-card/85 px-2 py-1.5 text-[10px] shadow-elegant backdrop-blur-xl">
+            <button
+              onClick={() => setLegendOpen((v) => !v)}
+              className="flex w-full items-center gap-1.5 font-display text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+              aria-expanded={legendOpen}
+            >
+              {legendOpen ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronUp className="h-3 w-3" />
+              )}
+              Legende · 2 m T (°C)
+            </button>
+            {legendOpen && (
+              <div className="mt-1">
+                <div className="h-2.5 w-40 rounded-sm" style={{ background: gradientCss() }} />
+                <div className="mt-0.5 flex w-40 justify-between font-mono text-[9px] tabular-nums text-muted-foreground">
+                  <span>-20</span>
+                  <span>0</span>
+                  <span>15</span>
+                  <span>30</span>
+                  <span>42</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {q.isError && (
+            <div className="absolute inset-x-0 top-3 z-10 mx-auto w-fit rounded-md bg-destructive px-3 py-1.5 text-xs text-destructive-foreground">
+              Temperaturfeld konnte nicht geladen werden.
+            </div>
+          )}
+        </div>
+
+        {/* BOTTOM-STREIFEN */}
+        <div className="flex flex-wrap items-center gap-2 border-t border-border bg-card px-3 py-2 md:flex-nowrap md:gap-3 md:px-6">
+          {/* Pick-Readout */}
+          <div className="flex min-w-[140px] flex-col leading-tight">
+            {pick ? (
+              <>
+                <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+                  {pick.lat.toFixed(2)}°N {pick.lon.toFixed(2)}°E
+                </span>
+                <span className="font-display text-sm font-semibold tabular-nums text-foreground">
+                  {pickVal != null && !Number.isNaN(pickVal)
+                    ? `${pickVal.toFixed(1)} °C`
+                    : "keine Daten"}
+                </span>
+              </>
+            ) : (
+              <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                Karte tippen für Wert
+              </span>
+            )}
+          </div>
+
+          {/* Scrubber */}
+          <div className="ml-auto flex min-w-0 flex-1 items-center gap-1.5 md:gap-2">
             <Button
               size="icon"
               variant="ghost"
@@ -236,6 +294,19 @@ export function TemperatureMapCockpit() {
             >
               {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
             </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-11 w-11 md:h-8 md:w-8"
+              onClick={() => {
+                setPlaying(false);
+                setStep((s) => Math.min(maxStep, s + 1));
+              }}
+              disabled={!field || step >= maxStep}
+              aria-label="Schritt vor"
+            >
+              <SkipForward className="h-3.5 w-3.5" />
+            </Button>
             <button
               onClick={() => {
                 setPlaying(false);
@@ -255,66 +326,69 @@ export function TemperatureMapCockpit() {
                 setPlaying(false);
                 setStep(Number(e.target.value));
               }}
-              className="h-11 w-full accent-primary md:h-6"
+              className="h-11 min-w-0 flex-1 accent-primary md:h-6"
               disabled={!field}
               aria-label="Vorhersagezeit"
             />
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-11 w-11 md:h-8 md:w-8"
-              onClick={() => {
-                setPlaying(false);
-                setStep((s) => Math.min(maxStep, s + 1));
-              }}
-              disabled={!field || step >= maxStep}
-              aria-label="Schritt vor"
-            >
-              <SkipForward className="h-3.5 w-3.5" />
-            </Button>
-            <span className="col-span-full -mt-1 text-right font-mono text-[10px] tabular-nums text-muted-foreground md:col-span-1 md:mt-0 md:w-14">
+            <span className="w-12 shrink-0 text-right font-mono text-[10px] tabular-nums text-muted-foreground">
               {step === 0 ? "Jetzt" : `+${step} h`}
             </span>
           </div>
-          <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/70 px-3 py-2 shadow-elegant backdrop-blur-xl">
-            <span className="font-display text-[10px] uppercase tracking-wider text-muted-foreground">
-              Deckkraft
-            </span>
-            <input
-              type="range"
-              min={0.3}
-              max={0.9}
-              step={0.05}
-              value={opacity}
-              onChange={(e) => setOpacity(Number(e.target.value))}
-              className="h-11 w-32 accent-primary md:h-6"
-              aria-label="Deckkraft Temperaturfeld"
-            />
-            <span className="ml-auto hidden font-mono text-[10px] text-muted-foreground md:block">
-              Open-Meteo best_match · 0,75°-Raster (Übersicht), interpoliert
-            </span>
+
+          {/* Deckkraft-Popover + Quelle-Info */}
+          <div className="flex items-center gap-1.5">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-11 w-11 md:h-8 md:w-8"
+                  aria-label="Deckkraft"
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent side="top" align="end" className="w-56">
+                <div className="flex flex-col gap-2">
+                  <span className="font-display text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Deckkraft Temperaturfeld
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min={0.3}
+                      max={0.9}
+                      step={0.05}
+                      value={opacity}
+                      onChange={(e) => setOpacity(Number(e.target.value))}
+                      className="h-6 flex-1 accent-primary"
+                      aria-label="Deckkraft Temperaturfeld"
+                    />
+                    <span className="w-10 text-right font-mono text-[10px] tabular-nums text-muted-foreground">
+                      {Math.round(opacity * 100)}%
+                    </span>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Datenquelle"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    <Info className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" align="end">
+                  Open-Meteo best_match · 0,75°-Raster (Übersicht), interpoliert
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
-
-        <div className="pointer-events-none absolute bottom-28 right-3 z-10 rounded-md border border-border/60 bg-card/70 px-2.5 py-1.5 text-[10px] shadow-elegant backdrop-blur-xl md:right-6">
-          <div className="mb-1 font-display text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            2 m Temperatur (°C)
-          </div>
-          <div className="h-2.5 w-44 rounded-sm" style={{ background: gradientCss() }} />
-          <div className="mt-0.5 flex w-44 justify-between font-mono text-[9px] tabular-nums text-muted-foreground">
-            <span>-20</span>
-            <span>0</span>
-            <span>15</span>
-            <span>30</span>
-            <span>42</span>
-          </div>
-        </div>
-
-        {q.isError && (
-          <div className="absolute inset-x-0 top-20 z-10 mx-auto w-fit rounded-md bg-destructive px-3 py-1.5 text-xs text-destructive-foreground">
-            Temperaturfeld konnte nicht geladen werden.
-          </div>
-        )}
       </div>
     </div>
   );

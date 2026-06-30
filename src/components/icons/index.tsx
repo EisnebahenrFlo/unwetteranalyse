@@ -331,6 +331,24 @@ export const ShieldAlert = svg(
   </>,
 );
 
+export const Lock = svg(
+  <>
+    <rect x="5" y="11" width="14" height="9" rx="2" />
+    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+  </>,
+);
+
+export const SlidersHorizontal = svg(
+  <>
+    <path d="M3 6h12" />
+    <path d="M3 12h6" />
+    <path d="M3 18h10" />
+    <circle cx="17" cy="6" r="2" />
+    <circle cx="11" cy="12" r="2" />
+    <circle cx="15" cy="18" r="2" />
+  </>,
+);
+
 /* --------------------------- Player / Action --------------------------- */
 
 export const Pause = svg(
