@@ -54,6 +54,8 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    const isDark = () =>
+      typeof document !== "undefined" && document.documentElement.classList.contains("dark");
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: {
@@ -73,12 +75,24 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
           },
         },
         layers: [
-          { id: "bg", type: "background", paint: { "background-color": "#e6ecf2" } },
+          {
+            id: "bg",
+            type: "background",
+            paint: { "background-color": isDark() ? "#0D1318" : "#e6ecf2" },
+          },
           {
             id: "osm",
             type: "raster",
             source: "osm",
-            paint: { "raster-saturation": -0.4, "raster-brightness-max": 0.95 },
+            paint: isDark()
+              ? {
+                  "raster-saturation": -1,
+                  "raster-brightness-max": 0.45,
+                  "raster-brightness-min": 0,
+                  "raster-contrast": -0.1,
+                  "raster-opacity": 0.85,
+                }
+              : { "raster-saturation": -0.4, "raster-brightness-max": 0.95 },
           },
         ],
       },
@@ -337,11 +351,39 @@ export const RadarMap = forwardRef<RadarMapHandle, Props>(function RadarMap(
     });
     map.on("zoomend", emitBbox);
 
+    // Theme-Wechsel zur Laufzeit: nur Base-Style-Paint nachziehen, Map nicht neu erzeugen.
+    const applyTheme = () => {
+      if (!readyRef.current) return;
+      const dark = isDark();
+      if (map.getLayer("bg")) {
+        map.setPaintProperty("bg", "background-color", dark ? "#0D1318" : "#e6ecf2");
+      }
+      if (map.getLayer("osm")) {
+        map.setPaintProperty("osm", "raster-saturation", dark ? -1 : -0.4);
+        map.setPaintProperty("osm", "raster-brightness-max", dark ? 0.45 : 0.95);
+        map.setPaintProperty("osm", "raster-brightness-min", dark ? 0 : 0);
+        map.setPaintProperty("osm", "raster-contrast", dark ? -0.1 : 0);
+        map.setPaintProperty("osm", "raster-opacity", dark ? 0.85 : 1);
+      }
+    };
+    const themeObserver =
+      typeof MutationObserver !== "undefined"
+        ? new MutationObserver(applyTheme)
+        : null;
+    if (themeObserver && typeof document !== "undefined") {
+      themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["class"],
+      });
+    }
+    map.on("load", applyTheme);
+
     const ro = new ResizeObserver(() => map.resize());
     ro.observe(containerRef.current);
 
     return () => {
       ro.disconnect();
+      themeObserver?.disconnect();
       map.remove();
       mapRef.current = null;
       readyRef.current = false;
