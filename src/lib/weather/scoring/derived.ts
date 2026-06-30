@@ -104,3 +104,27 @@ export function thunderProbability(p: HourlyPoint): number {
   if (p.weatherCode != null && p.weatherCode >= 95) prob = Math.max(prob, 0.85);
   return Math.min(1, prob);
 }
+
+/**
+ * Nowcast-Variante der Gewitterwahrscheinlichkeit.
+ * Verzichtet bewusst auf K-Index und Total Totals (Luftmassen-Stabilitätsindizes
+ * ohne Tageszeitbezug — sie erzeugen morgens Fehlalarme im 0–2 h-Fenster).
+ * Berücksichtigt nur CAPE, LI, CIN-Dämpfung und WMO-Code.
+ */
+export function thunderProbabilityNowcast(p: HourlyPoint): number {
+  let prob = 0;
+  if (p.cape != null) {
+    if (p.cape >= 2500) prob = Math.max(prob, 0.95);
+    else if (p.cape >= 1500) prob = Math.max(prob, 0.8);
+    else if (p.cape >= 800) prob = Math.max(prob, 0.55);
+    else if (p.cape >= 300) prob = Math.max(prob, 0.3);
+  }
+  if (p.liftedIndex != null) {
+    if (p.liftedIndex <= -6) prob = Math.max(prob, 0.9);
+    else if (p.liftedIndex <= -3) prob = Math.max(prob, 0.7);
+    else if (p.liftedIndex <= -1) prob = Math.max(prob, 0.45);
+  }
+  if (p.convectiveInhibition != null && p.convectiveInhibition >= 150) prob *= 0.5;
+  if (p.weatherCode != null && p.weatherCode >= 95) prob = Math.max(prob, 0.85);
+  return Math.min(1, prob);
+}
