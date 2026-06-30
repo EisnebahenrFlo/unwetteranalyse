@@ -14,7 +14,7 @@ export function HazardAlertBanner({ alerts }: { alerts: HazardAlert[] }) {
   return (
     <div className="rounded-xl border border-border bg-card">
       <div className="flex items-center gap-2 border-b border-border/60 px-3 py-1.5">
-        <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+        <AlertTriangle className="h-3.5 w-3.5 text-warn-minor" />
         <span className="text-xs font-semibold tracking-tight">Hazard-Alerts</span>
         <span className="font-mono text-[10px] text-muted-foreground">{alerts.length} aktiv</span>
       </div>

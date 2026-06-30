@@ -287,10 +287,12 @@ export function RadarCockpit() {
         </div>
 
         <Legend layer={activeLayer} />
-        <FrameBadge frame={activeFrame} scrub={scrub} />
 
         {/* Bedienleiste unten: Scrubber + Layer */}
         <div className="pointer-events-auto absolute inset-x-3 bottom-3 z-10 flex flex-col gap-2 md:inset-x-6 md:right-[360px]">
+          <div className="flex justify-start">
+            <FrameBadge frame={activeFrame} scrub={scrub} />
+          </div>
           <TimeScrubber
             value={scrub}
             min={minScrub}
@@ -401,11 +403,11 @@ function TopBar({
 function HealthPill({ h }: { h: { label: string; confidence: Confidence; detail: string } }) {
   const tone =
     h.confidence === "ok"
-      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+      ? "bg-primary/15 text-primary"
       : h.confidence === "delayed"
-        ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+        ? "bg-muted text-foreground/80"
         : h.confidence === "degraded"
-          ? "bg-orange-500/15 text-orange-700 dark:text-orange-300"
+          ? "bg-destructive/15 text-destructive"
           : "bg-muted text-muted-foreground";
   return (
     <span
@@ -424,22 +426,22 @@ function FrameBadge({ frame, scrub }: { frame: string | null; scrub: number }) {
   const tag = scrub === 0 ? "Jetzt" : scrub < 0 ? "Verlauf" : "Nowcast";
   const tone =
     scrub === 0
-      ? "bg-emerald-500/90 text-white"
+      ? "bg-primary text-primary-foreground"
       : scrub < 0
-        ? "bg-slate-500/90 text-white"
-        : "bg-sky-500/90 text-white";
+        ? "bg-muted text-foreground"
+        : "bg-info text-info-fg";
   return (
-    <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-2">
+    <div className="pointer-events-none inline-flex items-center gap-2 self-start rounded-md border border-border/60 bg-card/70 px-2 py-1 shadow-elegant backdrop-blur-xl">
       <span
         className={cn(
-          "rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wide",
+          "rounded-sm px-1.5 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider",
           tone,
         )}
       >
         {tag}
       </span>
       {frame && (
-        <span className="rounded-md bg-background/85 px-2 py-1 font-mono text-[11px] text-foreground backdrop-blur">
+        <span className="font-mono text-[11px] tabular-nums text-foreground">
           {new Date(frame).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
         </span>
       )}
@@ -449,8 +451,8 @@ function FrameBadge({ frame, scrub }: { frame: string | null; scrub: number }) {
 
 function Legend({ layer }: { layer: WmsLayerKey }) {
   return (
-    <div className="pointer-events-none absolute bottom-3 right-3 rounded-md border border-border bg-background/90 px-2.5 py-1.5 text-[10px] backdrop-blur">
-      <div className="mb-1 font-semibold uppercase tracking-wide text-muted-foreground">
+    <div className="pointer-events-none absolute bottom-3 right-3 rounded-md border border-border bg-card/80 px-2.5 py-1.5 text-[10px] shadow-elegant backdrop-blur-xl">
+      <div className="mb-1 font-display text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
         {WMS_LAYERS[layer].label} · Niederschlag (RY, mm/5min)
       </div>
       <div className="flex items-center gap-1">
@@ -490,7 +492,7 @@ function TimeScrubber({
       <Button
         size="icon"
         variant="ghost"
-        className="h-8 w-8"
+        className="h-11 w-11 md:h-8 md:w-8"
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={disabled}
       >
@@ -499,7 +501,7 @@ function TimeScrubber({
       <Button
         size="icon"
         variant={playing ? "default" : "outline"}
-        className="h-8 w-8"
+        className="h-11 w-11 md:h-8 md:w-8"
         onClick={onPlay}
         disabled={disabled}
       >
@@ -514,9 +516,9 @@ function TimeScrubber({
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
           disabled={disabled}
-          className="w-full accent-primary"
+          className="h-11 w-full accent-primary md:h-6"
         />
-        <div className="pointer-events-none flex justify-between px-1 pt-0.5 font-mono text-[9px] text-muted-foreground">
+        <div className="pointer-events-none flex justify-between px-1 pt-0.5 font-mono text-[9px] tabular-nums text-muted-foreground">
           <span>{min * stepMinutes} min</span>
           <span>Jetzt</span>
           <span>+{max * stepMinutes} min</span>
@@ -524,7 +526,7 @@ function TimeScrubber({
       </div>
       <button
         onClick={onJumpNow}
-        className="rounded-md border border-border px-2 py-1 font-mono text-[11px] text-foreground hover:bg-muted"
+        className="rounded-md border border-border px-2 py-1 font-mono text-[11px] tabular-nums text-foreground hover:bg-muted"
         disabled={disabled}
       >
         {label}
@@ -532,7 +534,7 @@ function TimeScrubber({
       <Button
         size="icon"
         variant="ghost"
-        className="h-8 w-8"
+        className="h-11 w-11 md:h-8 md:w-8"
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={disabled}
       >
