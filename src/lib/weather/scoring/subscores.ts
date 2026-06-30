@@ -17,7 +17,7 @@ import {
   normTotalTotals,
   normWindKmh,
 } from "./normalize";
-import { kIndex, thunderProbability, totalTotals } from "./derived";
+import { kIndex, thunderProbability, thunderProbabilityNowcast, totalTotals } from "./derived";
 
 export interface Contributor {
   label: string;
@@ -68,10 +68,10 @@ export function windSubscore(p: HourlyPoint): Subscore {
 
 export function thunderSubscore(
   p: HourlyPoint,
-  opts?: { radarTopDbz?: number | null },
+  opts?: { radarTopDbz?: number | null; nowcast?: boolean },
 ): Subscore {
   const c: Contributor[] = [];
-  const tp = thunderProbability(p);
+  const tp = opts?.nowcast ? thunderProbabilityNowcast(p) : thunderProbability(p);
   const tpPts = normThunderProb(tp) * 0.6;
   if (tpPts > 0.5)
     c.push({ label: "Gewitterwahrscheinl.", raw: `${Math.round(tp * 100)} %`, points: tpPts });

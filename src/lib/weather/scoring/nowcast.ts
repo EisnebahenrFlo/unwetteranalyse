@@ -165,6 +165,7 @@ export function buildNowcast(input: NowcastInput): NowcastResult {
     const wind = windSubscore(point);
     const thunder = thunderSubscore(point, {
       radarTopDbz: i === 0 ? (input.radarTopDbz ?? null) : null,
+      nowcast: true,
     });
     const conv = convectionSubscore(point);
     const total = combine(rain.value, wind.value, thunder.value, conv.value);
