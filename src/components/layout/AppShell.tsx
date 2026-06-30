@@ -17,6 +17,7 @@ import { LocationSwitcher } from "./LocationSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
 import { DataFreshness } from "./DataFreshness";
 import { SeverityRail } from "@/components/common/SeverityRail";
+import { useGlobalSignal } from "@/hooks/use-global-signal";
 import { cn } from "@/lib/utils";
 import { MeteoconIcon } from "@/components/weather/MeteoconIcon";
 import { useAdaptiveTheme } from "@/hooks/use-adaptive-theme";
@@ -46,6 +47,7 @@ type NavItemDef = { to: string; label: string; icon: ComponentType<{ className?:
 
 export function AppShell({ children }: { children: ReactNode }) {
   useAdaptiveTheme();
+  const sig = useGlobalSignal();
   return (
     <div className="relative min-h-screen bg-background text-foreground">
       {/* Persistente Signatur-Rail an der linken Außenkante (nur Desktop sichtbar). */}
@@ -53,7 +55,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         aria-hidden
         className="pointer-events-none fixed inset-y-0 left-0 z-40 hidden w-1.5 px-0 py-3 md:block"
       >
-        <SeverityRail level={null} variant="gradient" className="h-full" />
+        <SeverityRail level={sig.level} variant="gradient" className="h-full" />
       </div>
       <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <div className="mx-auto grid max-w-[1440px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 md:gap-3 md:px-6 md:py-2.5">
@@ -72,7 +74,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <LocationSwitcher />
           </div>
           <div className="flex items-center gap-2">
-            <DataFreshness />
+            <DataFreshness updatedAt={sig.updatedAt} source={sig.source} />
             <ThemeToggle />
           </div>
         </div>
