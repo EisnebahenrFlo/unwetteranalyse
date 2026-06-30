@@ -45,7 +45,7 @@ export function DataFreshnessStrip({ entries }: { entries: Entry[] }) {
 }
 
 const DOT: Record<"ok" | "delayed" | "off", string> = {
-  ok: "bg-emerald-500",
-  delayed: "bg-warn-minor",
-  off: "bg-warn-severe",
+  ok: "bg-primary",
+  delayed: "bg-muted-foreground",
+  off: "bg-destructive",
 };
