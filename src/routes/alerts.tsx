@@ -3,9 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useActivePoint } from "@/components/layout/LocationSwitcher";
 import { brightSkyAlertsQuery, forecastQuery } from "@/lib/weather/queries";
 import { DataCard } from "@/components/common/DataCard";
-import { WarnBadge } from "@/components/common/WarnBadge";
 import {
-  SeverityRail,
   alertSeverityToLevel,
   type SeverityLevel,
 } from "@/components/common/SeverityRail";
@@ -20,6 +18,20 @@ import { useLiveNow } from "@/hooks/use-live-now";
 import { liveHourly } from "@/lib/weather/live";
 import type { AlertSeverity, WeatherAlert } from "@/lib/weather/types";
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
+
+const LEVEL_BG: Record<SeverityLevel, string> = {
+  1: "bg-warn-minor",
+  2: "bg-warn-moderate",
+  3: "bg-warn-severe",
+  4: "bg-warn-extreme",
+};
+const LEVEL_BORDER: Record<SeverityLevel, string> = {
+  1: "border-l-warn-minor",
+  2: "border-l-warn-moderate",
+  3: "border-l-warn-severe",
+  4: "border-l-warn-extreme",
+};
 
 export const Route = createFileRoute("/alerts")({
   head: () => ({
@@ -87,33 +99,21 @@ function AlertsPage() {
         <GroupedAlerts
           alerts={official.data ?? []}
           renderItem={(a) => (
-            <article key={a.id} className="rounded-md border border-border bg-background/50 p-3">
-              <header className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-start gap-2">
-                <SeverityRail
-                  level={alertSeverityToLevel(a.severity)}
-                  orientation="vertical"
-                  showLabel={false}
-                  className="h-10"
-                />
-                <WarnBadge severity={a.severity} showLevel />
-                <div className="min-w-0">
-                  <h3 className="truncate text-sm font-semibold">{a.headline}</h3>
-                  <div className="text-[10px] text-muted-foreground">
-                    {formatHour(a.onset)} bis {formatHour(a.expires)} · {formatRelative(a.onset)}
-                  </div>
-                </div>
-              </header>
-              {a.description && (
-                <p className="mt-2 whitespace-pre-line text-xs text-foreground/90">
-                  {a.description}
-                </p>
-              )}
-              {a.instruction && (
-                <p className="mt-2 rounded bg-muted px-2 py-1.5 text-[11px] text-muted-foreground">
-                  {a.instruction}
-                </p>
-              )}
-            </article>
+            <AlertCard
+              key={a.id}
+              severity={a.severity}
+              headline={a.headline}
+              timeLine={
+                <>
+                  <span className="font-mono tabular-nums">{formatHour(a.onset)}</span> bis{" "}
+                  <span className="font-mono tabular-nums">{formatHour(a.expires)}</span> ·{" "}
+                  {formatRelative(a.onset)}
+                </>
+              }
+              description={a.description}
+              instruction={a.instruction}
+              descriptionClassName="whitespace-pre-line"
+            />
           )}
         />
       </DataCard>
@@ -137,29 +137,76 @@ function AlertsPage() {
         <GroupedAlerts
           alerts={derived}
           renderItem={(d) => (
-            <article key={d.id} className="rounded-md border border-border bg-background/50 p-3">
-              <header className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-start gap-2">
-                <SeverityRail
-                  level={alertSeverityToLevel(d.severity)}
-                  orientation="vertical"
-                  showLabel={false}
-                  className="h-10"
-                />
-                <WarnBadge severity={d.severity} />
-                <div className="min-w-0">
-                  <h3 className="truncate text-sm font-semibold">{d.headline}</h3>
-                  <div className="text-[10px] text-muted-foreground">
-                    erstmals erwartet {formatHour(d.onset)} · {formatRelative(d.onset)}
-                  </div>
-                </div>
-              </header>
-              <p className="mt-2 text-xs text-foreground/90">{d.description}</p>
-              <p className="mt-1.5 text-[11px] text-muted-foreground">{d.instruction}</p>
-            </article>
+            <AlertCard
+              key={d.id}
+              severity={d.severity}
+              headline={d.headline}
+              timeLine={
+                <>
+                  erstmals erwartet{" "}
+                  <span className="font-mono tabular-nums">{formatHour(d.onset)}</span> ·{" "}
+                  {formatRelative(d.onset)}
+                </>
+              }
+              description={d.description}
+              instruction={d.instruction}
+            />
           )}
         />
       </DataCard>
     </div>
+  );
+}
+
+/* ---------------- Einzelne Alert-Karte ---------------- */
+
+interface AlertCardProps {
+  severity: AlertSeverity;
+  headline: string;
+  timeLine: ReactNode;
+  description?: string;
+  instruction?: string;
+  descriptionClassName?: string;
+}
+
+function AlertCard({
+  severity,
+  headline,
+  timeLine,
+  description,
+  instruction,
+  descriptionClassName,
+}: AlertCardProps) {
+  const lvl = alertSeverityToLevel(severity);
+  return (
+    <article
+      className={cn(
+        "rounded-md border border-border border-l-[3px] bg-background/50 p-3",
+        LEVEL_BORDER[lvl],
+      )}
+    >
+      <header className="min-w-0">
+        <h3 className="font-display text-sm font-semibold leading-snug text-foreground">
+          {headline}
+        </h3>
+        <div className="mt-0.5 text-[10px] text-muted-foreground">{timeLine}</div>
+      </header>
+      {description && (
+        <p
+          className={cn(
+            "mt-2 text-xs leading-relaxed text-foreground/90",
+            descriptionClassName,
+          )}
+        >
+          {description}
+        </p>
+      )}
+      {instruction && (
+        <p className="mt-2 rounded bg-muted px-2 py-1.5 text-[11px] leading-relaxed text-muted-foreground">
+          {instruction}
+        </p>
+      )}
+    </article>
   );
 }
 
@@ -188,16 +235,21 @@ function GroupedAlerts<T extends { severity: AlertSeverity }>({
   return (
     <div className="flex flex-col gap-4">
       {groups.map((g) => (
-        <div key={g.level} className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            <SeverityRail level={g.level} orientation="horizontal" showLabel={false} className="w-10" />
-            <span className="font-display tracking-[0.18em]">
-              {`Stufe ${g.level} · ${WARN_LEVEL[g.level].name}`} ·{" "}
-              <span className="font-mono tabular-nums">{g.items.length}</span>
+        <section key={g.level} className="flex flex-col gap-2.5">
+          <header className="flex items-center gap-2 border-b border-border/60 pb-1.5 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            <span
+              className={cn("h-3 w-3 shrink-0 rounded-[3px]", LEVEL_BG[g.level])}
+              aria-hidden
+            />
+            <span className="font-display font-semibold tracking-[0.18em] text-foreground/90">
+              Stufe {g.level} · {WARN_LEVEL[g.level].name}
             </span>
-          </div>
-          <div className="flex flex-col gap-2">{g.items.map((a) => renderItem(a))}</div>
-        </div>
+            <span className="font-mono tabular-nums text-muted-foreground">
+              · {g.items.length}
+            </span>
+          </header>
+          <div className="flex flex-col gap-2.5">{g.items.map((a) => renderItem(a))}</div>
+        </section>
       ))}
     </div>
   );
