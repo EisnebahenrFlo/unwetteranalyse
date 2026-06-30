@@ -15,6 +15,8 @@ import {
 import type { ComponentType } from "react";
 import { LocationSwitcher } from "./LocationSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
+import { DataFreshness } from "./DataFreshness";
+import { SeverityRail } from "@/components/common/SeverityRail";
 import { cn } from "@/lib/utils";
 import { MeteoconIcon } from "@/components/weather/MeteoconIcon";
 import { useAdaptiveTheme } from "@/hooks/use-adaptive-theme";
@@ -45,7 +47,14 @@ type NavItemDef = { to: string; label: string; icon: ComponentType<{ className?:
 export function AppShell({ children }: { children: ReactNode }) {
   useAdaptiveTheme();
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="relative min-h-screen bg-background text-foreground">
+      {/* Persistente Signatur-Rail an der linken Außenkante (nur Desktop sichtbar). */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-y-0 left-0 z-40 hidden w-1.5 px-0 py-3 md:block"
+      >
+        <SeverityRail level={null} variant="gradient" className="h-full" />
+      </div>
       <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <div className="mx-auto grid max-w-[1440px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 md:gap-3 md:px-6 md:py-2.5">
           <Link to="/" search={keepSearch} className="flex shrink-0 items-center gap-2">
@@ -53,18 +62,23 @@ export function AppShell({ children }: { children: ReactNode }) {
               <MeteoconIcon name="partly-cloudy-day" label="ForecastHub" className="h-7 w-7" />
             </div>
             <div className="hidden md:block">
-              <div className="text-sm font-semibold tracking-tight">ForecastHub</div>
+              <div className="font-display text-sm font-semibold uppercase tracking-wide">
+                Unwetter <span className="text-primary">Forecast</span> Hub
+              </div>
               <div className="text-[10px] text-muted-foreground">Privates Wetterwerkzeug</div>
             </div>
           </Link>
           <div className="min-w-0">
             <LocationSwitcher />
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <DataFreshness />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
-      <div className="mx-auto flex max-w-[1440px]">
+      <div className="mx-auto flex max-w-[1440px] md:pl-3">
         <SideNav />
         <main className="min-w-0 flex-1 px-3 pb-24 pt-3 md:px-6 md:pb-8 md:pt-6">{children}</main>
       </div>
