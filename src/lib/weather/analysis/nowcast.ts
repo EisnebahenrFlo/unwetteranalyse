@@ -1,5 +1,5 @@
 import type { AlertSeverity, HourlyPoint, MinutelyPoint } from "../types";
-import { hailRisk } from "./convection";
+import { hailRisk, severeScore } from "./convection";
 import { buildNowcast } from "../scoring/nowcast";
 import { bandToSeverity } from "../scoring/labels";
 import { thunderProbabilityNowcast } from "../scoring/derived";
