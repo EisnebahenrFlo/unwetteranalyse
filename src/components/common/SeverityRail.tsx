@@ -30,6 +30,12 @@ interface Props {
   label?: string;
   showLabel?: boolean;
   className?: string;
+  /**
+   * `segments` (Default): vier diskrete DWD-Segmente, klassisches Inline-Badge.
+   * `gradient`: schmaler durchgehender Verlauf (Stufe 4 oben → Stufe 1 unten)
+   * mit Pegel-Indikator, gedacht für die persistente App-Rail an der linken Kante.
+   */
+  variant?: "segments" | "gradient";
 }
 
 export function SeverityRail({
@@ -38,7 +44,11 @@ export function SeverityRail({
   label,
   showLabel = true,
   className,
+  variant = "segments",
 }: Props) {
+  if (variant === "gradient") {
+    return <SeverityRailGradient level={level} label={label} className={className} />;
+  }
   const isV = orientation === "vertical";
   const segments: SeverityLevel[] = [1, 2, 3, 4];
 
@@ -82,6 +92,46 @@ export function SeverityRail({
         >
           {label ?? (level ? `S${level}` : "S0")}
         </span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Persistente Signatur-Rail (vertikal, full-height).
+ * Reihenfolge oben→unten: Stufe 4 violett, 3 rot, 2 orange, 1 gelb.
+ * Ein heller Strich markiert die aktuell höchste aktive Warnstufe.
+ */
+function SeverityRailGradient({
+  level,
+  label,
+  className,
+}: {
+  level: SeverityLevel | null;
+  label?: string;
+  className?: string;
+}) {
+  // Indikator-Position: Stufe 4 oben = 12.5%, 3 = 37.5%, 2 = 62.5%, 1 = 87.5%.
+  const indicatorTop = level == null ? null : `${(4 - level) * 25 + 12.5}%`;
+  return (
+    <div
+      role="img"
+      aria-label={label ?? (level ? LEVEL_LABEL[level] : "Keine aktive Warnung")}
+      className={cn("relative h-full w-1.5", className)}
+    >
+      <div
+        className="absolute inset-0 rounded-full opacity-80"
+        style={{
+          backgroundImage:
+            "linear-gradient(to bottom, var(--warn-extreme) 0%, var(--warn-extreme) 25%, var(--warn-severe) 25%, var(--warn-severe) 50%, var(--warn-moderate) 50%, var(--warn-moderate) 75%, var(--warn-minor) 75%, var(--warn-minor) 100%)",
+        }}
+      />
+      {indicatorTop != null && (
+        <div
+          className="absolute -left-1 -right-1 h-[2px] rounded-full bg-foreground shadow-[0_0_6px_var(--ring)]"
+          style={{ top: indicatorTop }}
+          aria-hidden
+        />
       )}
     </div>
   );
