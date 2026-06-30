@@ -37,7 +37,7 @@ export function StormPanel({ cells, alerts, activeEta, snapshotOk, hazardReports
     <section className="rounded-xl border border-border/60 bg-card/75 shadow-elegant backdrop-blur-xl">
       <header className="flex items-center justify-between gap-2 border-b border-border/60 px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">
-          <Zap className="h-4 w-4 text-amber-500" />
+          <Zap className="h-4 w-4 text-primary" />
           <h2 className="truncate text-sm font-semibold tracking-tight">Stormtracking</h2>
         </div>
         <span className="font-mono text-[10px] text-muted-foreground">

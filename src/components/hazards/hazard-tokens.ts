@@ -17,11 +17,11 @@ export const HAZARD_LEVEL_LABEL: Record<HazardLevel, string> = {
 };
 
 export const HAZARD_LEVEL_TONE: Record<HazardLevel, string> = {
-  none: "bg-slate-500/15 text-slate-700 dark:text-slate-300",
-  watch: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  elevated: "bg-orange-500/15 text-orange-700 dark:text-orange-300",
-  high: "bg-red-500/15 text-red-700 dark:text-red-300",
-  extreme: "bg-red-900/20 text-red-800 dark:text-red-200",
+  none: "bg-muted text-muted-foreground",
+  watch: "bg-warn-minor/15 text-warn-minor",
+  elevated: "bg-warn-moderate/15 text-warn-moderate",
+  high: "bg-warn-severe/15 text-warn-severe",
+  extreme: "bg-warn-extreme/15 text-warn-extreme",
 };
 
 export const HAZARD_KIND_LABEL: Record<HazardKind, string> = {

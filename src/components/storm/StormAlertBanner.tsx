@@ -8,12 +8,12 @@ export function StormAlertBanner({ alerts }: { alerts: StormAlert[] }) {
   const top = alerts[0];
   const tone =
     top.level === "extreme"
-      ? "border-violet-500/50 bg-violet-500/10 text-violet-700 dark:text-violet-300"
+      ? "border-warn-extreme/50 bg-warn-extreme/10 text-warn-extreme"
       : top.level === "severe"
-        ? "border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-300"
+        ? "border-warn-severe/50 bg-warn-severe/10 text-warn-severe"
         : top.level === "serious"
-          ? "border-orange-500/50 bg-orange-500/10 text-orange-700 dark:text-orange-300"
-          : "border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-300";
+          ? "border-warn-moderate/50 bg-warn-moderate/10 text-warn-moderate"
+          : "border-warn-minor/50 bg-warn-minor/10 text-warn-minor";
 
   return (
     <div className={cn("flex items-start gap-2 rounded-xl border px-3 py-2 text-xs", tone)}>

@@ -118,8 +118,8 @@ export function StormCellDrawer({ cell, onClose, alerts, hazardReport = null }: 
           </div>
 
           {cell.hailCoreAreaKm2 >= 1 && (
-            <div className="rounded-lg border border-red-500/40 bg-red-500/5 px-3 py-2 text-xs">
-              <span className="font-semibold text-red-700 dark:text-red-300">
+            <div className="rounded-lg border border-warn-severe/40 bg-warn-severe/10 px-3 py-2 text-xs">
+              <span className="font-semibold text-warn-severe">
                 Hagelkern erkannt
               </span>{" "}
               <span className="text-muted-foreground">
