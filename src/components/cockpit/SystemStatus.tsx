@@ -86,9 +86,9 @@ function Row({ entry }: { entry: SourceEntry }) {
 type Status = "ok" | "delayed" | "off";
 
 const STATUS_DOT: Record<Status, string> = {
-  ok: "bg-emerald-500",
-  delayed: "bg-warn-minor",
-  off: "bg-warn-severe",
+  ok: "bg-primary",
+  delayed: "bg-muted-foreground",
+  off: "bg-destructive",
 };
 const STATUS_LABEL: Record<Status, string> = {
   ok: "ok",

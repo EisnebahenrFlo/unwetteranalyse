@@ -27,7 +27,7 @@ export function SectionHeader({ id, eyebrow, title, question, action, className 
         <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           {eyebrow}
         </div>
-        <h2 className="mt-0.5 truncate text-lg font-semibold tracking-tight text-foreground md:text-xl">
+        <h2 className="mt-0.5 truncate font-display text-lg font-semibold tracking-tight text-foreground md:text-xl">
           {title}
         </h2>
         {question && (

@@ -191,8 +191,9 @@ function GroupedAlerts<T extends { severity: AlertSeverity }>({
         <div key={g.level} className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             <SeverityRail level={g.level} orientation="horizontal" showLabel={false} className="w-10" />
-            <span>
-              {`Stufe ${g.level} · ${WARN_LEVEL[g.level].name}`} · {g.items.length}
+            <span className="font-display tracking-[0.18em]">
+              {`Stufe ${g.level} · ${WARN_LEVEL[g.level].name}`} ·{" "}
+              <span className="font-mono tabular-nums">{g.items.length}</span>
             </span>
           </div>
           <div className="flex flex-col gap-2">{g.items.map((a) => renderItem(a))}</div>

@@ -18,7 +18,9 @@ export function DataCard({ title, subtitle, meta, action, className, children }:
     <Card className={cn("flex flex-col gap-3 p-4 md:p-5", className)}>
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
         <div className="min-w-0">
-          <h3 className="truncate text-sm font-semibold tracking-tight text-foreground">{title}</h3>
+          <h3 className="truncate font-display text-sm font-semibold tracking-tight text-foreground">
+            {title}
+          </h3>
           {subtitle && <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>}
         </div>
         {action && <div className="shrink-0">{action}</div>}

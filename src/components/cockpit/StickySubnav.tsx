@@ -62,9 +62,9 @@ export function StickySubnav({ items, value, onChange }: Props) {
                 data-active={isActive}
                 onClick={() => onChange(it.id)}
                 className={cn(
-                  "group inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] transition-colors",
+                  "group inline-flex min-h-[44px] items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] transition-colors md:min-h-0",
                   isActive
-                    ? "border-foreground/20 bg-foreground/5 text-foreground"
+                    ? "border-primary/40 bg-primary/10 text-primary"
                     : "border-transparent text-muted-foreground hover:text-foreground",
                 )}
               >
