@@ -54,17 +54,17 @@ function VerdictPill({ v }: { v: Verdict }) {
   const map: Record<Verdict, { label: string; tone: string; Icon: typeof CheckCircle2 }> = {
     ok: {
       label: "ok",
-      tone: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+      tone: "bg-primary/15 text-primary",
       Icon: CheckCircle2,
     },
     watch: {
       label: "watch",
-      tone: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+      tone: "bg-muted text-foreground/80",
       Icon: AlertTriangle,
     },
     alert: {
       label: "alert",
-      tone: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
+      tone: "bg-destructive/15 text-destructive",
       Icon: AlertTriangle,
     },
     unknown: { label: "unbekannt", tone: "bg-muted text-muted-foreground", Icon: CircleHelp },
@@ -86,11 +86,11 @@ function VerdictPill({ v }: { v: Verdict }) {
 export function ModelObsCard({ c }: { c: ModelObsCheck }) {
   const tone =
     c.state === "match"
-      ? "border-emerald-500/30 bg-emerald-500/10"
+      ? "border-primary/30 bg-primary/10"
       : c.state === "model_overcalls"
-        ? "border-amber-500/40 bg-amber-500/10"
+        ? "border-border bg-muted/40"
         : c.state === "model_underestimates"
-          ? "border-rose-500/40 bg-rose-500/10"
+          ? "border-destructive/40 bg-destructive/10"
           : "border-border/60 bg-card/75";
   const label: Record<ModelObsCheck["state"], string> = {
     match: "Modell und Radar passen",
@@ -125,10 +125,10 @@ export function SourceConfidenceGrid({ items }: { items: SourceConfidence[] }) {
         {items.map((it) => {
           const tone =
             it.state === "good"
-              ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+              ? "bg-primary/15 text-primary"
               : it.state === "limited"
-                ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
-                : "bg-rose-500/15 text-rose-700 dark:text-rose-300";
+                ? "bg-muted text-foreground/80"
+                : "bg-destructive/15 text-destructive";
           const stateLabel =
             it.state === "good" ? "ok" : it.state === "limited" ? "eingeschränkt" : "fehlt";
           return (
