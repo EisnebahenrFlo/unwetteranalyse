@@ -152,7 +152,7 @@ export function SourceConfidenceGrid({ items }: { items: SourceConfidence[] }) {
 function Header({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <div className="flex items-baseline justify-between gap-2">
-      <h3 className="text-[12px] font-semibold uppercase tracking-wide text-foreground">{title}</h3>
+      <h3 className="font-display text-[12px] font-semibold uppercase tracking-wider text-foreground">{title}</h3>
       <span className="truncate text-[11px] text-muted-foreground">{subtitle}</span>
     </div>
   );
