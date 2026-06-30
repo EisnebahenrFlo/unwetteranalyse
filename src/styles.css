@@ -82,34 +82,35 @@
 
 :root {
   --radius: 0.625rem;
-  /* Adaptive Hell — F4F7FA / 131A24, kühl, kein Marketingblau. */
-  --background: oklch(0.971 0.005 240);
-  --foreground: oklch(0.21 0.022 250);
+  /* Light = kühles Gegenstück zum Dark-Primärtheme („Paper on Ink"). */
+  --background: oklch(0.97 0.005 230);
+  --foreground: oklch(0.20 0.014 240);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.022 250);
+  --card-foreground: oklch(0.20 0.014 240);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.022 250);
-  /* primary = „Glacier" (Bedienung, nicht-Severity) */
-  --primary: oklch(0.49 0.09 230);
-  --primary-foreground: oklch(0.985 0.005 230);
-  --secondary: oklch(0.955 0.008 240);
-  --secondary-foreground: oklch(0.27 0.03 250);
-  --muted: oklch(0.955 0.008 240);
-  --muted-foreground: oklch(0.5 0.018 245);
-  --accent: oklch(0.94 0.012 235);
-  --accent-foreground: oklch(0.27 0.03 250);
-  --destructive: oklch(0.57 0.21 28);
+  --popover-foreground: oklch(0.20 0.014 240);
+  /* primary = „Sweep" (Radar-Cyan #34C3CE), für Light leicht dunkler. */
+  --primary: oklch(0.66 0.10 200);
+  --primary-foreground: oklch(0.17 0.012 235);
+  --secondary: oklch(0.95 0.008 235);
+  --secondary-foreground: oklch(0.25 0.018 240);
+  --muted: oklch(0.95 0.008 235);
+  --muted-foreground: oklch(0.50 0.018 235);
+  --accent: oklch(0.93 0.012 230);
+  --accent-foreground: oklch(0.25 0.018 240);
+  --destructive: oklch(0.60 0.22 28);
   --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.91 0.012 240);
-  --input: oklch(0.91 0.012 240);
-  --ring: oklch(0.55 0.08 230);
+  --border: oklch(0.88 0.012 235);
+  --input: oklch(0.88 0.012 235);
+  --ring: oklch(0.66 0.10 200);
 
-  /* DWD-Warnstufen — neu kalibriert, Semantik bleibt */
-  --warn-minor: oklch(0.78 0.16 90);    /* #E6B400 gelb, Stufe 1 markant */
-  --warn-moderate: oklch(0.66 0.18 50); /* #E8730C orange, Stufe 2 Unwetter */
-  --warn-severe: oklch(0.57 0.21 28);   /* #D62828 rot, Stufe 3 schwer */
-  --warn-extreme: oklch(0.47 0.22 310); /* #8B2FC9 violett, Stufe 4 extrem */
-  --warn-minor-fg: oklch(0.2 0.04 90);
+  /* DWD-Warnstufen — Keys behalten, Werte = amtliche DWD-Farben.
+     1 Wetterwarnung gelb · 2 Markantes Wetter orange · 3 Unwetterwarnung rot · 4 Extremes Unwetter violett */
+  --warn-minor: oklch(0.84 0.18 90);     /* #FFC400 gelb,    Stufe 1 Wetterwarnung   */
+  --warn-moderate: oklch(0.72 0.17 55);  /* #FB8C00 orange,  Stufe 2 Markantes Wetter */
+  --warn-severe: oklch(0.60 0.22 28);    /* #E53935 rot,     Stufe 3 Unwetterwarnung  */
+  --warn-extreme: oklch(0.50 0.22 320);  /* #9C36B5 violett, Stufe 4 Extremes Unwetter */
+  --warn-minor-fg: oklch(0.20 0.04 90);
   --warn-moderate-fg: oklch(0.99 0 0);
   --warn-severe-fg: oklch(0.99 0 0);
   --warn-extreme-fg: oklch(0.99 0 0);
@@ -123,55 +124,57 @@
   --info-fg: oklch(0.99 0 0);
 
   --shadow-elegant:
-    0 1px 0 0 oklch(1 0 0 / 0.6) inset, 0 14px 36px -20px oklch(0.21 0.022 250 / 0.22);
-  --shadow-glow: 0 0 0 1px oklch(0.49 0.09 230 / 0.18), 0 18px 40px -16px oklch(0.49 0.09 230 / 0.3);
+    0 1px 0 0 oklch(1 0 0 / 0.6) inset, 0 14px 36px -20px oklch(0.20 0.014 240 / 0.22);
+  --shadow-glow: 0 0 0 1px oklch(0.66 0.10 200 / 0.20), 0 18px 40px -16px oklch(0.66 0.10 200 / 0.30);
 
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.962 0.006 235);
-  --sidebar-foreground: oklch(0.21 0.022 250);
-  --sidebar-primary: oklch(0.49 0.09 230);
-  --sidebar-primary-foreground: oklch(0.985 0.005 230);
-  --sidebar-accent: oklch(0.93 0.012 235);
-  --sidebar-accent-foreground: oklch(0.27 0.03 250);
-  --sidebar-border: oklch(0.91 0.012 240);
-  --sidebar-ring: oklch(0.55 0.08 230);
+  --sidebar: oklch(0.95 0.006 230);
+  --sidebar-foreground: oklch(0.20 0.014 240);
+  --sidebar-primary: oklch(0.66 0.10 200);
+  --sidebar-primary-foreground: oklch(0.17 0.012 235);
+  --sidebar-accent: oklch(0.92 0.012 230);
+  --sidebar-accent-foreground: oklch(0.25 0.018 240);
+  --sidebar-border: oklch(0.88 0.012 235);
+  --sidebar-ring: oklch(0.66 0.10 200);
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Saira Semi Condensed", "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .dark {
-  /* Adaptive Dunkel — 0B1017 / 121A24, E6EDF5 */
-  --background: oklch(0.16 0.015 245);
-  --foreground: oklch(0.93 0.011 240);
-  --card: oklch(0.21 0.02 245);
-  --card-foreground: oklch(0.93 0.011 240);
-  --popover: oklch(0.21 0.02 245);
-  --popover-foreground: oklch(0.93 0.011 240);
-  --primary: oklch(0.71 0.09 220);            /* Glacier dark #4FB0CC */
-  --primary-foreground: oklch(0.16 0.015 245);
-  --secondary: oklch(0.25 0.022 245);
-  --secondary-foreground: oklch(0.93 0.011 240);
-  --muted: oklch(0.25 0.022 245);
-  --muted-foreground: oklch(0.7 0.018 240);
-  --accent: oklch(0.28 0.03 235);
-  --accent-foreground: oklch(0.93 0.011 240);
-  --destructive: oklch(0.62 0.21 28);
+  /* Dunkel = Primärtheme „Mess-Instrument / Radarscope".
+     Ink #0D1318 · slate #161F27 · line #2A3845 · mist #7E909D · paper #E9EEF1 · sweep #34C3CE */
+  --background: oklch(0.17 0.012 235);
+  --foreground: oklch(0.94 0.005 235);
+  --card: oklch(0.23 0.014 240);
+  --card-foreground: oklch(0.94 0.005 235);
+  --popover: oklch(0.23 0.014 240);
+  --popover-foreground: oklch(0.94 0.005 235);
+  --primary: oklch(0.74 0.11 200);             /* Sweep #34C3CE */
+  --primary-foreground: oklch(0.17 0.012 235); /* Ink */
+  --secondary: oklch(0.27 0.016 240);
+  --secondary-foreground: oklch(0.94 0.005 235);
+  --muted: oklch(0.27 0.016 240);
+  --muted-foreground: oklch(0.63 0.018 235);   /* mist */
+  --accent: oklch(0.30 0.022 235);
+  --accent-foreground: oklch(0.94 0.005 235);
+  --destructive: oklch(0.62 0.22 28);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.65 0.08 220);
+  --border: oklch(0.32 0.020 240);             /* line #2A3845 */
+  --input: oklch(0.32 0.020 240);
+  --ring: oklch(0.74 0.11 200);
 
-  --warn-minor: oklch(0.8 0.17 90);
-  --warn-moderate: oklch(0.7 0.18 50);
-  --warn-severe: oklch(0.62 0.21 28);
-  --warn-extreme: oklch(0.55 0.22 310);
-  --warn-minor-fg: oklch(0.15 0.03 90);
+  /* DWD-Warnstufen (Dark) — identische Hues, leicht gelifted für Kontrast auf Ink. */
+  --warn-minor: oklch(0.86 0.18 90);     /* Stufe 1 Wetterwarnung    · gelb     */
+  --warn-moderate: oklch(0.74 0.17 55);  /* Stufe 2 Markantes Wetter · orange   */
+  --warn-severe: oklch(0.62 0.22 28);    /* Stufe 3 Unwetterwarnung  · rot      */
+  --warn-extreme: oklch(0.55 0.22 320);  /* Stufe 4 Extremes Unwetter · violett */
+  --warn-minor-fg: oklch(0.17 0.04 90);
   --warn-moderate-fg: oklch(0.99 0 0);
   --warn-severe-fg: oklch(0.99 0 0);
   --warn-extreme-fg: oklch(0.99 0 0);
@@ -184,21 +187,21 @@
   --info-fg: oklch(0.99 0 0);
 
   --shadow-elegant: 0 1px 0 0 oklch(1 0 0 / 0.04) inset, 0 22px 56px -24px oklch(0 0 0 / 0.7);
-  --shadow-glow: 0 0 0 1px oklch(0.71 0.09 220 / 0.28), 0 24px 52px -20px oklch(0.71 0.09 220 / 0.4);
+  --shadow-glow: 0 0 0 1px oklch(0.74 0.11 200 / 0.28), 0 24px 52px -20px oklch(0.74 0.11 200 / 0.40);
 
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.19 0.018 245);
-  --sidebar-foreground: oklch(0.93 0.011 240);
-  --sidebar-primary: oklch(0.71 0.09 220);
-  --sidebar-primary-foreground: oklch(0.16 0.015 245);
-  --sidebar-accent: oklch(0.25 0.022 245);
-  --sidebar-accent-foreground: oklch(0.93 0.011 240);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.65 0.08 220);
+  --sidebar: oklch(0.20 0.013 238);
+  --sidebar-foreground: oklch(0.94 0.005 235);
+  --sidebar-primary: oklch(0.74 0.11 200);
+  --sidebar-primary-foreground: oklch(0.17 0.012 235);
+  --sidebar-accent: oklch(0.27 0.016 240);
+  --sidebar-accent-foreground: oklch(0.94 0.005 235);
+  --sidebar-border: oklch(0.32 0.020 240);
+  --sidebar-ring: oklch(0.74 0.11 200);
 }
 
 @layer base {
