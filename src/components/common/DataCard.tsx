@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 
 interface DataCardProps {
   title: string;
-  subtitle?: string;
+  subtitle?: ReactNode;
   meta?: DataMetaT;
   action?: ReactNode;
   className?: string;

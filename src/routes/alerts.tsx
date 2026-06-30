@@ -72,7 +72,7 @@ function AlertsPage() {
         title="Offizielle Warnungen (DWD / Bright Sky)"
         subtitle={
           officialAge != null
-            ? `Stand vor ${officialAge} min`
+            ? <>Stand vor <span className="font-mono tabular-nums">{officialAge}</span> min</>
             : "Stand unbekannt"
         }
       >
@@ -122,7 +122,7 @@ function AlertsPage() {
         title="Eigene Schwellen-Analyse (DWD-orientiert)"
         subtitle={
           forecastAge != null
-            ? `Aus Forecast der nächsten 48 h · Stand vor ${forecastAge} min`
+            ? <>Aus Forecast der nächsten 48 h · Stand vor <span className="font-mono tabular-nums">{forecastAge}</span> min</>
             : "Aus Forecast der nächsten 48 h"
         }
       >
