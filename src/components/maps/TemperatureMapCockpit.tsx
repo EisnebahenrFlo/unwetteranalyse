@@ -10,6 +10,7 @@ import {
   SkipBack,
   SkipForward,
   SlidersHorizontal,
+  X,
 } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -19,9 +20,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Bar,
+  ComposedChart,
+  Line,
+  ResponsiveContainer,
+  Tooltip as RTooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { ForecastFieldMap, type ForecastFieldMapHandle } from "./ForecastFieldMap";
 import { fetchTemperatureField } from "@/lib/weather/maps/temperature-field";
 import { sampleField, TEMP_STOPS } from "@/lib/weather/maps/field-render";
+import { forecastQuery } from "@/lib/weather/queries";
+import type { ForecastBundle, GeoPoint } from "@/lib/weather/types";
+import type { UseQueryResult } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 type ParamKey = "t2m" | "gust" | "precip";
@@ -126,6 +139,15 @@ export function TemperatureMapCockpit() {
     if (!field || !pick) return null;
     return sampleField(field, hourIdx, pick.lat, pick.lon);
   }, [field, pick, hourIdx]);
+
+  const pickPoint: GeoPoint | null = useMemo(
+    () => (pick ? { lat: pick.lat, lon: pick.lon, name: "Gewählter Punkt" } : null),
+    [pick],
+  );
+  const fq = useQuery({
+    ...forecastQuery(pickPoint ?? { lat: 0, lon: 0, name: "-" }),
+    enabled: !!pickPoint,
+  });
 
   const activeTime = field?.times[hourIdx];
   const updated = field
@@ -247,28 +269,27 @@ export function TemperatureMapCockpit() {
               Temperaturfeld konnte nicht geladen werden.
             </div>
           )}
+
+          {pick && (
+            <PointForecastPanel
+              lat={pick.lat}
+              lon={pick.lon}
+              query={fq}
+              fieldReadout={
+                pickVal != null && !Number.isNaN(pickVal) && activeTime
+                  ? `Feld: ${pickVal.toFixed(1)} °C @ ${fmtTime(activeTime)}`
+                  : null
+              }
+              onClose={() => setPick(null)}
+            />
+          )}
         </div>
 
         {/* BOTTOM-STREIFEN */}
         <div className="flex flex-wrap items-center gap-2 border-t border-border bg-card px-3 py-2 md:flex-nowrap md:gap-3 md:px-6">
-          {/* Pick-Readout */}
-          <div className="flex min-w-[140px] flex-col leading-tight">
-            {pick ? (
-              <>
-                <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
-                  {pick.lat.toFixed(2)}°N {pick.lon.toFixed(2)}°E
-                </span>
-                <span className="font-display text-sm font-semibold tabular-nums text-foreground">
-                  {pickVal != null && !Number.isNaN(pickVal)
-                    ? `${pickVal.toFixed(1)} °C`
-                    : "keine Daten"}
-                </span>
-              </>
-            ) : (
-              <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                Karte tippen für Wert
-              </span>
-            )}
+          {/* Hinweis statt Pick-Readout (Panel übernimmt die Werte) */}
+          <div className="hidden min-w-[180px] font-mono text-[10px] uppercase tracking-wider text-muted-foreground md:block">
+            {pick ? "Punkt-Forecast oben-links" : "Karte tippen für Punkt-Forecast"}
           </div>
 
           {/* Scrubber */}
@@ -404,6 +425,181 @@ export function TemperatureMapCockpit() {
             </TooltipProvider>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+interface PointForecastPanelProps {
+  lat: number;
+  lon: number;
+  query: UseQueryResult<ForecastBundle, Error>;
+  fieldReadout: string | null;
+  onClose: () => void;
+}
+
+function PointForecastPanel({ lat, lon, query, fieldReadout, onClose }: PointForecastPanelProps) {
+  const bundle = query.data;
+  const hours = useMemo(() => {
+    if (!bundle) return [];
+    const now = Date.now();
+    return bundle.hourly
+      .filter((h) => new Date(h.time).getTime() >= now - 30 * 60_000)
+      .slice(0, 24);
+  }, [bundle]);
+
+  const stats = useMemo(() => {
+    if (hours.length === 0) return null;
+    const temps = hours.map((h) => h.temperatureC).filter((v) => Number.isFinite(v));
+    const gusts = hours
+      .map((h) => h.windGustMs)
+      .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+    const precs = hours
+      .map((h) => h.precipitationMm)
+      .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+    return {
+      tNow: temps[0],
+      tMin: temps.length ? Math.min(...temps) : null,
+      tMax: temps.length ? Math.max(...temps) : null,
+      gustMax: gusts.length ? Math.max(...gusts) : null,
+      precSum: precs.length ? precs.reduce((a, b) => a + b, 0) : null,
+    };
+  }, [hours]);
+
+  const chartData = useMemo(
+    () =>
+      hours.map((h) => ({
+        t: new Date(h.time).getHours(),
+        temp: h.temperatureC,
+        prec: h.precipitationMm ?? 0,
+      })),
+    [hours],
+  );
+
+  return (
+    <div
+      className={cn(
+        "pointer-events-auto absolute z-20 border border-border/70 bg-card/95 shadow-elegant backdrop-blur-xl",
+        "inset-x-2 bottom-2 rounded-md md:inset-auto md:left-3 md:top-3 md:w-[340px]",
+      )}
+    >
+      {/* Sweep-Akzent */}
+      <div className="h-0.5 w-full bg-gradient-to-r from-primary via-primary/60 to-transparent" />
+      <div className="flex items-start justify-between gap-2 px-3 pt-2">
+        <div className="min-w-0">
+          <div className="font-display text-[11px] font-semibold uppercase tracking-wider text-foreground">
+            Punkt-Forecast
+          </div>
+          <div className="font-mono text-[10px] tabular-nums text-muted-foreground">
+            {lat.toFixed(3)}°N {lon.toFixed(3)}°E
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          aria-label="Schließen"
+          className="-mr-1 inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground md:h-8 md:w-8"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      <div className="px-3 pb-3">
+        {query.isLoading && (
+          <div className="py-6 text-center font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            lädt Punktvorhersage …
+          </div>
+        )}
+        {query.isError && !query.isLoading && (
+          <div className="py-4 text-center font-mono text-[10px] uppercase tracking-wider text-destructive">
+            Vorhersage nicht verfügbar
+          </div>
+        )}
+        {!query.isLoading && !query.isError && stats && (
+          <>
+            <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-[11px] tabular-nums text-foreground">
+              {Number.isFinite(stats.tNow) && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Jetzt</span>
+                  <span>{stats.tNow.toFixed(1)} °C</span>
+                </div>
+              )}
+              {stats.tMin != null && stats.tMax != null && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">24 h</span>
+                  <span>
+                    {stats.tMin.toFixed(0)}–{stats.tMax.toFixed(0)} °C
+                  </span>
+                </div>
+              )}
+              {stats.gustMax != null && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Böe max</span>
+                  <span>{(stats.gustMax * 3.6).toFixed(0)} km/h</span>
+                </div>
+              )}
+              {stats.precSum != null && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Σ Regen</span>
+                  <span>{stats.precSum.toFixed(1)} mm</span>
+                </div>
+              )}
+            </div>
+
+            {chartData.length > 1 && (
+              <div className="mt-2 h-24 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart
+                    data={chartData}
+                    margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
+                  >
+                    <XAxis
+                      dataKey="t"
+                      tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                      axisLine={false}
+                      tickLine={false}
+                      interval={3}
+                    />
+                    <YAxis
+                      yAxisId="temp"
+                      tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={22}
+                    />
+                    <YAxis yAxisId="prec" orientation="right" hide domain={[0, "dataMax + 1"]} />
+                    <RTooltip
+                      contentStyle={{
+                        background: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        fontSize: 10,
+                      }}
+                      labelFormatter={(v) => `${v}:00`}
+                    />
+                    <Bar
+                      yAxisId="prec"
+                      dataKey="prec"
+                      fill="hsl(var(--primary) / 0.35)"
+                      barSize={4}
+                    />
+                    <Line
+                      yAxisId="temp"
+                      dataKey="temp"
+                      type="monotone"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={1.5}
+                      dot={false}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </>
+        )}
+        {fieldReadout && (
+          <div className="mt-1 border-t border-border/60 pt-1 font-mono text-[10px] tabular-nums text-muted-foreground">
+            {fieldReadout}
+          </div>
+        )}
       </div>
     </div>
   );
