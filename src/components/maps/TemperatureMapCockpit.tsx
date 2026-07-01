@@ -10,6 +10,7 @@ import {
   SkipBack,
   SkipForward,
   SlidersHorizontal,
+  X,
 } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -19,9 +20,20 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Bar,
+  ComposedChart,
+  Line,
+  ResponsiveContainer,
+  Tooltip as RTooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { ForecastFieldMap, type ForecastFieldMapHandle } from "./ForecastFieldMap";
 import { fetchTemperatureField } from "@/lib/weather/maps/temperature-field";
 import { sampleField, TEMP_STOPS } from "@/lib/weather/maps/field-render";
+import { forecastQuery } from "@/lib/weather/queries";
+import type { GeoPoint } from "@/lib/weather/types";
 import { cn } from "@/lib/utils";
 
 type ParamKey = "t2m" | "gust" | "precip";
