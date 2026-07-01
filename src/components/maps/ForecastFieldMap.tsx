@@ -13,10 +13,11 @@ interface Props {
   initialCenter: { lat: number; lon: number };
   initialZoom?: number;
   onPick?: (lat: number, lon: number) => void;
+  showLabels?: boolean;
 }
 
 export const ForecastFieldMap = forwardRef<ForecastFieldMapHandle, Props>(function ForecastFieldMap(
-  { initialCenter, initialZoom = 5.2, onPick },
+  { initialCenter, initialZoom = 5.2, onPick, showLabels = true },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -24,6 +25,8 @@ export const ForecastFieldMap = forwardRef<ForecastFieldMapHandle, Props>(functi
   const readyRef = useRef(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const addedRef = useRef(false);
+  const labelsAddedRef = useRef(false);
+  const showLabelsRef = useRef(showLabels);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -145,6 +148,64 @@ export const ForecastFieldMap = forwardRef<ForecastFieldMapHandle, Props>(functi
         } else {
           map.setPaintProperty("temp-field-lyr", "raster-opacity", opacity);
         }
+
+        // Labels: Source/Layer beim ersten Mal anlegen, danach nur setData.
+        if (!labelsAddedRef.current) {
+          if (map.getLayer("temp-labels-lyr")) map.removeLayer("temp-labels-lyr");
+          if (map.getSource("temp-labels-src")) map.removeSource("temp-labels-src");
+          map.addSource("temp-labels-src", {
+            type: "geojson",
+            data: { type: "FeatureCollection", features: [] },
+          });
+          map.addLayer({
+            id: "temp-labels-lyr",
+            type: "symbol",
+            source: "temp-labels-src",
+            layout: {
+              "text-field": ["get", "t"],
+              "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"],
+              "text-size": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                4,
+                10,
+                7,
+                13,
+              ],
+              "text-allow-overlap": false,
+              "text-ignore-placement": false,
+              "text-padding": 2,
+              visibility: showLabelsRef.current ? "visible" : "none",
+            },
+            paint: {
+              "text-color": "#0b1220",
+              "text-halo-color": "#ffffff",
+              "text-halo-width": 1.4,
+            },
+          });
+          labelsAddedRef.current = true;
+        }
+        const features: Array<{
+          type: "Feature";
+          geometry: { type: "Point"; coordinates: [number, number] };
+          properties: { t: string };
+        }> = [];
+        const { nLat, nLon, lats, lons, temps } = field;
+        const base = hourIdx * nLat * nLon;
+        for (let y = 0; y < nLat; y++) {
+          for (let x = 0; x < nLon; x++) {
+            const v = temps[base + y * nLon + x];
+            if (!Number.isFinite(v)) continue;
+            features.push({
+              type: "Feature",
+              geometry: { type: "Point", coordinates: [lons[x], lats[y]] },
+              properties: { t: String(Math.round(v)) },
+            });
+          }
+        }
+        const src = map.getSource("temp-labels-src") as maplibregl.GeoJSONSource | undefined;
+        src?.setData({ type: "FeatureCollection", features });
       };
       if (readyRef.current) apply();
       else map.once("load", apply);
@@ -157,6 +218,14 @@ export const ForecastFieldMap = forwardRef<ForecastFieldMapHandle, Props>(functi
       });
     },
   }));
+
+  useEffect(() => {
+    showLabelsRef.current = showLabels;
+    const map = mapRef.current;
+    if (!map || !readyRef.current) return;
+    if (!map.getLayer("temp-labels-lyr")) return;
+    map.setLayoutProperty("temp-labels-lyr", "visibility", showLabels ? "visible" : "none");
+  }, [showLabels]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 });
