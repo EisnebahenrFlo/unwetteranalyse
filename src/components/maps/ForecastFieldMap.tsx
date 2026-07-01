@@ -186,7 +186,11 @@ export const ForecastFieldMap = forwardRef<ForecastFieldMapHandle, Props>(functi
           });
           labelsAddedRef.current = true;
         }
-        const features: GeoJSON.Feature[] = [];
+        const features: Array<{
+          type: "Feature";
+          geometry: { type: "Point"; coordinates: [number, number] };
+          properties: { t: string };
+        }> = [];
         const { nLat, nLon, lats, lons, temps } = field;
         const base = hourIdx * nLat * nLon;
         for (let y = 0; y < nLat; y++) {
