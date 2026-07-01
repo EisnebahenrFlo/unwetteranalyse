@@ -33,7 +33,8 @@ import { ForecastFieldMap, type ForecastFieldMapHandle } from "./ForecastFieldMa
 import { fetchTemperatureField } from "@/lib/weather/maps/temperature-field";
 import { sampleField, TEMP_STOPS } from "@/lib/weather/maps/field-render";
 import { forecastQuery } from "@/lib/weather/queries";
-import type { GeoPoint } from "@/lib/weather/types";
+import type { ForecastBundle, GeoPoint } from "@/lib/weather/types";
+import type { UseQueryResult } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 type ParamKey = "t2m" | "gust" | "precip";
@@ -432,7 +433,7 @@ export function TemperatureMapCockpit() {
 interface PointForecastPanelProps {
   lat: number;
   lon: number;
-  query: ReturnType<typeof useQuery<ReturnType<typeof forecastQuery>["queryFn"] extends (...a: any) => Promise<infer R> ? R : never>>;
+  query: UseQueryResult<ForecastBundle, Error>;
   fieldReadout: string | null;
   onClose: () => void;
 }
