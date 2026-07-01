@@ -76,6 +76,7 @@ export function TemperatureMapCockpit() {
   const [domain, setDomain] = useState<DomainKey>(DEFAULT_DOMAIN);
   const [playing, setPlaying] = useState(false);
   const [legendOpen, setLegendOpen] = useState(true);
+  const [showLabels, setShowLabels] = useState(true);
 
   const q = useQuery({
     queryKey: ["temp-field"],
@@ -210,6 +211,7 @@ export function TemperatureMapCockpit() {
             initialCenter={{ lat: initialDomain.lat, lon: initialDomain.lon }}
             initialZoom={initialDomain.zoom}
             onPick={(lat, lon) => setPick({ lat, lon })}
+            showLabels={showLabels}
           />
 
           {/* Kompakte, einklappbare Legende */}
@@ -337,6 +339,19 @@ export function TemperatureMapCockpit() {
 
           {/* Deckkraft-Popover + Quelle-Info */}
           <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setShowLabels((v) => !v)}
+              aria-pressed={showLabels}
+              className={cn(
+                "inline-flex h-11 items-center rounded-md border px-2.5 font-display text-[11px] font-semibold uppercase tracking-wider transition-colors md:h-8",
+                showLabels
+                  ? "border-primary bg-primary/15 text-primary"
+                  : "border-border text-muted-foreground hover:bg-muted",
+              )}
+            >
+              Zahlen
+            </button>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
