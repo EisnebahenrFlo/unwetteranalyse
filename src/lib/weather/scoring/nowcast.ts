@@ -13,6 +13,8 @@ import {
   windSubscore,
   type Subscore,
 } from "./subscores";
+import { combineNowcast } from "./combine";
+import { hazardBoostFloor } from "./hazard-axes";
 
 const STEP_MINUTES = 10;
 const STEPS = 12;
@@ -40,22 +42,6 @@ export interface NowcastResult {
   data: Subscore;
   reasons: string[];
   confidence: "niedrig" | "mittel" | "hoch";
-}
-
-const W = { rain: 0.35, wind: 0.2, thunder: 0.3, convection: 0.15 };
-
-function combine(rain: number, wind: number, thunder: number, convection: number): number {
-  const linear = rain * W.rain + wind * W.wind + thunder * W.thunder + convection * W.convection;
-  const subs = [rain, wind, thunder, convection];
-  const maxSub = Math.max(...subs);
-  let score = Math.max(linear, maxSub * 0.85);
-  // Multi-Source-Gate: die kritische Stufe (>=60) braucht >=2 korrelierende Achsen.
-  // Eine einzelne starke Achse wird auf das obere Ende von "markant" (59) gedeckelt.
-  const corroborating = subs.filter((v) => v >= 45).length;
-  if (score >= 60 && corroborating < 2) {
-    score = Math.min(score, 59);
-  }
-  return Math.round(score);
 }
 
 function floorTo(date: Date, minutes: number) {
@@ -168,7 +154,10 @@ export function buildNowcast(input: NowcastInput): NowcastResult {
       nowcast: true,
     });
     const conv = convectionSubscore(point);
-    const total = combine(rain.value, wind.value, thunder.value, conv.value);
+    const total = Math.max(
+      combineNowcast(rain.value, wind.value, thunder.value, conv.value),
+      hazardBoostFloor(point),
+    );
     steps.push({
       time: t.toISOString(),
       minutesFromNow: Math.round((t.getTime() - input.now.getTime()) / 60_000),
@@ -188,7 +177,11 @@ export function buildNowcast(input: NowcastInput): NowcastResult {
   const windAgg = aggregateSub(steps.map((s) => s.wind));
   const thunderAgg = aggregateSub(steps.map((s) => s.thunder));
   const convAgg = aggregateSub(steps.map((s) => s.convection));
-  const total = combine(rainAgg.value, windAgg.value, thunderAgg.value, convAgg.value);
+  const maxHazardFloor = Math.max(0, ...steps.map((s) => hazardBoostFloor(s.point)));
+  const total = Math.max(
+    combineNowcast(rainAgg.value, windAgg.value, thunderAgg.value, convAgg.value),
+    maxHazardFloor,
+  );
 
   const step0Precip = steps[0]?.point.precipitationMm ?? 0;
   const radarPrecipConflict =

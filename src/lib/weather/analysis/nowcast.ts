@@ -1,5 +1,6 @@
 import type { AlertSeverity, HourlyPoint, MinutelyPoint } from "../types";
-import { hailRisk, severeScore } from "./convection";
+import { hailRisk } from "./convection";
+export { dailySeverity } from "./convection";
 import { buildNowcast } from "../scoring/nowcast";
 import { bandToSeverity } from "../scoring/labels";
 import { thunderProbabilityNowcast } from "../scoring/derived";
@@ -122,16 +123,4 @@ function headlineFor(
   if (rainMmPerH >= 5) return "Schauerstaffel im Anflug";
   if (level === "minor") return "Erhöhte Gewitterneigung in den nächsten 2 Stunden";
   return "Ruhige Kurzfristlage in den nächsten 2 Stunden";
-}
-
-export function dailySeverity(hourly: HourlyPoint[], date: string) {
-  const dayPoints = hourly.filter((p) => p.time.slice(0, 10) === date);
-  if (dayPoints.length === 0)
-    return { level: "none" as AlertSeverity | "none", score: 0, reasons: [] as string[] };
-  let best = { level: "none" as AlertSeverity | "none", score: 0, reasons: [] as string[] };
-  for (const p of dayPoints) {
-    const s = severeScore(p);
-    if (s.value > best.score) best = { level: s.level, score: s.value, reasons: s.reasons };
-  }
-  return best;
 }

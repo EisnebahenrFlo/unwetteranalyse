@@ -13,14 +13,8 @@ import {
   windSubscore,
   type Subscore,
 } from "./subscores";
-
-const W = { rain: 0.22, wind: 0.2, thunder: 0.3, convection: 0.28 };
-
-function combine(rain: number, wind: number, thunder: number, convection: number): number {
-  const linear = rain * W.rain + wind * W.wind + thunder * W.thunder + convection * W.convection;
-  const maxSub = Math.max(rain, wind, thunder, convection);
-  return Math.round(Math.max(linear, maxSub * 0.8));
-}
+import { combineToday } from "./combine";
+import { hazardBoostFloor } from "./hazard-axes";
 
 export interface HourScore {
   time: string;
@@ -63,7 +57,7 @@ export function buildToday(input: TodayInput): TodayResult {
     const w = windSubscore(p);
     const t = thunderSubscore(p);
     const c = convectionSubscore(p);
-    const total = combine(r.value, w.value, t.value, c.value);
+    const total = Math.max(combineToday(r.value, w.value, t.value, c.value), hazardBoostFloor(p));
     return {
       time: p.time,
       point: p,
@@ -92,7 +86,11 @@ export function buildToday(input: TodayInput): TodayResult {
   const windAgg = maxSub(hours.map((h) => h.wind));
   const thunderAgg = maxSub(hours.map((h) => h.thunder));
   const convAgg = maxSub(hours.map((h) => h.convection));
-  const total = combine(rainAgg.value, windAgg.value, thunderAgg.value, convAgg.value);
+  const maxHazardFloor = Math.max(0, ...hours.map((h) => hazardBoostFloor(h.point)));
+  const total = Math.max(
+    combineToday(rainAgg.value, windAgg.value, thunderAgg.value, convAgg.value),
+    maxHazardFloor,
+  );
 
   const ctx: DataContextInput = {
     hasMinutely: false,
