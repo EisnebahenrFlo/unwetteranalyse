@@ -437,12 +437,28 @@ interface PointForecastPanelProps {
   lat: number;
   lon: number;
   query: UseQueryResult<ForecastBundle, Error>;
+  activeTime: string | undefined;
   fieldReadout: string | null;
   onClose: () => void;
 }
 
-function PointForecastPanel({ lat, lon, query, fieldReadout, onClose }: PointForecastPanelProps) {
+function PointForecastPanel({
+  lat,
+  lon,
+  query,
+  activeTime,
+  fieldReadout,
+  onClose,
+}: PointForecastPanelProps) {
+  const [tab, setTab] = useState<"forecast" | "sounding">("forecast");
   const bundle = query.data;
+  const soundingHourIndex = useMemo(() => {
+    if (!activeTime) return 0;
+    const t = new Date(activeTime).getTime();
+    const startLocal = new Date();
+    startLocal.setHours(0, 0, 0, 0);
+    return Math.max(0, Math.min(47, Math.round((t - startLocal.getTime()) / 3_600_000)));
+  }, [activeTime]);
   const hours = useMemo(() => {
     if (!bundle) return [];
     const now = Date.now();
@@ -507,6 +523,21 @@ function PointForecastPanel({ lat, lon, query, fieldReadout, onClose }: PointFor
       </div>
 
       <div className="px-3 pb-3">
+        <div className="mb-2">
+          <SegmentedTabs
+            size="sm"
+            tabs={[
+              { id: "forecast", label: "Prognose" },
+              { id: "sounding", label: "Sounding" },
+            ]}
+            value={tab}
+            onChange={(v) => setTab(v as "forecast" | "sounding")}
+          />
+        </div>
+        {tab === "sounding" ? (
+          <SoundingPanel point={{ lat, lon, name: "Punkt" }} hourIndex={soundingHourIndex} />
+        ) : (
+          <>
         {query.isLoading && (
           <div className="py-6 text-center font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
             lädt Punktvorhersage …
@@ -602,6 +633,8 @@ function PointForecastPanel({ lat, lon, query, fieldReadout, onClose }: PointFor
           <div className="mt-1 border-t border-border/60 pt-1 font-mono text-[10px] tabular-nums text-muted-foreground">
             {fieldReadout}
           </div>
+        )}
+          </>
         )}
       </div>
     </div>
