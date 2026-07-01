@@ -4,6 +4,7 @@ import { soundingQuery, buildSounding } from "@/lib/weather/queries";
 import { SkewT } from "./SkewT";
 import { Hodograph } from "./Hodograph";
 import type { GeoPoint } from "@/lib/weather/types";
+import { computeComposites, scpLevel, stpLevel } from "@/lib/weather/sounding/composites";
 
 function fmt(n: number | null | undefined, unit: string, digits = 0) {
   return n == null ? "–" : `${n.toFixed(digits)} ${unit}`;
@@ -19,6 +20,15 @@ export function SoundingPanel({ point, hourIndex = 0 }: { point: GeoPoint; hourI
     return <div className="p-4 text-sm text-muted-foreground">Kein Vertikalprofil verfügbar.</div>;
 
   const k = profile.kinematics;
+  const comp = computeComposites(profile);
+  const levelClass = (l: "neutral" | "erhoeht" | "hoch") =>
+    l === "hoch" ? "text-foreground font-semibold" : l === "erhoeht" ? "text-foreground" : "text-muted-foreground";
+  const composites: Array<[string, string, string]> = [
+    ["SCP", comp.scp == null ? "–" : comp.scp.toFixed(1), levelClass(scpLevel(comp.scp))],
+    ["STP", comp.stp == null ? "–" : comp.stp.toFixed(1), levelClass(stpLevel(comp.stp))],
+    ["EHI 0–3", comp.ehi03 == null ? "–" : comp.ehi03.toFixed(1), levelClass("neutral")],
+    ["EHI 0–1", comp.ehi01 == null ? "–" : comp.ehi01.toFixed(1), levelClass("neutral")],
+  ];
   const stats: Array<[string, string]> = [
     ["CAPE", fmt(profile.cape, "J/kg")],
     ["CIN", fmt(profile.cin, "J/kg")],
@@ -48,9 +58,21 @@ export function SoundingPanel({ point, hourIndex = 0 }: { point: GeoPoint; hourI
           </div>
         ))}
       </dl>
+      <div>
+        <div className="mb-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Composite</div>
+        <dl className="grid grid-cols-4 gap-x-3 gap-y-1 text-xs">
+          {composites.map(([label, val, cls]) => (
+            <div key={label} className="flex flex-col">
+              <dt className="text-muted-foreground">{label}</dt>
+              <dd className={`font-mono tabular-nums ${cls}`}>{val}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
       <p className="text-[10px] text-muted-foreground">
-        Thermo: Open-Meteo (ICON). Kinematik abgeleitet aus Drucklevel-Wind. Storm-Motion nach
-        Bunkers-ID (RM/LM). Quelle: Open-Meteo / DWD ICON.
+        Thermo: Open-Meteo (ICON). Kinematik aus Drucklevel-Wind. Storm-Motion nach Bunkers-ID.
+        SCP/STP als Fixed-Layer-Näherung, US/SPC-kalibriert — in Mitteleuropa als Orientierung.
+        Quelle: Open-Meteo / DWD ICON.
       </p>
     </div>
   );
