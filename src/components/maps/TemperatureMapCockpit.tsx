@@ -36,6 +36,8 @@ import { forecastQuery } from "@/lib/weather/queries";
 import type { ForecastBundle, GeoPoint } from "@/lib/weather/types";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { SegmentedTabs } from "@/components/common/SegmentedTabs";
+import { SoundingPanel } from "@/components/sounding/SoundingPanel";
 
 type ParamKey = "t2m" | "gust" | "precip";
 type DomainKey = "dach" | "italy" | "alps";
@@ -275,6 +277,7 @@ export function TemperatureMapCockpit() {
               lat={pick.lat}
               lon={pick.lon}
               query={fq}
+              activeTime={activeTime}
               fieldReadout={
                 pickVal != null && !Number.isNaN(pickVal) && activeTime
                   ? `Feld: ${pickVal.toFixed(1)} °C @ ${fmtTime(activeTime)}`
