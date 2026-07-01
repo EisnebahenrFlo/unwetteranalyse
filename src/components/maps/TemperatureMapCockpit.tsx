@@ -139,6 +139,15 @@ export function TemperatureMapCockpit() {
     return sampleField(field, hourIdx, pick.lat, pick.lon);
   }, [field, pick, hourIdx]);
 
+  const pickPoint: GeoPoint | null = useMemo(
+    () => (pick ? { lat: pick.lat, lon: pick.lon, name: "Gewählter Punkt" } : null),
+    [pick],
+  );
+  const fq = useQuery({
+    ...forecastQuery(pickPoint ?? { lat: 0, lon: 0, name: "-" }),
+    enabled: !!pickPoint,
+  });
+
   const activeTime = field?.times[hourIdx];
   const updated = field
     ? new Date(field.fetchedAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })
