@@ -16,6 +16,8 @@ import {
 import { WEATHER_MODELS } from "./models";
 import { searchLocations } from "@/lib/geo/geocoding";
 import type { GeoPoint } from "./types";
+import { fetchSounding } from "./sounding/fetch";
+import { buildSounding } from "./sounding/profile";
 
 const STALE = 10 * 60 * 1000;
 
@@ -133,3 +135,14 @@ export function ensembleQuery(point: GeoPoint) {
     refetchInterval: STALE,
   });
 }
+
+export function soundingQuery(point: GeoPoint) {
+  return queryOptions({
+    queryKey: ["sounding", point.lat, point.lon] as const,
+    queryFn: () => fetchSounding({ lat: point.lat, lon: point.lon }),
+    staleTime: 10 * 60 * 1000,
+    refetchInterval: 10 * 60 * 1000,
+  });
+}
+
+export { buildSounding };
