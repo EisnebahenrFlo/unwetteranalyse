@@ -13,10 +13,11 @@ interface Props {
   initialCenter: { lat: number; lon: number };
   initialZoom?: number;
   onPick?: (lat: number, lon: number) => void;
+  showLabels?: boolean;
 }
 
 export const ForecastFieldMap = forwardRef<ForecastFieldMapHandle, Props>(function ForecastFieldMap(
-  { initialCenter, initialZoom = 5.2, onPick },
+  { initialCenter, initialZoom = 5.2, onPick, showLabels = true },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -24,6 +25,8 @@ export const ForecastFieldMap = forwardRef<ForecastFieldMapHandle, Props>(functi
   const readyRef = useRef(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const addedRef = useRef(false);
+  const labelsAddedRef = useRef(false);
+  const showLabelsRef = useRef(showLabels);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
