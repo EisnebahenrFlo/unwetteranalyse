@@ -268,28 +268,27 @@ export function TemperatureMapCockpit() {
               Temperaturfeld konnte nicht geladen werden.
             </div>
           )}
+
+          {pick && (
+            <PointForecastPanel
+              lat={pick.lat}
+              lon={pick.lon}
+              query={fq}
+              fieldReadout={
+                pickVal != null && !Number.isNaN(pickVal) && activeTime
+                  ? `Feld: ${pickVal.toFixed(1)} °C @ ${fmtTime(activeTime)}`
+                  : null
+              }
+              onClose={() => setPick(null)}
+            />
+          )}
         </div>
 
         {/* BOTTOM-STREIFEN */}
         <div className="flex flex-wrap items-center gap-2 border-t border-border bg-card px-3 py-2 md:flex-nowrap md:gap-3 md:px-6">
-          {/* Pick-Readout */}
-          <div className="flex min-w-[140px] flex-col leading-tight">
-            {pick ? (
-              <>
-                <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
-                  {pick.lat.toFixed(2)}°N {pick.lon.toFixed(2)}°E
-                </span>
-                <span className="font-display text-sm font-semibold tabular-nums text-foreground">
-                  {pickVal != null && !Number.isNaN(pickVal)
-                    ? `${pickVal.toFixed(1)} °C`
-                    : "keine Daten"}
-                </span>
-              </>
-            ) : (
-              <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                Karte tippen für Wert
-              </span>
-            )}
+          {/* Hinweis statt Pick-Readout (Panel übernimmt die Werte) */}
+          <div className="hidden min-w-[180px] font-mono text-[10px] uppercase tracking-wider text-muted-foreground md:block">
+            {pick ? "Punkt-Forecast oben-links" : "Karte tippen für Punkt-Forecast"}
           </div>
 
           {/* Scrubber */}
