@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useActivePoint } from "@/components/layout/LocationSwitcher";
 import {
-  brightSkyAlertsQuery,
+  weatherAlertsQuery,
   brightSkyCurrentQuery,
   dwdRadarFramesQuery,
   forecastQuery,
@@ -52,7 +52,7 @@ function Dashboard() {
   const now = useLiveNow();
   const forecast = useQuery(forecastQuery(point));
   const bsCurrent = useQuery(brightSkyCurrentQuery(point));
-  const bsAlerts = useQuery(brightSkyAlertsQuery(point));
+  const bsAlerts = useQuery(weatherAlertsQuery(point));
   const radarFrames = useQuery(dwdRadarFramesQuery);
 
   if (forecast.isLoading) return <DashboardSkeleton />;

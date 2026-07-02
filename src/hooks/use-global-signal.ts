@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useActivePoint } from "@/components/layout/LocationSwitcher";
-import { brightSkyAlertsQuery } from "@/lib/weather/queries";
+import { weatherAlertsQuery } from "@/lib/weather/queries";
 import {
   alertSeverityToLevel,
   type SeverityLevel,
@@ -19,7 +19,7 @@ export interface GlobalSignal {
  */
 export function useGlobalSignal(): GlobalSignal {
   const point = useActivePoint();
-  const query = useQuery(brightSkyAlertsQuery(point));
+  const query = useQuery(weatherAlertsQuery(point));
 
   const alerts = query.data ?? [];
   let level: SeverityLevel | null = null;
@@ -32,5 +32,6 @@ export function useGlobalSignal(): GlobalSignal {
     ? new Date(query.dataUpdatedAt).toISOString()
     : null;
 
-  return { level, updatedAt, source: "DWD" };
+  const hasMeteoalarm = alerts.some((a) => a.source === "meteoalarm");
+  return { level, updatedAt, source: hasMeteoalarm ? "MeteoAlarm" : "DWD" };
 }
