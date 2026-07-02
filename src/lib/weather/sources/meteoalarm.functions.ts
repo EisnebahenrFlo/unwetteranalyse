@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { pointInPolygon } from "../geo/point-in-polygon";
 
 /**
  * MeteoAlarm Legacy-Atom-Feeds. Beobachtetes Format (Juli 2026, AT/IT):
@@ -126,6 +127,7 @@ export const fetchMeteoAlarm = createServerFn({ method: "POST" })
 const EDR_BASE = "https://api.meteogate.eu/warnings/collections/warnings/locations/";
 const EDR_MAX_ALERTS = 25;
 const EDR_WINDOW_MS = 23 * 3600_000; // < 24 h Pflicht
+const EDR_MAX_PAGES = 10;
 
 /** GeoJSON-Geometrie -> Liste von [lon,lat][]-Ringen (Polygon + MultiPolygon). */
 function geomToRings(geom: unknown): [number, number][][] {
@@ -185,6 +187,8 @@ async function fetchCapAlert(
   alertId: string,
   hubLink: string,
   bboxRing: [number, number][],
+  lon: number,
+  lat: number,
 ): Promise<MeteoAlarmRaw | null> {
   try {
     const res = await fetch(hubLink, {
@@ -200,6 +204,16 @@ async function fetchCapAlert(
     const severity = pick(info, ["severity"]);
     if (!severity) return null;
     const params = capParameters(info);
+    // Echte CAP-<polygon> (auf Area-Ebene) bevorzugen, sonst Index-BBox.
+    const capPolys = parsePolygons(info);
+    let polygons: [number, number][][];
+    if (capPolys.length > 0) {
+      // Punktscharfer Test gegen echte Polygone; nichts drin → Alert verwerfen.
+      if (!capPolys.some((ring) => pointInPolygon(lon, lat, ring))) return null;
+      polygons = capPolys;
+    } else {
+      polygons = bboxRing.length ? [bboxRing] : [];
+    }
     return {
       id: alertId,
       event: pick(info, ["event"]) ?? "Wetterwarnung",
@@ -212,7 +226,7 @@ async function fetchCapAlert(
       instruction: pick(info, ["instruction"]),
       awarenessType: digitsOnly(params["awareness_type"]),
       awarenessLevel: digitsOnly(params["awareness_level"]),
-      polygons: bboxRing.length ? [bboxRing] : [],
+      polygons,
     };
   } catch {
     return null;
@@ -236,42 +250,55 @@ export const fetchMeteoAlarmEdr = createServerFn({ method: "POST" })
       const now = Date.now();
       const from = new Date(now - EDR_WINDOW_MS / 2).toISOString().replace(/\.\d+Z$/, "Z");
       const to = new Date(now + EDR_WINDOW_MS / 2).toISOString().replace(/\.\d+Z$/, "Z");
-      const url = `${EDR_BASE}${data.country.toUpperCase()}?f=GeoJSON&datetime=${from}/${to}`;
-      const res = await fetch(url, {
-        headers: {
-          apikey: key,
-          Accept: "application/geo+json,application/json",
-          "User-Agent": "UnwetterForecastHub/1.0 (+unwetteranalyse.app)",
-        },
-      });
-      if (!res.ok) return [];
-      const json = (await res.json()) as { features?: unknown[] };
-      const features = Array.isArray(json?.features) ? json.features : [];
+      const baseUrl = `${EDR_BASE}${data.country.toUpperCase()}?f=GeoJSON&datetime=${from}/${to}`;
 
-      // Index filtern: aktiv (nicht superseded) + BBox enthält Punkt.
+      // Alle Seiten des Zeitfensters durchlaufen (rel:"next" existiert nicht,
+      // MeteoGate liefert metadata.total_pages + page-Query, 1-basiert).
       const seen = new Set<string>();
       const candidates: Array<{ alertId: string; hubLink: string; ring: [number, number][] }> = [];
-      for (const raw of features) {
-        const f = raw as {
-          properties?: Record<string, unknown>;
-          geometry?: unknown;
+      let page = 1;
+      let totalPages = 1;
+      while (page <= totalPages && page <= EDR_MAX_PAGES) {
+        const url = page === 1 ? baseUrl : `${baseUrl}&page=${page}`;
+        const res = await fetch(url, {
+          headers: {
+            apikey: key,
+            Accept: "application/geo+json,application/json",
+            "User-Agent": "UnwetterForecastHub/1.0 (+unwetteranalyse.app)",
+          },
+        });
+        if (!res.ok) break;
+        const json = (await res.json()) as {
+          features?: unknown[];
+          metadata?: { total_pages?: number };
         };
-        const p = f.properties ?? {};
-        if (p.supersededByAlertId) continue;
-        const alertId = typeof p.alertId === "string" ? p.alertId : null;
-        const hubLink = typeof p.hubLink === "string" ? p.hubLink : null;
-        if (!alertId || !hubLink) continue;
-        const rings = geomToRings(f.geometry);
-        const outer = rings[0];
-        if (!outer || !bboxContains(outer, data.lon, data.lat)) continue;
-        if (seen.has(alertId)) continue;
-        seen.add(alertId);
-        candidates.push({ alertId, hubLink, ring: outer });
-        if (candidates.length >= EDR_MAX_ALERTS) break;
+        const tp = json?.metadata?.total_pages;
+        if (typeof tp === "number" && tp > totalPages) totalPages = tp;
+        const features = Array.isArray(json?.features) ? json.features : [];
+        for (const raw of features) {
+          const f = raw as {
+            properties?: Record<string, unknown>;
+            geometry?: unknown;
+          };
+          const p = f.properties ?? {};
+          if (p.supersededByAlertId) continue;
+          const alertId = typeof p.alertId === "string" ? p.alertId : null;
+          const hubLink = typeof p.hubLink === "string" ? p.hubLink : null;
+          if (!alertId || !hubLink) continue;
+          if (seen.has(alertId)) continue;
+          const rings = geomToRings(f.geometry);
+          const outer = rings[0];
+          if (!outer || !bboxContains(outer, data.lon, data.lat)) continue;
+          seen.add(alertId);
+          candidates.push({ alertId, hubLink, ring: outer });
+        }
+        page += 1;
       }
 
+      // Erst nach vollständigem Sammeln capen (echte Warnungen für den Punkt).
+      const capped = candidates.slice(0, EDR_MAX_ALERTS);
       const settled = await Promise.all(
-        candidates.map((c) => fetchCapAlert(c.alertId, c.hubLink, c.ring)),
+        capped.map((c) => fetchCapAlert(c.alertId, c.hubLink, c.ring, data.lon, data.lat)),
       );
       return settled.filter((x): x is MeteoAlarmRaw => x !== null);
     } catch {
