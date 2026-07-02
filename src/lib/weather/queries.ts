@@ -19,7 +19,11 @@ import type { GeoPoint } from "./types";
 import { fetchSounding } from "./sounding/fetch";
 import { buildSounding } from "./sounding/profile";
 import type { WeatherAlert } from "./types";
-import { fetchMeteoAlarm, type MeteoAlarmRaw } from "./sources/meteoalarm.functions";
+import {
+  fetchMeteoAlarm,
+  fetchMeteoAlarmEdr,
+  type MeteoAlarmRaw,
+} from "./sources/meteoalarm.functions";
 import { mapMeteoAlarm } from "./mappers/meteoalarm";
 import { pointInPolygon } from "./geo/point-in-polygon";
 
@@ -104,17 +108,48 @@ const FEED_BY_COUNTRY: Record<string, string> = {
   italien: "italy",
 };
 
+const EDR_ISO2: Record<string, string> = {
+  at: "AT",
+  austria: "AT",
+  "österreich": "AT",
+  ch: "CH",
+  switzerland: "CH",
+  schweiz: "CH",
+  it: "IT",
+  italy: "IT",
+  italien: "IT",
+};
+
 function feedSlug(country?: string): string | null {
   if (!country) return null;
   return FEED_BY_COUNTRY[country.trim().toLowerCase()] ?? null;
 }
 
+function edrIso2(country?: string): string | null {
+  if (!country) return null;
+  return EDR_ISO2[country.trim().toLowerCase()] ?? null;
+}
+
 export function weatherAlertsQuery(point: GeoPoint) {
   const slug = feedSlug(point.country);
+  const iso2 = edrIso2(point.country);
   return queryOptions({
-    queryKey: ["weather-alerts", point.lat, point.lon, slug] as const,
+    queryKey: ["weather-alerts", "edr", point.lat, point.lon, slug, iso2] as const,
     queryFn: async (): Promise<WeatherAlert[]> => {
       if (!slug) return fetchBrightSkyAlertsAsWeatherAlerts(point);
+      // 1) EDR-first: amtliche GeoJSON, punktgenau per Geometrie.
+      if (iso2) {
+        const edr: MeteoAlarmRaw[] = await fetchMeteoAlarmEdr({ data: { country: iso2 } });
+        if (edr.length > 0) {
+          const filtered = edr.filter((a) =>
+            a.polygons.length === 0
+              ? true
+              : a.polygons.some((poly) => pointInPolygon(point.lon, point.lat, poly)),
+          );
+          return mapMeteoAlarm(filtered);
+        }
+      }
+      // 2) Fallback: Legacy-Atom (landesweit, ohne Key).
       const raw: MeteoAlarmRaw[] = await fetchMeteoAlarm({ data: { feed: slug } });
       const filtered = raw.filter((a) =>
         a.polygons.length === 0
