@@ -123,7 +123,7 @@ function AlertsPage() {
         />
         {(official.data ?? []).some((a) => a.source === "meteoalarm") && (
           <p className="mt-3 text-[10px] text-muted-foreground">
-            Quelle: MeteoAlarm (EUMETNET), CC BY 4.0.
+            Quelle: MeteoAlarm / MeteoGate (EUMETNET), CC BY 4.0.
           </p>
         )}
       </DataCard>
