@@ -3,7 +3,7 @@
  * Werte stehen immer in SI-Einheiten (°C, m/s, mm, hPa, m), Umrechnung passiert nur im UI.
  */
 
-export type WeatherSource = "open-meteo" | "bright-sky" | "dwd";
+export type WeatherSource = "open-meteo" | "bright-sky" | "dwd" | "meteoalarm";
 
 export interface DataMeta {
   source: WeatherSource;
@@ -155,6 +155,7 @@ export interface WeatherAlert {
   onset: string;
   expires: string;
   source: WeatherSource;
+  area?: string;
 }
 
 export interface StationObservation {
