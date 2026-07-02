@@ -19,6 +19,8 @@ export interface MeteoAlarmRaw {
   headline?: string;
   description?: string;
   instruction?: string;
+  awarenessType?: string;
+  awarenessLevel?: string;
   polygons: [number, number][][]; // [lon,lat][] je Polygon; leer wenn keine Geometrie
 }
 
