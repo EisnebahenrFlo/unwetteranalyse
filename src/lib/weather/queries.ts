@@ -139,14 +139,12 @@ export function weatherAlertsQuery(point: GeoPoint) {
       if (!slug) return fetchBrightSkyAlertsAsWeatherAlerts(point);
       // 1) EDR-first: amtliche GeoJSON, punktgenau per Geometrie.
       if (iso2) {
-        const edr: MeteoAlarmRaw[] = await fetchMeteoAlarmEdr({ data: { country: iso2 } });
+        const edr: MeteoAlarmRaw[] = await fetchMeteoAlarmEdr({
+          data: { country: iso2, lat: point.lat, lon: point.lon },
+        });
         if (edr.length > 0) {
-          const filtered = edr.filter((a) =>
-            a.polygons.length === 0
-              ? true
-              : a.polygons.some((poly) => pointInPolygon(point.lon, point.lat, poly)),
-          );
-          return mapMeteoAlarm(filtered);
+          // Serverseitig bereits per BBox punktgenau gefiltert.
+          return mapMeteoAlarm(edr);
         }
       }
       // 2) Fallback: Legacy-Atom (landesweit, ohne Key).
