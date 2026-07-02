@@ -21,6 +21,22 @@ const HAZARD_KEYWORDS: Array<{ match: RegExp; label: string; code: number }> = [
   { match: /forest[-\s]?fire|wildfire/i, label: "Waldbrand", code: 8 },
 ];
 
+/** EMMA-Awareness-Type -> deutsches Label. Quelle: MeteoAlarm CAP-Doku. */
+const EMMA_LABELS: Record<number, string> = {
+  1: "Wind",
+  2: "Schnee/Glätte",
+  3: "Gewitter",
+  4: "Nebel",
+  5: "Hohe Temperaturen",
+  6: "Tiefe Temperaturen",
+  7: "Küstenereignis",
+  8: "Waldbrand",
+  9: "Lawinen",
+  10: "Regen",
+  11: "Hochwasser",
+  12: "Regen/Hochwasser",
+};
+
 function deriveHazard(event: string): { label: string; code?: number } {
   for (const h of HAZARD_KEYWORDS) if (h.match.test(event)) return { label: h.label, code: h.code };
   return { label: event || "Wetterwarnung" };
@@ -28,7 +44,10 @@ function deriveHazard(event: string): { label: string; code?: number } {
 
 export function mapMeteoAlarm(raw: MeteoAlarmRaw[]): WeatherAlert[] {
   return raw.map((a) => {
-    const hazard = deriveHazard(a.event);
+    const emmaCode = a.awarenessType ? Number(a.awarenessType) : NaN;
+    const hazard = Number.isFinite(emmaCode) && EMMA_LABELS[emmaCode]
+      ? { label: EMMA_LABELS[emmaCode], code: emmaCode }
+      : deriveHazard(a.event);
     return {
       id: a.id,
       headline: a.headline ?? (a.areaDesc ? `${hazard.label} — ${a.areaDesc}` : hazard.label),
