@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useActivePoint } from "@/components/layout/LocationSwitcher";
-import { brightSkyAlertsQuery, forecastQuery } from "@/lib/weather/queries";
+import { weatherAlertsQuery, forecastQuery } from "@/lib/weather/queries";
 import { DataCard } from "@/components/common/DataCard";
 import {
   alertSeverityToLevel,
@@ -49,7 +49,7 @@ export const Route = createFileRoute("/alerts")({
 function AlertsPage() {
   const point = useActivePoint();
   const now = useLiveNow();
-  const official = useQuery(brightSkyAlertsQuery(point));
+  const official = useQuery(weatherAlertsQuery(point));
   const forecast = useQuery(forecastQuery(point));
   const derived = forecast.data
     ? deriveAlertsFromForecast({
@@ -75,13 +75,17 @@ function AlertsPage() {
           Aktive Warnungen, höchste Stufe zuerst
         </h1>
         <p className="text-sm text-muted-foreground">
-          Offizielle DWD-Warnungen für Deutschland via Bright Sky plus eigene Schwellen
-          aus der Forecast-Analyse. (AT/CH/IT: amtliche Warnungen folgen über MeteoAlarm.)
+          Offizielle Warnungen aus DWD (Deutschland via Bright Sky) und MeteoAlarm
+          (AT/CH/IT) plus eigene Schwellen aus der Forecast-Analyse.
         </p>
       </header>
 
       <DataCard
-        title="Offizielle Warnungen (DWD / Bright Sky)"
+        title={
+          (official.data ?? []).some((a) => a.source === "meteoalarm")
+            ? "Offizielle Warnungen (MeteoAlarm)"
+            : "Offizielle Warnungen (DWD / Bright Sky)"
+        }
         subtitle={
           officialAge != null
             ? <>Stand vor <span className="font-mono tabular-nums">{officialAge}</span> min</>
@@ -92,7 +96,7 @@ function AlertsPage() {
         {!official.isLoading && (official.data?.length ?? 0) === 0 && (
           <EmptyState
             title="Aktuell keine amtlichen Warnungen"
-            description="Nichts vom DWD im Gebiet. Wir aktualisieren regelmäßig im Hintergrund."
+            description="Nichts Amtliches im Gebiet. Wir aktualisieren regelmäßig im Hintergrund."
             icon={<ShieldCheck className="h-5 w-5" />}
           />
         )}
@@ -108,6 +112,7 @@ function AlertsPage() {
                   <span className="font-mono tabular-nums">{formatHour(a.onset)}</span> bis{" "}
                   <span className="font-mono tabular-nums">{formatHour(a.expires)}</span> ·{" "}
                   {formatRelative(a.onset)}
+                  {a.area ? <> · <span className="text-foreground/80">{a.area}</span></> : null}
                 </>
               }
               description={a.description}
@@ -116,6 +121,11 @@ function AlertsPage() {
             />
           )}
         />
+        {(official.data ?? []).some((a) => a.source === "meteoalarm") && (
+          <p className="mt-3 text-[10px] text-muted-foreground">
+            Quelle: MeteoAlarm (EUMETNET), CC BY 4.0.
+          </p>
+        )}
       </DataCard>
 
       <DataCard
