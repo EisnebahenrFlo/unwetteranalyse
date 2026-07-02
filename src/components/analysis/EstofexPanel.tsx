@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { AlertTriangle, ChevronDown, ChevronUp } from "@/components/icons";
 import { estofexQuery } from "@/lib/weather/queries";
 import { estofexIsCurrent, estofexLevelAt, type EstofexLevel } from "@/lib/weather/estofex";
+import type { EstofexForecast } from "@/lib/weather/sources/estofex.functions";
 import { useActivePoint } from "@/components/layout/LocationSwitcher";
 import { useLiveNow } from "@/hooks/use-live-now";
 import { formatHour } from "@/lib/weather/format";
@@ -145,7 +146,7 @@ function PointHeader(props: {
 /* -------------------- Karte -------------------- */
 
 function EstofexMap(props: {
-  forecast: NonNullable<ReturnType<typeof useQuery<typeof estofexQuery>>["data"]>;
+  forecast: EstofexForecast;
   centerLon: number;
   centerLat: number;
 }) {
