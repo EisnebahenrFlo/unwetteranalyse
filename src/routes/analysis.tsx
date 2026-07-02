@@ -22,6 +22,7 @@ import { SevereTimeline } from "@/components/analysis/SevereTimeline";
 import { bandFromScore } from "@/lib/weather/scoring/labels";
 import { useStormSnapshot } from "@/lib/weather/storm/use-storm-tracking";
 import { distanceKm } from "@/lib/weather/storm/geo";
+import { EstofexPanel } from "@/components/analysis/EstofexPanel";
 
 export const Route = createFileRoute("/analysis")({
   head: () => ({
@@ -196,6 +197,8 @@ function AnalysisPage() {
       )}
 
       {tab === "params" && <ParamGrid />}
+
+      <EstofexPanel />
     </div>
   );
 

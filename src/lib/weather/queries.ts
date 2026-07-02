@@ -18,6 +18,7 @@ import { searchLocations } from "@/lib/geo/geocoding";
 import type { GeoPoint } from "./types";
 import { fetchSounding } from "./sounding/fetch";
 import { buildSounding } from "./sounding/profile";
+import { fetchEstofex } from "./sources/estofex.functions";
 import type { WeatherAlert } from "./types";
 import {
   fetchMeteoAlarm,
@@ -224,5 +225,13 @@ export function soundingQuery(point: GeoPoint) {
     refetchInterval: 10 * 60 * 1000,
   });
 }
+
+export const estofexQuery = queryOptions({
+  queryKey: ["estofex"] as const,
+  queryFn: () => fetchEstofex(),
+  staleTime: 30 * 60 * 1000,
+  refetchInterval: 30 * 60 * 1000,
+  retry: 1,
+});
 
 export { buildSounding };
