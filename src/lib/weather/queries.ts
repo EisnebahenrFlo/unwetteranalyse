@@ -18,6 +18,10 @@ import { searchLocations } from "@/lib/geo/geocoding";
 import type { GeoPoint } from "./types";
 import { fetchSounding } from "./sounding/fetch";
 import { buildSounding } from "./sounding/profile";
+import type { WeatherAlert } from "./types";
+import { fetchMeteoAlarm, type MeteoAlarmRaw } from "./sources/meteoalarm.functions";
+import { mapMeteoAlarm } from "./mappers/meteoalarm";
+import { pointInPolygon } from "./geo/point-in-polygon";
 
 const STALE = 10 * 60 * 1000;
 
@@ -65,16 +69,59 @@ export function brightSkyStationsQuery(point: GeoPoint) {
   });
 }
 
+async function fetchBrightSkyAlertsAsWeatherAlerts(point: GeoPoint): Promise<WeatherAlert[]> {
+  try {
+    const raw = await fetchBrightSkyAlerts(point.lat, point.lon);
+    return mapBrightSkyAlerts(raw);
+  } catch {
+    return [];
+  }
+}
+
 export function brightSkyAlertsQuery(point: GeoPoint) {
   return queryOptions({
     queryKey: ["bs-alerts", point.lat, point.lon],
-    queryFn: async () => {
-      try {
-        const raw = await fetchBrightSkyAlerts(point.lat, point.lon);
-        return mapBrightSkyAlerts(raw);
-      } catch {
-        return [];
-      }
+    queryFn: () => fetchBrightSkyAlertsAsWeatherAlerts(point),
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Kanonische Warnungen-Query. DE → DWD via Bright Sky (unverändert).
+ * AT/CH/IT → MeteoAlarm-Legacy-Atom, punktgenau via Polygon wo verfügbar,
+ * ansonsten landesweit. Unbekannte Länder fallen auf Bright Sky zurück.
+ */
+const FEED_BY_COUNTRY: Record<string, string> = {
+  at: "austria",
+  austria: "austria",
+  "österreich": "austria",
+  ch: "switzerland",
+  switzerland: "switzerland",
+  schweiz: "switzerland",
+  it: "italy",
+  italy: "italy",
+  italien: "italy",
+};
+
+function feedSlug(country?: string): string | null {
+  if (!country) return null;
+  return FEED_BY_COUNTRY[country.trim().toLowerCase()] ?? null;
+}
+
+export function weatherAlertsQuery(point: GeoPoint) {
+  const slug = feedSlug(point.country);
+  return queryOptions({
+    queryKey: ["weather-alerts", point.lat, point.lon, slug] as const,
+    queryFn: async (): Promise<WeatherAlert[]> => {
+      if (!slug) return fetchBrightSkyAlertsAsWeatherAlerts(point);
+      const raw: MeteoAlarmRaw[] = await fetchMeteoAlarm({ data: { feed: slug } });
+      const filtered = raw.filter((a) =>
+        a.polygons.length === 0
+          ? true
+          : a.polygons.some((poly) => pointInPolygon(point.lon, point.lat, poly)),
+      );
+      return mapMeteoAlarm(filtered);
     },
     staleTime: 5 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
